@@ -1,40 +1,46 @@
 ---
-title: Welcome to Starlight
-description: Get started building your docs site with Starlight.
-template: splash # Remove or comment out this line to display the site sidebar on this page.
+title: Yastubo Backend API Docs
+description: Complete API reference for the Yastubo funeral plan management backend.
+template: splash
 hero:
-  tagline: Congrats on setting up a new Starlight project!
+  tagline: REST API for migrant funeral plan management — powered by FastAPI
   image:
     file: ../../assets/houston.webp
   actions:
-    - text: Example Guide
-      link: /guides/example/
+    - text: Getting Started
+      link: /guides/getting-started/
       icon: right-arrow
-    - text: Read the Starlight docs
-      link: https://starlight.astro.build
-      icon: external
+    - text: API Reference
+      link: /reference/overview/
+      icon: open-book
       variant: minimal
 ---
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
-## Next steps
+## What is Yastubo?
+
+Yastubo Backend is a REST API built with **FastAPI** that manages funeral insurance plans for migrants. It covers the full lifecycle: plan configuration, policy issuance, Stripe-based payments, and a self-service client portal.
+
+## Modules
 
 <CardGrid stagger>
-	<Card title="Update content" icon="pencil">
-		Edit `src/content/docs/index.mdx` to see this page change.
+	<Card title="Authentication" icon="approve-check-circle">
+		User registration, JWT login, token refresh/logout, and role-based access control (ADMIN / VENDEDOR).
 	</Card>
-	<Card title="Change page layout" icon="document">
-		Delete `template: splash` in `src/content/docs/index.mdx` to display a
-		sidebar on this page.
+	<Card title="Plans" icon="document">
+		Create, update, price-calculate, and version-control funeral insurance plans with country and age-range configurations.
 	</Card>
-	<Card title="Add new content" icon="add-document">
-		Add Markdown or MDX files to `src/content/docs` to create new pages.
+	<Card title="Emission" icon="pen">
+		Register clients, issue policies, manage policy status transitions, and download generated PDFs.
 	</Card>
-	<Card title="Configure your site" icon="setting">
-		Edit your `sidebar` and other config in `astro.config.mjs`.
+	<Card title="Payments" icon="star">
+		Stripe one-time payment intents, subscriptions, manual payments, transactions listing, and Connect onboarding.
 	</Card>
-	<Card title="Read the docs" icon="open-book">
-		Learn more in [the Starlight Docs](https://starlight.astro.build/).
+	<Card title="Audit" icon="information">
+		Paginated audit log for every action performed in the system — admin access only.
+	</Card>
+	<Card title="Portal" icon="laptop">
+		Self-service portal for clients: view policies, manage payment methods, cancel policies, and pay pending invoices.
 	</Card>
 </CardGrid>
