@@ -13,6 +13,11 @@ export default defineConfig({
 					label: 'Guides',
 					items: [
 						{ label: 'Getting Started', slug: 'guides/getting-started' },
+						{ label: 'Project Setup Tutorial', slug: 'guides/project-setup-tutorial' },
+						{ label: 'Scripts Tutorial', slug: 'guides/scripts-tutorial' },
+						{ label: 'Architecture', slug: 'guides/architecture' },
+						{ label: 'Project Philosophy', slug: 'guides/project-philosophy' },
+						{ label: 'Contributing', slug: 'guides/contributing' },
 					],
 				},
 				{
