@@ -6,19 +6,26 @@ import starlight from '@astrojs/starlight';
 export default defineConfig({
 	integrations: [
 		starlight({
-			title: 'My Docs',
-			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/withastro/starlight' }],
+			title: 'Yastubo Backend API',
+			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/TechAtlasDev/yastubo_backend' }],
 			sidebar: [
 				{
 					label: 'Guides',
 					items: [
-						// Each item here is one entry in the navigation menu.
-						{ label: 'Example Guide', slug: 'guides/example' },
+						{ label: 'Getting Started', slug: 'guides/getting-started' },
 					],
 				},
 				{
-					label: 'Reference',
-					autogenerate: { directory: 'reference' },
+					label: 'API Reference',
+					items: [
+						{ label: 'Overview', slug: 'reference/overview' },
+						{ label: 'Authentication', slug: 'reference/auth' },
+						{ label: 'Plans', slug: 'reference/plans' },
+						{ label: 'Emission (Policies)', slug: 'reference/emission' },
+						{ label: 'Payments', slug: 'reference/payments' },
+						{ label: 'Audit', slug: 'reference/audit' },
+						{ label: 'Portal (Client)', slug: 'reference/portal' },
+					],
 				},
 			],
 		}),
