@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background:#ffffff;color:#333333;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ffffff;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;font-family:Arial,sans-serif;">
+            <tr><td style="padding:24px 16px;text-align:center;font-size:32px;color:#1a1a2e;font-weight:bold;">YASTUBO</td></tr>
+            <tr><td style="padding:0 16px 24px 16px;text-align:center;">
+              <h2 style="margin:0 0 12px 0;color:#1a1a2e;">Póliza emitida con éxito</h2>
+              <p>Hola {{ client_name }},</p>
+              <p>Tu póliza <strong>{{ policy_number }}</strong> fue emitida correctamente.</p>
+              <p>Plan: <strong>{{ plan_name }}</strong></p>
+              <p>Precio: <strong>{{ currency }} {{ final_price }}</strong></p>
+            </td></tr>
+            <tr><td style="padding:16px;text-align:center;font-size:12px;color:#666;">yastubo.com | Todos los derechos reservados</td></tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
