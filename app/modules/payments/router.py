@@ -7,7 +7,7 @@ from loguru import logger
 
 from app.core.database import get_db, SessionLocal
 from app.core.config import settings
-from app.modules.auth.dependencies import get_current_user, require_role
+from app.modules.auth.dependencies import get_current_user, require_role, get_current_workspace_id
 from app.modules.auth.models import User
 from app.modules.payments.schemas import (
     CreatePaymentIntentRequest, CreateSubscriptionRequest, ManualPaymentRequest, 

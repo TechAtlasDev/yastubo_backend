@@ -1320,6 +1320,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pkpass"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d3/d2/a3327d3df4f0b745b975855c628294437faa50eeaaa4c11166259694c0a6/pkpass-0.1.1.tar.gz", hash = "sha256:16f2d7b42b05eb0aca53f47cd87761580825f86b3ee2a57c138c9707e87078fb", size = 1821, upload-time = "2019-06-26T22:37:35.537Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bf/31/945a123f56ee8b0cb5a36f8de8c6bdb5e118280d66267a927b44c4ba4b88/pkpass-0.1.1-py3-none-any.whl", hash = "sha256:04ea803b00f3c4204d6caa29a2c18e5fc30def65cd12a48ea245722c50637b81", size = 2133, upload-time = "2019-06-26T22:37:33.305Z" },
+]
+
+[[package]]
 name = "platformdirs"
 version = "4.9.4"
 source = { registry = "https://pypi.org/simple" }
@@ -2242,6 +2251,7 @@ dependencies = [
     { name = "loguru" },
     { name = "passlib", extra = ["bcrypt"] },
     { name = "pgvector" },
+    { name = "pkpass" },
     { name = "psycopg2-binary" },
     { name = "pydantic", extra = ["email"] },
     { name = "pydantic-settings" },
@@ -2281,6 +2291,7 @@ requires-dist = [
     { name = "loguru", specifier = ">=0.7.0" },
     { name = "passlib", extras = ["bcrypt"], specifier = ">=1.7.4" },
     { name = "pgvector", specifier = ">=0.4.2" },
+    { name = "pkpass", specifier = ">=0.1.1" },
     { name = "psycopg2-binary", specifier = ">=2.9.11" },
     { name = "pydantic", specifier = ">=2.9.0" },
     { name = "pydantic", extras = ["email"], specifier = ">=2.9.0" },

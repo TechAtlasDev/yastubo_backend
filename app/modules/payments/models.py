@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 class Transaction(BaseModel):
     __tablename__ = "transactions"
 
+    workspace_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
     policy_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("policies.id", ondelete="CASCADE"), nullable=False)
     stripe_payment_intent_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
     stripe_invoice_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)

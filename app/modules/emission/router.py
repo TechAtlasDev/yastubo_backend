@@ -1,7 +1,8 @@
 import uuid
 from typing import List, Optional
 from fastapi import APIRouter, Depends, status, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
+from app.modules.emission.passbook_service import get_passbook_service, PassbookService
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db

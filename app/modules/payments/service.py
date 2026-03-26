@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
 from app.modules.payments.models import Transaction, Subscription, StripeAccount
+from app.modules.workspaces.models import Workspace
 from app.modules.payments.schemas import CreatePaymentIntentRequest, CreateSubscriptionRequest, ManualPaymentRequest, CancelSubscriptionRequest
 from app.modules.payments.stripe_client import StripeClient
 from app.modules.emission import service as emission_service

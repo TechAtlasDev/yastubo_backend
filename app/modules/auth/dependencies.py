@@ -1,6 +1,6 @@
 import uuid
-from typing import Callable
-from fastapi import Depends, HTTPException, status
+from typing import Callable, Optional
+from fastapi import Depends, HTTPException, status, Header
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
