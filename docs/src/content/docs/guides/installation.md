@@ -1,4 +1,7 @@
-# Instalación y configuración del proyecto
+---
+title: Installation & Setup
+description: Guide to install and configure the project environment.
+---
 
 ## Requisitos
 

@@ -65,3 +65,8 @@ class User(BaseModel):
         secondaryjoin="Role.id == user_roles.c.role_id",
         overlaps="roles,users"
     )
+
+    workspaces: Mapped[List["Workspace"]] = relationship(
+        secondary="user_workspaces",
+        back_populates="users"
+    )

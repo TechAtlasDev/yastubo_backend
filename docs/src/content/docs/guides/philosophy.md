@@ -1,4 +1,7 @@
-# Filosofía del proyecto
+---
+title: Project Philosophy
+description: Project core values and technical principles.
+---
 
 ## 1) Modularidad pragmática
 

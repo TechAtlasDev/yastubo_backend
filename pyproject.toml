@@ -10,7 +10,6 @@ dependencies = [
     "pydantic>=2.9.0",
     "pydantic-settings>=2.6.0",
     "sqlalchemy[asyncio]>=2.0.0",
-    "aiomysql>=0.2.0",
     "alembic>=1.14.0",
     "redis>=5.2.0",
     "loguru>=0.7.0",
@@ -25,6 +24,8 @@ dependencies = [
     "stripe>=11.0.0",
     "arq>=0.26",
     "rich>=13.9.0",
+    "psycopg2-binary>=2.9.11",
+    "asyncpg>=0.31.0",
 ]
 
 [dependency-groups]

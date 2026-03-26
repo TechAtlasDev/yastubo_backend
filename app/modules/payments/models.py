@@ -45,6 +45,7 @@ class PaymentMethod(BaseModel):
 class Subscription(BaseModel):
     __tablename__ = "subscriptions"
 
+    workspace_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
     policy_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("policies.id", ondelete="CASCADE"), nullable=False, unique=True)
     stripe_subscription_id: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     stripe_customer_id: Mapped[str] = mapped_column(String(255), nullable=False)

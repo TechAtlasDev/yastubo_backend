@@ -14,6 +14,7 @@ from app.modules.plans import models as plans_models
 from app.modules.emission import models as emission_models
 from app.modules.payments import models as payments_models
 from app.modules.leads import models as leads_models
+from app.modules.workspaces import models as workspace_models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

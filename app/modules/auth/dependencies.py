@@ -42,6 +42,37 @@ async def get_current_user(
         
     return user
 
+async def get_current_workspace_id(
+    user: User = Depends(get_current_user),
+    workspace_id: Optional[uuid.UUID] = Header(None, alias="X-Workspace-Id"),
+) -> uuid.UUID:
+    """
+    Get the current workspace ID for the user.
+    If multiple workspaces exist, the X-Workspace-Id header must be provided.
+    """
+    if workspace_id:
+        # Check if user belongs to this workspace
+        if any(ws.id == workspace_id for ws in user.workspaces):
+            return workspace_id
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this workspace"
+        )
+    
+    if len(user.workspaces) == 1:
+        return user.workspaces[0].id
+    
+    if len(user.workspaces) > 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Multiple workspaces found. Please specify X-Workspace-Id header."
+        )
+        
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="User is not assigned to any workspace"
+    )
+
 def require_role(*roles: str) -> Callable:
     def role_checker(user: User = Depends(get_current_user)):
         user_roles = [role.name for role in user.roles]

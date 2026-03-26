@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import String, Integer, DateTime, Boolean, Enum, Text, func
+from sqlalchemy import String, Integer, DateTime, Boolean, Enum, Text, func, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 from app.shared.base_model import BaseModel, GUID
 import enum
@@ -23,6 +23,8 @@ class FunnelStage(str, enum.Enum):
 class Lead(BaseModel):
     __tablename__ = "leads"
 
+    workspace_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
+    
     # Identity
     first_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     last_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)

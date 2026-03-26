@@ -1,4 +1,7 @@
-# Scripts disponibles
+---
+title: Scripts Reference
+description: Guide for using the internal project scripts.
+---
 
 ## scripts/backend_setup.py
 

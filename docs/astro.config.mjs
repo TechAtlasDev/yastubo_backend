@@ -7,16 +7,16 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: 'Yastubo Backend API',
+			customCss: ['./src/styles/custom.css'],
 			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/TechAtlasDev/yastubo_backend' }],
 			sidebar: [
 				{
 					label: 'Guides',
 					items: [
-						{ label: 'Getting Started', slug: 'guides/getting-started' },
-						{ label: 'Project Setup Tutorial', slug: 'guides/project-setup-tutorial' },
-						{ label: 'Scripts Tutorial', slug: 'guides/scripts-tutorial' },
+						{ label: 'Project Setup', slug: 'guides/installation' },
+						{ label: 'Scripts Tutorial', slug: 'guides/scripts' },
 						{ label: 'Architecture', slug: 'guides/architecture' },
-						{ label: 'Project Philosophy', slug: 'guides/project-philosophy' },
+						{ label: 'Project Philosophy', slug: 'guides/philosophy' },
 						{ label: 'Contributing', slug: 'guides/contributing' },
 					],
 				},

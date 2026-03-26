@@ -1,0 +1,133 @@
+/* Vercel + X-Organizations Dynamic Theme */
+
+:root {
+  --v-black: #000000;
+  --v-white: #ffffff;
+  --v-gray-100: #f3f4f6;
+  --v-gray-200: #e5e7eb;
+  --v-gray-800: #1f2937;
+  --v-gray-900: #111827;
+}
+
+/* --- LIGHT MODE CONFIG --- */
+:root[data-theme='light'] {
+  --sl-color-bg: var(--v-white);
+  --sl-color-text: var(--v-gray-900);
+  --sl-color-text-accent: var(--v-black);
+  --sl-color-hairline: var(--v-gray-200);
+  --sl-color-hairline-light: var(--v-gray-100);
+  
+  --v-bg-image: 
+    repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(75, 85, 99, 0.08) 19px, rgba(75, 85, 99, 0.08) 20px, transparent 20px, transparent 39px, rgba(75, 85, 99, 0.08) 39px, rgba(75, 85, 99, 0.08) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(75, 85, 99, 0.08) 19px, rgba(75, 85, 99, 0.08) 20px, transparent 20px, transparent 39px, rgba(75, 85, 99, 0.08) 39px, rgba(75, 85, 99, 0.08) 40px),
+    radial-gradient(circle at 20px 20px, rgba(55, 65, 81, 0.12) 2px, transparent 2px),
+    radial-gradient(circle at 40px 40px, rgba(55, 65, 81, 0.12) 2px, transparent 2px);
+  --v-bg-size: 40px 40px;
+  --v-bg-mask: linear-gradient(to left, #000 0%, #000 50%, transparent 20%, transparent 100%);
+
+  --v-card-bg: rgba(255, 255, 255, 0.8);
+  --v-card-border: rgba(0, 0, 0, 0.05);
+}
+
+/* --- DARK MODE CONFIG --- */
+:root[data-theme='dark'] {
+  --sl-color-bg: var(--v-black);
+  --sl-color-text: var(--v-gray-100);
+  --sl-color-text-accent: var(--v-white);
+  --sl-color-hairline: var(--v-gray-800);
+  --sl-color-hairline-light: var(--v-gray-900);
+
+  --v-bg-image: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(120, 180, 255, 0.25), transparent 70%), #000000;
+  --v-bg-size: 100% 100%;
+  --v-bg-mask: none;
+
+  --v-card-bg: rgba(0, 0, 0, 0.4);
+  --v-card-border: rgba(255, 255, 255, 0.1);
+}
+
+/* Dynamic Background */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--v-bg-image);
+  background-size: var(--v-bg-size);
+  -webkit-mask-image: var(--v-bg-mask);
+  mask-image: var(--v-bg-mask);
+}
+
+/* UI Structure */
+.sidebar-pane, .sidebar-content, aside, .main-frame, .content-panel, .right-sidebar-container, .left-sidebar-container {
+  background-color: transparent !important;
+}
+
+header {
+  backdrop-filter: blur(16px);
+  background-color: rgba(var(--sl-color-bg-rgb), 0.6) !important;
+  border-bottom: 1px solid var(--sl-color-hairline);
+}
+
+/* CARDS Glassmorphism */
+.card, .sl-link-card {
+  background-color: var(--v-card-bg) !important;
+  border: 1px solid var(--v-card-border) !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1) !important;
+  transition: border-color 0.3s, transform 0.2s, background-color 0.3s;
+}
+
+.card:hover, .sl-link-card:hover {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  transform: translateY(-2px);
+}
+
+/* ALWAYS DARK CODE BLOCKS - HIGH CONTRAST FIX */
+pre {
+  background-color: #000000 !important;
+  border: 1px solid #333333 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  color-scheme: dark !important; /* Force dark context for internal elements */
+}
+
+/* Force bright syntax highlighting in Light Mode */
+[data-theme='light'] pre span {
+    filter: brightness(1.8) saturate(1.2); /* Boost dark tokens to be visible on black */
+}
+
+pre code {
+  color: #eeeeee !important; /* Force base text to light gray */
+}
+
+/* Inline Code */
+:not(pre) > code {
+  background-color: var(--sl-color-hairline-light) !important;
+  color: var(--sl-color-text-accent) !important;
+  padding: 0.2em 0.4em !important;
+  border-radius: 6px !important;
+  border: 1px solid var(--sl-color-hairline) !important;
+}
+
+/* Buttons */
+.action-button.primary {
+  background-color: var(--sl-color-text-accent) !important;
+  color: var(--sl-color-bg) !important;
+  border-radius: 6px !important;
+  border: 1px solid var(--sl-color-text-accent) !important;
+}
+
+/* Active Navigation */
+.sidebar-content [aria-current="page"] {
+  color: var(--sl-color-text-accent) !important;
+  background-color: var(--sl-color-hairline-light) !important;
+  font-weight: 600;
+  border-radius: 4px;
+}

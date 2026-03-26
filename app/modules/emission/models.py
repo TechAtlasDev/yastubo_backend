@@ -45,6 +45,7 @@ class Client(BaseModel):
 class Policy(BaseModel):
     __tablename__ = "policies"
 
+    workspace_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
     policy_number: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     client_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
     lead_id: Mapped[Optional[uuid.UUID]] = mapped_column(GUID(), ForeignKey("leads.id", ondelete="SET NULL"), nullable=True)
