@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     STRIPE_SECRET_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
     STRIPE_CONNECT_CLIENT_ID: str = ""
+    
+    # Google Gemini
+    GOOGLE_API_KEY: str = ""
 
     # External integrations feature flags
     NOTIFICATIONS_ENABLED: bool = False

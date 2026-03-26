@@ -75,6 +75,7 @@ api_v1_router.include_router(payments_router)
 api_v1_router.include_router(audit_router)
 api_v1_router.include_router(portal_router)
 api_v1_router.include_router(leads_router)
+api_v1_router.include_router(ai_router)
 
 @api_v1_router.get("/health", tags=["Infrastructure"])
 async def health_check(db: AsyncSession = Depends(get_db)):
@@ -99,3 +100,4 @@ app.include_router(api_v1_router)
 @app.get("/")
 async def root():
     return {"message": f"Welcome to {settings.APP_NAME} API"}
+P_NAME} API"}
