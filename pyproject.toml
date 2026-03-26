@@ -28,6 +28,8 @@ dependencies = [
     "asyncpg>=0.31.0",
     "google-generativeai>=0.8.6",
     "pgvector>=0.4.2",
+    "elevenlabs>=2.40.0",
+    "websockets>=16.0",
 ]
 
 [dependency-groups]

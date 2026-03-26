@@ -19,6 +19,8 @@ from app.modules.payments.router import router as payments_router
 from app.modules.audit.router import router as audit_router
 from app.modules.portal.router import router as portal_router
 from app.modules.leads.router import router as leads_router
+from app.modules.ai.router import router as ai_router
+from app.modules.voice.router import router as voice_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -76,6 +78,7 @@ api_v1_router.include_router(audit_router)
 api_v1_router.include_router(portal_router)
 api_v1_router.include_router(leads_router)
 api_v1_router.include_router(ai_router)
+api_v1_router.include_router(voice_router)
 
 @api_v1_router.get("/health", tags=["Infrastructure"])
 async def health_check(db: AsyncSession = Depends(get_db)):
@@ -100,4 +103,3 @@ app.include_router(api_v1_router)
 @app.get("/")
 async def root():
     return {"message": f"Welcome to {settings.APP_NAME} API"}
-P_NAME} API"}

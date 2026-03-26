@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     
     # Google Gemini
     GOOGLE_API_KEY: str = ""
+    
+    # ElevenLabs
+    ELEVENLABS_API_KEY: str = ""
+    ELEVENLABS_VOICE_ID: str = "21m00Tcm4TlvDq8ikWAM" # Default Rachel
 
     # External integrations feature flags
     NOTIFICATIONS_ENABLED: bool = False
