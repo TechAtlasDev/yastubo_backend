@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import String, ForeignKey, Boolean, DateTime, Table, Column, func
+from sqlalchemy import String, ForeignKey, Boolean, DateTime, Table, Column, func, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.shared.base_model import BaseModel, GUID
 from app.core.database import Base
@@ -17,6 +17,7 @@ class Workspace(BaseModel):
     # Metadata for Resellers
     is_reseller: Mapped[bool] = mapped_column(Boolean, default=False)
     stripe_connect_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    commission_rate: Mapped[float] = mapped_column(Numeric(5, 2), default=0.0) # e.g. 10.00 for 10%
     
     users: Mapped[List["User"]] = relationship(
         secondary="user_workspaces",

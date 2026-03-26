@@ -42,7 +42,9 @@ class StripeClient:
         )
 
     async def create_subscription(self, customer_id: str, price_id: str,
-                                   payment_method_id: str, metadata: dict) -> dict:
+                                   payment_method_id: str, metadata: dict,
+                                   connect_account_id: Optional[str] = None,
+                                   application_fee_percent: Optional[float] = None) -> dict:
         # First attach PM to customer
         await asyncio.to_thread(
             stripe.PaymentMethod.attach,
@@ -56,13 +58,18 @@ class StripeClient:
             invoice_settings={"default_payment_method": payment_method_id}
         )
         
-        return await asyncio.to_thread(
-            stripe.Subscription.create,
-            customer=customer_id,
-            items=[{"price": price_id}],
-            metadata=metadata,
-            expand=["latest_invoice.payment_intent"]
-        )
+        params = {
+            "customer": customer_id,
+            "items": [{"price": price_id}],
+            "metadata": metadata,
+            "expand": ["latest_invoice.payment_intent"]
+        }
+        
+        if connect_account_id:
+            params["application_fee_percent"] = application_fee_percent
+            params["transfer_data"] = {"destination": connect_account_id}
+            
+        return await asyncio.to_thread(stripe.Subscription.create, **params)
 
     async def cancel_subscription(self, subscription_id: str, at_period_end: bool) -> dict:
         if at_period_end:

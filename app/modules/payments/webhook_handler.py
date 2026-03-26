@@ -78,10 +78,22 @@ async def handle_stripe_event(event: dict, db: AsyncSession) -> None:
                     StatusTransitionRequest(target_status=PolicyStatus.IN_ARREARS, reason="Payment failed multiple times"),
                     transaction.policy.issued_by
                 )
-                audit = AuditLog(action="PAYMENT_FAILED_MAX_RETRIES", entity="Transaction", user_id=None, details=f"Payment failed max retries for {pi_id}")
+                audit = AuditLog(
+                    workspace_id=transaction.workspace_id,
+                    action="PAYMENT_FAILED_MAX_RETRIES", 
+                    entity="Transaction", 
+                    user_id=None, 
+                    details=f"Payment failed max retries for {pi_id}"
+                )
                 db.add(audit)
             
-            audit = AuditLog(action="PAYMENT_FAILED", entity="Transaction", user_id=None, details=f"Payment failed for {pi_id}")
+            audit = AuditLog(
+                workspace_id=transaction.workspace_id,
+                action="PAYMENT_FAILED", 
+                entity="Transaction", 
+                user_id=None, 
+                details=f"Payment failed for {pi_id}"
+            )
             db.add(audit)
             await db.commit()
 
@@ -112,7 +124,13 @@ async def handle_stripe_event(event: dict, db: AsyncSession) -> None:
                 StatusTransitionRequest(target_status=PolicyStatus.CANCELLED, reason="Subscription deleted in Stripe"),
                 subscription.policy.issued_by
             )
-            audit = AuditLog(action="SUBSCRIPTION_CANCELLED", entity="Policy", user_id=None, details=f"Subscription deleted for {sub_id}")
+            audit = AuditLog(
+                workspace_id=subscription.workspace_id,
+                action="SUBSCRIPTION_CANCELLED", 
+                entity="Policy", 
+                user_id=None, 
+                details=f"Subscription deleted for {sub_id}"
+            )
             db.add(audit)
             await db.commit()
 
@@ -133,6 +151,12 @@ async def handle_stripe_event(event: dict, db: AsyncSession) -> None:
                     processed_at=datetime.now()
                 )
                 db.add(transaction)
-                audit = AuditLog(action="SUBSCRIPTION_PAYMENT_SUCCEEDED", entity="Transaction", user_id=None, details=f"Subscription invoice paid for {sub_id}")
+                audit = AuditLog(
+                    workspace_id=subscription.workspace_id,
+                    action="SUBSCRIPTION_PAYMENT_SUCCEEDED", 
+                    entity="Transaction", 
+                    user_id=None, 
+                    details=f"Subscription invoice paid for {sub_id}"
+                )
                 db.add(audit)
                 await db.commit()

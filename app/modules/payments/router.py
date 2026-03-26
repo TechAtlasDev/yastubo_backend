@@ -12,7 +12,7 @@ from app.modules.auth.models import User
 from app.modules.payments.schemas import (
     CreatePaymentIntentRequest, CreateSubscriptionRequest, ManualPaymentRequest, 
     CancelSubscriptionRequest, TransactionResponse, SubscriptionResponse, 
-    ConnectOnboardingResponse
+    ConnectOnboardingResponse, ResellerDashboardResponse
 )
 from app.modules.payments import service, webhook_handler
 from app.modules.payments.stripe_client import get_stripe_client, StripeClient
@@ -70,6 +70,14 @@ async def create_connect_onboarding(
     current_user: User = Depends(get_current_user)
 ):
     return await service.create_connect_onboarding(db, stripe_c, current_user)
+
+@router.get("/reseller/dashboard", response_model=ResellerDashboardResponse)
+async def get_reseller_dashboard(
+    db: AsyncSession = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_current_workspace_id),
+    current_user: User = Depends(require_role("VENDEDOR", "ADMIN"))
+):
+    return await service.get_reseller_dashboard(db, workspace_id)
 
 @router.post("/webhook")
 async def stripe_webhook(request: Request, background_tasks: BackgroundTasks, stripe_c: StripeClient = Depends(get_stripe_client)):

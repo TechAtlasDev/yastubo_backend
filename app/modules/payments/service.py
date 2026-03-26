@@ -88,6 +88,18 @@ async def on_payment_succeeded(db: AsyncSession, transaction: Transaction):
 async def create_subscription(db: AsyncSession, stripe: StripeClient, data: CreateSubscriptionRequest, issued_by: uuid.UUID) -> Subscription:
     policy = await emission_service.get_policy(db, data.policy_id)
     
+    # Get Workspace for commissions
+    res_ws = await db.execute(select(Workspace).where(Workspace.id == policy.workspace_id))
+    workspace = res_ws.scalar_one()
+    
+    connect_account_id = None
+    app_fee_percent = None
+    
+    if workspace.is_reseller and workspace.stripe_connect_id:
+        connect_account_id = workspace.stripe_connect_id
+        if workspace.commission_rate > 0:
+            app_fee_percent = float(workspace.commission_rate)
+
     # Check if existing active subscription
     existing = await db.execute(select(Subscription).where(Subscription.policy_id == policy.id, Subscription.status == "ACTIVE"))
     if existing.scalar_one_or_none():
@@ -105,10 +117,16 @@ async def create_subscription(db: AsyncSession, stripe: StripeClient, data: Crea
         customer_id=customer_id,
         price_id=plan.stripe_price_id,
         payment_method_id=data.stripe_payment_method_id,
-        metadata={"policy_id": str(policy.id)}
+        metadata={
+            "policy_id": str(policy.id),
+            "workspace_id": str(policy.workspace_id)
+        },
+        connect_account_id=connect_account_id,
+        application_fee_percent=app_fee_percent
     )
     
     sub = Subscription(
+        workspace_id=policy.workspace_id,
         policy_id=policy.id,
         stripe_subscription_id=stripe_sub["id"],
         stripe_customer_id=customer_id,
@@ -124,6 +142,7 @@ async def create_subscription(db: AsyncSession, stripe: StripeClient, data: Crea
         pi_id = stripe_sub["latest_invoice"]["payment_intent"]["id"]
 
     transaction = Transaction(
+        workspace_id=policy.workspace_id,
         policy_id=policy.id,
         stripe_payment_intent_id=pi_id,
         stripe_invoice_id=stripe_sub.get("latest_invoice", {}).get("id"),
@@ -161,6 +180,7 @@ async def register_manual_payment(db: AsyncSession, data: ManualPaymentRequest, 
     policy = await emission_service.get_policy(db, data.policy_id)
     
     transaction = Transaction(
+        workspace_id=policy.workspace_id,
         policy_id=policy.id,
         amount=float(data.amount),
         currency=policy.currency,
@@ -203,6 +223,41 @@ async def create_connect_onboarding(db: AsyncSession, stripe: StripeClient, user
     )
     
     return {"url": link["url"], "account_id": acc.stripe_account_id}
+
+async def get_reseller_dashboard(db: AsyncSession, workspace_id: uuid.UUID) -> dict:
+    from sqlalchemy import func
+    
+    # Total sales (Succeeded transactions)
+    query_sales = select(
+        func.count(Transaction.id).label("count"),
+        func.sum(Transaction.amount).label("total_amount")
+    ).where(
+        Transaction.workspace_id == workspace_id,
+        Transaction.status == "SUCCEEDED"
+    )
+    res_sales = await db.execute(query_sales)
+    sales_stats = res_sales.one()
+    
+    # Get Workspace to know commission rate
+    res_ws = await db.execute(select(Workspace).where(Workspace.id == workspace_id))
+    workspace = res_ws.scalar_one()
+    
+    # Calculate earned commissions (based on sales amount and workspace rate)
+    total_amount = sales_stats.total_amount or 0.0
+    # If commission_rate is what platform keeps, then reseller gets (100 - rate)%
+    # Based on our previous assumption in create_payment_intent: 
+    # Reseller is the destination, Platform takes Application Fee (commission_rate).
+    # So Reseller gets: total_amount - application_fee.
+    platform_rate = float(workspace.commission_rate) / 100.0
+    earned = float(total_amount) * (1.0 - platform_rate)
+    
+    return {
+        "total_sales_count": sales_stats.count,
+        "total_sales_amount": total_amount,
+        "total_commissions_earned": earned,
+        "pending_commissions": 0.0, # Stripe Connect handles payouts automatically or we can query Stripe Balance
+        "currency": "USD"
+    }
 
 async def list_transactions(db: AsyncSession, policy_id: Optional[uuid.UUID] = None, status: Optional[str] = None) -> List[Transaction]:
     query = select(Transaction).options(selectinload(Transaction.policy))

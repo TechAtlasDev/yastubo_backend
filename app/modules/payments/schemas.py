@@ -49,3 +49,10 @@ class SubscriptionResponse(BaseModel):
 class ConnectOnboardingResponse(BaseModel):
     url: str
     account_id: str
+
+class ResellerDashboardResponse(BaseModel):
+    total_sales_count: int
+    total_sales_amount: Decimal
+    total_commissions_earned: Decimal
+    pending_commissions: Decimal
+    currency: str = "USD"
