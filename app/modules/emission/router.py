@@ -90,3 +90,26 @@ async def download_policy_pdf(
         filename=f"{policy.policy_number}.pdf",
         media_type="application/pdf"
     )
+
+@router.get("/policies/{policy_id}/passbook")
+async def get_policy_passbook(
+    policy_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    pass_service: PassbookService = Depends(get_passbook_service),
+    current_user: User = Depends(require_role("ADMIN", "VENDEDOR"))
+):
+    policy = await service.get_policy(db, policy_id)
+    if not policy:
+        raise HTTPException(status_code=404, detail="Policy not found")
+        
+    # Multi-tenancy check
+    if not any(ws.id == policy.workspace_id for ws in current_user.workspaces):
+         raise HTTPException(status_code=403, detail="You do not have access to this policy")
+
+    pass_bytes = await pass_service.generate_policy_pass(policy, policy.client)
+    
+    return Response(
+        content=pass_bytes,
+        media_type="application/vnd.apple.pkpass",
+        headers={"Content-Disposition": f"attachment; filename=policy_{policy.policy_number}.pkpass"}
+    )

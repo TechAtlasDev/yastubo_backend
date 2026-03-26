@@ -1630,6 +1630,18 @@ wheels = [
 ]
 
 [[package]]
+name = "python-dateutil"
+version = "2.9.0.post0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/66/c0/0c8b6ad9f17a802ee498c46e004a0eb49bc148f2fd230864601a86dcf6db/python-dateutil-2.9.0.post0.tar.gz", hash = "sha256:37dd54208da7e1cd875388217d5e00ebd4179249f90fb72437e91a35459a0ad3", size = 342432, upload-time = "2024-03-01T18:36:20.211Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl", hash = "sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427", size = 229892, upload-time = "2024-03-01T18:36:18.57Z" },
+]
+
+[[package]]
 name = "python-discovery"
 version = "1.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2049,6 +2061,19 @@ wheels = [
 ]
 
 [[package]]
+name = "wallet"
+version = "2.1.525"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-dateutil" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/26/37/a0d5a895bf3238ffbc1f4ba6b6f5fa106d53e751213ed15a21fde158ea4f/wallet-2.1.525.tar.gz", hash = "sha256:63bd66e370a6952e579e78ecd2643a181cc33a5b1a59c5856384d562ad23208a", size = 333936, upload-time = "2022-12-07T05:54:48.745Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/db/ff/1c89e6a2d565523a0907d7a74872a79326f1ed8b3dcd06bf241afb32b3ff/wallet-2.1.525-py3-none-any.whl", hash = "sha256:baf45c618782346af9f2b70419beb7bf9a00f22be45a7505c0891ed5e2247732", size = 995629, upload-time = "2022-12-07T05:54:45.623Z" },
+]
+
+[[package]]
 name = "watchfiles"
 version = "1.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2227,6 +2252,7 @@ dependencies = [
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "stripe" },
     { name = "uvicorn", extra = ["standard"] },
+    { name = "wallet" },
     { name = "weasyprint" },
     { name = "websockets" },
 ]
@@ -2266,6 +2292,7 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.0" },
     { name = "stripe", specifier = ">=11.0.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
+    { name = "wallet", specifier = ">=2.1.525" },
     { name = "weasyprint", specifier = ">=62.0" },
     { name = "websockets", specifier = ">=16.0" },
 ]

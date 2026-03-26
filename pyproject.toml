@@ -30,6 +30,7 @@ dependencies = [
     "pgvector>=0.4.2",
     "elevenlabs>=2.40.0",
     "websockets>=16.0",
+    "wallet>=2.1.525",
 ]
 
 [dependency-groups]
