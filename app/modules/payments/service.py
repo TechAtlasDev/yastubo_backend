@@ -1,19 +1,17 @@
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
-from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
-from app.modules.payments.models import Transaction, Subscription, StripeAccount, PaymentMethod
+from app.modules.payments.models import Transaction, Subscription, StripeAccount
 from app.modules.payments.schemas import CreatePaymentIntentRequest, CreateSubscriptionRequest, ManualPaymentRequest, CancelSubscriptionRequest
 from app.modules.payments.stripe_client import StripeClient
-from app.modules.emission.models import Policy
 from app.modules.emission import service as emission_service
-from app.modules.emission.state_machine import PolicyStatus, transition
-from app.modules.auth.models import User, Role
+from app.modules.emission.state_machine import PolicyStatus
+from app.modules.auth.models import User
 from app.modules.audit.decorator import audited
 from app.modules.plans.models import Plan
 from app.core.config import settings
@@ -147,7 +145,7 @@ async def cancel_subscription(db: AsyncSession, stripe: StripeClient, data: Canc
     if not sub:
         raise HTTPException(status_code=404, detail="Subscription not found")
     
-    stripe_sub = await stripe.cancel_subscription(sub.stripe_subscription_id, data.cancel_immediately == False)
+    stripe_sub = await stripe.cancel_subscription(sub.stripe_subscription_id, not data.cancel_immediately)
     
     sub.status = stripe_sub["status"].upper()
     sub.cancel_at_period_end = stripe_sub.get("cancel_at_period_end", False)

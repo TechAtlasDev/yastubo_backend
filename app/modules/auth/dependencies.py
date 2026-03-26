@@ -1,5 +1,5 @@
 import uuid
-from typing import List, Callable
+from typing import Callable
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession

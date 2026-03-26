@@ -1,5 +1,4 @@
 from sqlalchemy import text
-import pytest
 
 # test 1: la app levanta y el health check responde 200
 async def test_health_check_returns_200(client):
@@ -16,4 +15,4 @@ async def test_database_connection(db_session):
 async def test_redis_connection(redis_client):
     await redis_client.set("test_key", "test_value")
     value = await redis_client.get("test_key")
-    assert value == b"test_value"
+    assert value in ("test_value", b"test_value")

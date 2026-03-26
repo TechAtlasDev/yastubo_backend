@@ -2,7 +2,7 @@ import uuid
 from typing import Optional, Any
 from sqlalchemy import String, ForeignKey, JSON, Index
 from sqlalchemy.orm import Mapped, mapped_column
-from app.shared.base_model import BaseModel, GUID
+from app.shared.base_model import BaseModel
 
 class AuditLog(BaseModel):
     __tablename__ = "audit_logs"

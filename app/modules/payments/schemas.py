@@ -1,9 +1,8 @@
 import uuid
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional
 from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field
-from app.modules.payments.models import Transaction, Subscription
 
 class CreatePaymentIntentRequest(BaseModel):
     policy_id: uuid.UUID

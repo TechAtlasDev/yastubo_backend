@@ -1,7 +1,7 @@
 import inspect
 import uuid
 from functools import wraps
-from typing import Any, Callable
+from typing import Callable
 from app.modules.audit import service as audit_service
 
 def audited(action: str, entity: str):
@@ -48,7 +48,7 @@ def audited(action: str, entity: str):
                     try:
                         if isinstance(result, uuid.UUID):
                             entity_id = result
-                    except:
+                    except Exception:
                         pass
 
                 await audit_service.log(

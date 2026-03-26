@@ -26,6 +26,17 @@ async def handle_stripe_event(event: dict, db: AsyncSession) -> None:
             transaction.processed_at = datetime.now()
             await service.on_payment_succeeded(db, transaction)
 
+            # PHASE 2: Convert Lead if exists
+            if transaction.policy and transaction.policy.lead_id:
+                from app.modules.leads import service as leads_service
+                from app.modules.leads.schemas import LeadUpdate
+                await leads_service.update_lead(
+                    db, 
+                    transaction.policy.lead_id, 
+                    LeadUpdate(purchase_completed=True)
+                )
+                logger.info(f"Lead {transaction.policy.lead_id} converted to customer due to successful payment.")
+
             policy_res = await db.execute(
                 select(Policy)
                 .where(Policy.id == transaction.policy_id)

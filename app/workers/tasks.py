@@ -1,4 +1,3 @@
-import uuid
 from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -57,7 +56,7 @@ async def retry_failed_payments(ctx):
             .where(
                 Transaction.status == "FAILED",
                 Transaction.attempt_count < 2,
-                Transaction.stripe_payment_intent_id != None
+                Transaction.stripe_payment_intent_id.is_not(None)
             )
             .options(selectinload(Transaction.policy))
         )

@@ -1,5 +1,5 @@
 import uuid
-from typing import List, Optional, Any
+from typing import List, Optional
 from sqlalchemy import String, ForeignKey, Boolean, Integer, Numeric, Text, JSON, UniqueConstraint, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.shared.base_model import BaseModel, GUID

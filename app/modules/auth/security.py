@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional, Union
+from typing import Optional
 import bcrypt
 from jose import jwt, JWTError
 from fastapi import HTTPException, status

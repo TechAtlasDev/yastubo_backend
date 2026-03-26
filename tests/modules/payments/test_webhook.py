@@ -1,5 +1,4 @@
 import pytest
-import json
 import uuid
 from sqlalchemy import select
 from httpx import AsyncClient

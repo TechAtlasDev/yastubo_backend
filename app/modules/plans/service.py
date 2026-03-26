@@ -1,11 +1,10 @@
 import uuid
-import json
 from decimal import Decimal
-from typing import List, Optional
-from sqlalchemy import select, update
+from typing import List
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 
 from app.modules.plans.models import Plan, PlanVersion, Coverage, AgeRange, CountryConfig, PlanCoverage
 from app.modules.plans.schemas import PlanCreate, PlanUpdate, PriceCalculationRequest, PriceCalculationResponse
@@ -109,7 +108,7 @@ async def list_plans(db: AsyncSession, active_only: bool = True) -> List[Plan]:
         selectinload(Plan.versions)
     )
     if active_only:
-        query = query.where(Plan.is_active == True)
+        query = query.where(Plan.is_active)
     
     result = await db.execute(query)
     plans = result.scalars().all()

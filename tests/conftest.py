@@ -4,8 +4,6 @@ import uuid
 import sqlite3
 from typing import AsyncGenerator
 from httpx import AsyncClient, ASGITransport
-from sqlalchemy import event
-from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import StaticPool
 from fakeredis import FakeAsyncRedis
@@ -16,7 +14,10 @@ from app.core.database import Base, get_db
 from app.core.redis import get_redis
 from app.modules.auth.models import User, Role, UserRole
 from app.modules.auth.security import get_password_hash, create_access_token
-from app.modules.plans.models import Coverage
+from app.modules.plans.models import Coverage, Plan, AgeRange, CountryConfig
+from app.modules.emission.models import Client, Policy, Beneficiary
+from app.modules.leads.models import Lead
+from app.modules.payments.models import Subscription, Transaction
 
 # Register UUID adapter and converter for SQLite
 sqlite3.register_adapter(uuid.UUID, lambda u: u.hex)
@@ -111,7 +112,6 @@ async def roles(db_session):
     for name in role_names:
         # Check if exists
         from sqlalchemy import select
-        from app.modules.auth.models import Role
         res = await db_session.execute(select(Role).where(Role.name == name))
         role = res.scalar_one_or_none()
         if not role:
@@ -124,7 +124,6 @@ async def roles(db_session):
 @pytest.fixture
 async def admin_user(db_session, roles):
     from sqlalchemy import select
-    from app.modules.auth.models import User
     res = await db_session.execute(select(User).where(User.email == "admin@yastubo.com"))
     user = res.scalar_one_or_none()
     if not user:
@@ -147,7 +146,6 @@ async def admin_user(db_session, roles):
 @pytest.fixture
 async def client_user(db_session, roles):
     from sqlalchemy import select
-    from app.modules.auth.models import User
     res = await db_session.execute(select(User).where(User.email == "client@yastubo.com"))
     user = res.scalar_one_or_none()
     if not user:

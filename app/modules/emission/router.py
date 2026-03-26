@@ -5,22 +5,21 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.modules.auth.dependencies import get_current_user, require_role
+from app.modules.auth.dependencies import require_role
 from app.modules.auth.models import User
-from app.modules.emission.schemas import ClientCreate, ClientResponse, EmissionRequest, EmissionResponse, PolicyResponse, StatusTransitionRequest
-from app.modules.emission import service
+from app.modules.emission import schemas, service
 
 router = APIRouter(prefix="/emission", tags=["Emission"])
 
-@router.post("/clients", response_model=ClientResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/clients", response_model=schemas.ClientResponse, status_code=status.HTTP_201_CREATED)
 async def register_client(
-    data: ClientCreate,
+    data: schemas.ClientCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role("ADMIN", "VENDEDOR"))
 ):
     return await service.register_client(db, data, current_user.id)
 
-@router.get("/clients/{client_id}", response_model=ClientResponse)
+@router.get("/clients/{client_id}", response_model=schemas.ClientResponse)
 async def get_client(
     client_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
@@ -28,15 +27,15 @@ async def get_client(
 ):
     return await service.get_client(db, client_id)
 
-@router.post("/issue", response_model=PolicyResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/issue", response_model=schemas.PolicyResponse, status_code=status.HTTP_201_CREATED)
 async def issue_policy(
-    data: EmissionRequest,
+    data: schemas.EmissionRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role("ADMIN", "VENDEDOR"))
 ):
     return await service.issue_policy(db, data, current_user.id)
 
-@router.get("/policies", response_model=List[PolicyResponse])
+@router.get("/policies", response_model=List[schemas.PolicyResponse])
 async def list_policies(
     status: Optional[str] = None,
     client_id: Optional[uuid.UUID] = None,
@@ -45,7 +44,7 @@ async def list_policies(
 ):
     return await service.list_policies(db, status=status, client_id=client_id)
 
-@router.get("/policies/{policy_id}", response_model=PolicyResponse)
+@router.get("/policies/{policy_id}", response_model=schemas.PolicyResponse)
 async def get_policy(
     policy_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
@@ -53,14 +52,28 @@ async def get_policy(
 ):
     return await service.get_policy(db, policy_id)
 
-@router.post("/policies/{policy_id}/transition", response_model=PolicyResponse)
+@router.post("/policies/{policy_id}/transition", response_model=schemas.PolicyResponse)
 async def change_policy_status(
     policy_id: uuid.UUID,
-    data: StatusTransitionRequest,
+    data: schemas.StatusTransitionRequest,
     db: AsyncSession = Depends(get_db),
-    admin_user: User = Depends(require_role("ADMIN"))
+    current_user: User = Depends(require_role("ADMIN"))
 ):
-    return await service.change_policy_status(db, policy_id, data, admin_user.id)
+    return await service.change_policy_status(db, policy_id, data, current_user.id)
+
+@router.post("/beneficiaries/{beneficiary_id}/mark-deceased", response_model=schemas.BeneficiaryResponse)
+async def mark_beneficiary_deceased(
+    beneficiary_id: uuid.UUID,
+    data: schemas.DeceasedReport,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role("ADMIN")) # Only admin/system can mark deceased
+):
+    """
+    Mark a beneficiary as deceased.
+    Triggered by CRM write-back or internal management.
+    """
+    return await service.mark_beneficiary_deceased(db, beneficiary_id, data.reported_by)
+
 
 @router.get("/policies/{policy_id}/pdf")
 async def download_policy_pdf(

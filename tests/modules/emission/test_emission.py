@@ -1,5 +1,4 @@
 import pytest
-import os
 from unittest.mock import patch
 from datetime import date, timedelta
 from httpx import AsyncClient

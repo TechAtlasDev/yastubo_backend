@@ -1,7 +1,6 @@
-import pytest
 import pytest_asyncio
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.modules.auth.models import User, Role, UserRole
@@ -78,7 +77,6 @@ async def active_policy_for_client(db_session: AsyncSession, client_user_with_pr
         final_price=100.0,
         currency="USD",
         country_code="US",
-        insured_age=34,
         start_date=date.today(),
         end_date=date.today() + timedelta(days=365),
         issued_by=user.id

@@ -1,14 +1,14 @@
 import uuid
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.modules.auth.dependencies import get_current_user
 from app.modules.auth.models import User
-from app.modules.emission.models import Client, Policy
+from app.modules.emission.models import Client
 from app.modules.emission.schemas import PolicyResponse
-from app.modules.payments.models import Transaction, PaymentMethod
+from app.modules.payments.models import PaymentMethod
 from app.modules.payments.stripe_client import get_stripe_client, StripeClient
 from app.modules.portal import service as portal_service
 

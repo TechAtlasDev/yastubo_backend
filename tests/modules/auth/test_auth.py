@@ -1,5 +1,4 @@
 import pytest
-import uuid
 from httpx import AsyncClient
 from app.modules.auth.security import create_access_token, decode_token
 

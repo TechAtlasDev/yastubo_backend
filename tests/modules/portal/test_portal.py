@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.emission.state_machine import PolicyStatus
 from app.modules.payments.models import PaymentMethod
 from app.modules.emission.models import Policy
-from app.modules.auth.models import User, Role, UserRole
+from app.modules.auth.models import User, UserRole
 from app.modules.auth.security import create_access_token
 
 @pytest.fixture
@@ -90,7 +90,7 @@ async def test_client_can_set_default_payment_method(client: AsyncClient, client
         headers={"Authorization": f"Bearer {client_user_token}"}
     )
     assert response.status_code == 200
-    assert response.json()["is_default"] == True
+    assert response.json()["is_default"]
 
 @pytest.mark.asyncio
 @patch("app.modules.portal.service.StripeClient")

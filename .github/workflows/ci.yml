@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    env:
+      APP_NAME: Yastubo Backend CI
+      APP_ENV: development
+      DEBUG: "false"
+      DATABASE_URL: sqlite+aiosqlite:///./ci.db
+      DATABASE_URL_SYNC: sqlite+pysqlite:///./ci.db
+      REDIS_URL: redis://localhost:6379
+      SECRET_KEY: ci-secret-key
+      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+      REFRESH_TOKEN_EXPIRE_DAYS: "7"
+      FRONTEND_URL: http://localhost:3000
+      BACKEND_CORS_ORIGINS: '["http://localhost:3000"]'
+      PYTHONPATH: ${{ github.workspace }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Build quality gate (lint + tests)
+        run: uv run python scripts/build.py

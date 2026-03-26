@@ -1,8 +1,6 @@
 import asyncio
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import create_engine, AsyncSession, async_sessionmaker
-from app.core.config import settings
-from app.core.database import engine, SessionLocal
+from app.core.database import SessionLocal
 from app.modules.auth.models import Role, Permission
 
 ROLES_PERMISSIONS = {

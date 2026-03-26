@@ -1,13 +1,12 @@
 import uuid
 from datetime import datetime
-from typing import List, Optional
-from sqlalchemy import select, and_
+from typing import List
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 
 from app.modules.emission.models import Client, Policy, PolicyStatusHistory
-from app.modules.emission import service as emission_service
 from app.modules.emission.state_machine import PolicyStatus, transition
 from app.modules.payments.models import Transaction, PaymentMethod
 from app.modules.payments.stripe_client import StripeClient
@@ -25,6 +24,7 @@ async def get_client_policies(db: AsyncSession, client_id: uuid.UUID) -> List[Po
         select(Policy)
         .where(Policy.client_id == client_id)
         .options(
+            selectinload(Policy.beneficiaries),
             selectinload(Policy.status_history),
             selectinload(Policy.transactions)
         )
@@ -37,6 +37,7 @@ async def get_client_policy_detail(db: AsyncSession, policy_id: uuid.UUID, clien
         select(Policy)
         .where(Policy.id == policy_id, Policy.client_id == client_id)
         .options(
+            selectinload(Policy.beneficiaries),
             selectinload(Policy.status_history),
             selectinload(Policy.transactions)
         )
@@ -117,7 +118,7 @@ async def pay_pending_policy(db: AsyncSession, stripe_client: StripeClient, poli
     
     # Get default PM for user
     pm_res = await db.execute(
-        select(PaymentMethod).where(PaymentMethod.user_id == user_id, PaymentMethod.is_default == True)
+        select(PaymentMethod).where(PaymentMethod.user_id == user_id, PaymentMethod.is_default)
     )
     pm = pm_res.scalar_one_or_none()
     if not pm:

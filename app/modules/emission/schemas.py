@@ -16,6 +16,10 @@ class ClientCreate(BaseModel):
     document_type: str
     document_number: str
     address: Optional[str] = None
+    
+    # New Phase 1 fields
+    acquisition_channel: Optional[str] = None
+    campaign_name: Optional[str] = None
 
     @field_validator("nationality", "country_of_residence")
     @classmethod
@@ -27,12 +31,34 @@ class ClientResponse(ClientCreate):
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
+class BeneficiaryCreate(BaseModel):
+    first_name: str
+    last_name: str
+    date_of_birth: date
+    kinship_type: str = Field(..., description="SELF, SPOUSE, CHILD, PARENT, OTHER")
+    country_of_residence: str = Field(..., min_length=2, max_length=2)
+    location_type: str = "URBAN"
+
+    @field_validator("country_of_residence")
+    @classmethod
+    def uppercase_country_code(cls, v: str) -> str:
+        return v.upper()
+
+class BeneficiaryResponse(BeneficiaryCreate):
+    id: uuid.UUID
+    individual_price: Decimal
+    coverage_status: str
+    deceased_flag: bool
+    model_config = ConfigDict(from_attributes=True)
+
 class EmissionRequest(BaseModel):
     client_id: uuid.UUID
     plan_id: uuid.UUID
     country_code: str = Field(..., min_length=2, max_length=2)
     start_date: date
     notes: Optional[str] = None
+    # Phase 1: Support for multiple beneficiaries
+    beneficiaries: Optional[List[BeneficiaryCreate]] = None
 
     @field_validator("country_code")
     @classmethod
@@ -66,7 +92,7 @@ class PolicyResponse(BaseModel):
     final_price: Decimal
     currency: str
     country_code: str
-    insured_age: int
+    # insured_age: int  # Removed in Phase 1 (moved to beneficiaries)
     start_date: Optional[date]
     end_date: Optional[date]
     pdf_path: Optional[str]
@@ -74,6 +100,7 @@ class PolicyResponse(BaseModel):
     issued_by: uuid.UUID
     issued_at: Optional[datetime]
     client: ClientResponse
+    beneficiaries: List[BeneficiaryResponse]
     status_history: List[StatusHistoryResponse]
     model_config = ConfigDict(from_attributes=True)
 
@@ -85,3 +112,6 @@ class EmissionResponse(BaseModel):
 class StatusTransitionRequest(BaseModel):
     target_status: PolicyStatus
     reason: Optional[str] = None
+
+class DeceasedReport(BaseModel):
+    reported_by: str = Field(..., description="Name or ID of the person/system reporting the death")

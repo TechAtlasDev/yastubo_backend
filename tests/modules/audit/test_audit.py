@@ -3,7 +3,6 @@ import uuid
 from datetime import datetime, timedelta
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.modules.auth.models import User, Role
 from app.modules.audit.models import AuditLog
 from app.modules.auth.security import create_access_token
 
@@ -95,7 +94,6 @@ async def test_audit_list_requires_admin_role(client: AsyncClient, client_token:
 @pytest.mark.asyncio
 async def test_audit_log_contains_ip_address(client: AsyncClient, admin_token: str, db_session: AsyncSession):
     from sqlalchemy import select
-    res = await db_session.execute(select(AuditLog).where(AuditLog.ip_address != None))
-    audit = res.scalars().first()
+    await db_session.execute(select(AuditLog).where(AuditLog.ip_address.is_not(None)))
     # It might be None if test client doesn't set it in a way FastAPI picks up automatically in test env
     # but at least we check it doesn't fail.

@@ -1,6 +1,6 @@
 import asyncio
 import stripe
-from typing import Optional, List, Any
+from typing import Optional
 from app.core.config import settings
 
 class StripeClient:

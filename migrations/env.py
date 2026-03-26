@@ -1,19 +1,19 @@
-import asyncio
+import os
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config, create_engine
+from sqlalchemy import create_engine
 from sqlalchemy import pool
 from alembic import context
 
 # Import our settings and Base
 from app.core.config import settings
 from app.core.database import Base
+
 # Import all models here for autogenerate to work
-from app.shared.base_model import BaseModel
-from app.modules.auth.models import User, Role, Permission, UserRole, role_permissions
-from app.modules.audit.models import AuditLog
-from app.modules.plans.models import Plan, PlanVersion, Coverage, AgeRange, CountryConfig, PlanCoverage
-from app.modules.emission.models import Client, Policy, PolicyStatusHistory
-from app.modules.payments.models import Transaction, PaymentMethod, Subscription, StripeAccount
+from app.modules.auth import models as auth_models
+from app.modules.plans import models as plans_models
+from app.modules.emission import models as emission_models
+from app.modules.payments import models as payments_models
+from app.modules.leads import models as leads_models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -27,8 +27,6 @@ if config.config_file_name is not None:
 # add your model's MetaData object here
 # for 'autogenerate' support
 target_metadata = Base.metadata
-
-import os
 # Set the database URL from settings
 config.set_main_option("sqlalchemy.url", os.getenv("ALEMBIC_DATABASE_URL", settings.DATABASE_URL_SYNC))
 

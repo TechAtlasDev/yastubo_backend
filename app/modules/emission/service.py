@@ -1,7 +1,6 @@
 import uuid
-import os
 import asyncio
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import List, Optional
 from decimal import Decimal
 from sqlalchemy import select, func
@@ -9,16 +8,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
-from app.modules.emission.models import Client, Policy, PolicyStatusHistory
-from app.modules.emission.schemas import ClientCreate, EmissionRequest, StatusTransitionRequest
+from app.modules.emission.models import Client, Policy, PolicyStatusHistory, Beneficiary
+from app.modules.emission.schemas import ClientCreate, EmissionRequest, StatusTransitionRequest, BeneficiaryCreate
 from app.modules.emission import state_machine, pdf_generator
-from app.modules.plans.models import Plan
 from app.modules.plans import service as plans_service
 from app.modules.plans import calculator
 from app.modules.notifications.service import get_notifications_service
 from app.modules.crm.service import sync_policy_to_crm, update_policy_stage_in_crm
 from app.modules.crm.zoho_client import get_zoho_client
 from app.modules.audit.decorator import audited
+from app.core.events import dispatch_event_background
 
 @audited(action="CLIENT_REGISTERED", entity="Client")
 async def register_client(db: AsyncSession, data: ClientCreate, created_by: uuid.UUID) -> Client:
@@ -41,48 +40,111 @@ async def get_client(db: AsyncSession, client_id: uuid.UUID) -> Client:
         raise HTTPException(status_code=404, detail="Client not found")
     return client
 
+def calculate_age(birth_date: date, reference_date: date) -> int:
+    return reference_date.year - birth_date.year - (
+        (reference_date.month, reference_date.day) < (birth_date.month, birth_date.day)
+    )
+
 @audited(action="POLICY_ISSUED", entity="Policy")
 async def issue_policy(db: AsyncSession, data: EmissionRequest, issued_by: uuid.UUID) -> Policy:
     # 1. Get Client
     client = await get_client(db, data.client_id)
+    
+    # NEW PHASE 2: Check or create lead for abandonment tracking
+    from app.modules.leads import service as leads_service
+    from app.modules.leads.schemas import LeadCreate
+    lead = await leads_service.create_or_update_lead(
+        db, 
+        LeadCreate(
+            phone_e164=client.phone,
+            first_name=client.first_name,
+            last_name=client.last_name,
+            email=client.email,
+            country_of_residence=client.country_of_residence,
+            nationality=client.nationality,
+            # Pass marketing attribution if available in client (from registration)
+            acquisition_channel=client.acquisition_channel,
+            campaign_name=client.campaign_name
+        )
+    )
+    # Update lead status to intent
+    from app.modules.leads.schemas import LeadUpdate
+    await leads_service.update_lead(db, lead.id, LeadUpdate(checkout_started=True))
     
     # 2. Get Plan
     plan = await plans_service.get_plan(db, data.plan_id)
     if not plan.is_active:
         raise HTTPException(status_code=400, detail="Plan is inactive")
     
-    # 3. Calculate Age at start_date
-    age = data.start_date.year - client.birth_date.year - ((data.start_date.month, data.start_date.day) < (client.birth_date.month, client.birth_date.day))
-    
-    # 4. Validate eligibility
-    if age > plan.max_entry_age:
-        raise HTTPException(status_code=422, detail=f"Client age {age} exceeds max entry age {plan.max_entry_age}")
+    # 3. Handle Beneficiaries (Default to client if empty)
+    beneficiaries_data = data.beneficiaries
+    if not beneficiaries_data:
+        beneficiaries_data = [
+            BeneficiaryCreate(
+                first_name=client.first_name,
+                last_name=client.last_name,
+                date_of_birth=client.birth_date,
+                kinship_type="SELF",
+                country_of_residence=client.country_of_residence
+            )
+        ]
     
     config = next((cc for cc in plan.country_configs if cc.country_code == data.country_code and cc.is_available), None)
     if not config:
         raise HTTPException(status_code=422, detail=f"Plan not available in country {data.country_code}")
     
-    # 5. Calculate price
+    # 4. Process each beneficiary
     age_ranges = [{"min_age": ar.min_age, "max_age": ar.max_age, "surcharge_percentage": ar.surcharge_percentage} for ar in plan.age_ranges]
     country_override = Decimal(str(config.base_price_override)) if config.base_price_override is not None else None
     
-    try:
-        calc_result = calculator.calculate_price(
-            base_price=Decimal(str(plan.base_price)),
-            age=age,
-            age_ranges=age_ranges,
-            country_override=country_override
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+    total_base_price = Decimal("0.00")
+    total_surcharge = Decimal("0.00")
+    total_final_price = Decimal("0.00")
     
-    # 6. Generate policy number
+    beneficiaries_to_create = []
+    
+    for b_data in beneficiaries_data:
+        age = calculate_age(b_data.date_of_birth, data.start_date)
+        
+        # Validate eligibility
+        if age > plan.max_entry_age:
+            raise HTTPException(
+                status_code=422, 
+                detail=f"Beneficiary {b_data.first_name} age {age} exceeds max entry age {plan.max_entry_age}"
+            )
+            
+        try:
+            calc_result = calculator.calculate_price(
+                base_price=Decimal(str(plan.base_price)),
+                age=age,
+                age_ranges=age_ranges,
+                country_override=country_override
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=f"Error calculating price for {b_data.first_name}: {str(e)}")
+            
+        beneficiary = Beneficiary(
+            first_name=b_data.first_name,
+            last_name=b_data.last_name,
+            date_of_birth=b_data.date_of_birth,
+            kinship_type=b_data.kinship_type,
+            country_of_residence=b_data.country_of_residence,
+            location_type=b_data.location_type,
+            individual_price=float(calc_result["final_price"])
+        )
+        beneficiaries_to_create.append(beneficiary)
+        
+        total_base_price += calc_result["base_price"]
+        total_surcharge += calc_result["age_surcharge_amount"]
+        total_final_price += calc_result["final_price"]
+        
+    # 5. Generate policy number
     year = datetime.now().year
     count_res = await db.execute(select(func.count(Policy.id)))
     counter = count_res.scalar() + 1
     policy_number = f"YAS-{year}-{counter:06d}"
     
-    # 7. Snapshot
+    # 6. Snapshot
     plan_snapshot = {
         "name": plan.name,
         "base_price": float(plan.base_price),
@@ -93,55 +155,61 @@ async def issue_policy(db: AsyncSession, data: EmissionRequest, issued_by: uuid.
         "repatriation_countries": plan.repatriation_countries
     }
     
-    # 8. Create Policy (DRAFT)
+    # 7. Create Policy (DRAFT)
     end_date = data.start_date + timedelta(days=365) # 1 year by default
     policy = Policy(
         policy_number=policy_number,
         client_id=client.id,
+        lead_id=lead.id, # Link lead for Phase 2
         plan_id=plan.id,
         plan_version_snapshot=plan_snapshot,
         status=state_machine.PolicyStatus.DRAFT,
-        base_price=float(calc_result["base_price"]),
-        surcharge_amount=float(calc_result["age_surcharge_amount"]),
-        final_price=float(calc_result["final_price"]),
+        base_price=float(total_base_price),
+        surcharge_amount=float(total_surcharge),
+        final_price=float(total_final_price),
         currency=plan.currency,
         country_code=data.country_code,
-        insured_age=age,
         start_date=data.start_date,
         end_date=end_date,
         notes=data.notes,
         issued_by=issued_by,
         issued_at=datetime.now()
     )
+    
+    # Link beneficiaries
+    for b in beneficiaries_to_create:
+        b.policy = policy
+        db.add(b)
+        
     db.add(policy)
     await db.flush()
     
-    # 9. History (INITIAL -> DRAFT)
+    # 8. History (INITIAL -> DRAFT)
     h1 = PolicyStatusHistory(policy_id=policy.id, from_status=None, to_status=state_machine.PolicyStatus.DRAFT, changed_by=issued_by, reason="Policy creation")
     db.add(h1)
     
-    # 10. Transition to PENDING_PAYMENT
+    # 9. Transition to PENDING_PAYMENT
     old_status = policy.status
     new_status = state_machine.transition(old_status, state_machine.PolicyStatus.PENDING_PAYMENT)
     policy.status = new_status
     
-    # 11. History (DRAFT -> PENDING_PAYMENT)
+    # 10. History (DRAFT -> PENDING_PAYMENT)
     h2 = PolicyStatusHistory(policy_id=policy.id, from_status=old_status, to_status=new_status, changed_by=issued_by, reason="Auto-transition to pending payment")
     db.add(h2)
     
-    # 12. Generate PDF
+    # 11. Generate PDF
     pdf_bytes = pdf_generator.generate_contract_pdf(policy, client, plan_snapshot)
     
-    # 13. Save path
+    # 12. Save path
     policy.pdf_path = f"storage/policies/{policy_number}.pdf"
     
-    # 14. Notifications
+    # 13. Notifications
     notifications = get_notifications_service()
     await notifications.on_policy_issued(policy, client, pdf_bytes)
     
     await db.commit()
 
-    # 15. CRM sync (best-effort, non-blocking)
+    # 14. CRM sync (best-effort, non-blocking)
     asyncio.create_task(
         sync_policy_to_crm(get_zoho_client(), policy, client, plan.name)
     )
@@ -154,6 +222,7 @@ async def get_policy(db: AsyncSession, policy_id: uuid.UUID) -> Policy:
         .where(Policy.id == policy_id)
         .options(
             selectinload(Policy.client),
+            selectinload(Policy.beneficiaries),
             selectinload(Policy.status_history)
         )
     )
@@ -163,7 +232,11 @@ async def get_policy(db: AsyncSession, policy_id: uuid.UUID) -> Policy:
     return policy
 
 async def list_policies(db: AsyncSession, status: Optional[str] = None, client_id: Optional[uuid.UUID] = None) -> List[Policy]:
-    query = select(Policy).options(selectinload(Policy.client), selectinload(Policy.status_history))
+    query = select(Policy).options(
+        selectinload(Policy.client), 
+        selectinload(Policy.beneficiaries),
+        selectinload(Policy.status_history)
+    )
     if status:
         query = query.where(Policy.status == status)
     if client_id:
@@ -198,9 +271,43 @@ async def change_policy_status(db: AsyncSession, policy_id: uuid.UUID, data: Sta
     db.add(history)
     
     await db.commit()
-    await db.refresh(policy, ["status_history"])
+    await db.refresh(policy, ["status_history", "beneficiaries"])
 
     # Best-effort, non-blocking CRM stage update
     asyncio.create_task(update_policy_stage_in_crm(get_zoho_client(), policy))
 
     return policy
+
+async def get_beneficiary(db: AsyncSession, beneficiary_id: uuid.UUID) -> Beneficiary:
+    res = await db.execute(select(Beneficiary).where(Beneficiary.id == beneficiary_id).options(selectinload(Beneficiary.policy)))
+    beneficiary = res.scalar_one_or_none()
+    if not beneficiary:
+        raise HTTPException(status_code=404, detail="Beneficiary not found")
+    return beneficiary
+
+@audited(action="BENEFICIARY_MARKED_DECEASED", entity="Beneficiary")
+async def mark_beneficiary_deceased(db: AsyncSession, beneficiary_id: uuid.UUID, reported_by: str) -> Beneficiary:
+    beneficiary = await get_beneficiary(db, beneficiary_id)
+    
+    if beneficiary.deceased_flag:
+        return beneficiary
+        
+    beneficiary.deceased_flag = True
+    beneficiary.deceased_reported_at = datetime.now()
+    beneficiary.deceased_reported_by = reported_by
+    beneficiary.coverage_status = "DECEASED"
+    
+    # Trigger billing adjustment logic (Integration with Stripe would go here)
+    # For Phase 3, we mark it and notify n8n/Zoho
+    beneficiary.billing_adjustment_confirmed = True # Assume confirmed for now
+    
+    await db.commit()
+    await db.refresh(beneficiary)
+    
+    dispatch_event_background("BENEFICIARY_DECEASED", {
+        "beneficiary_id": str(beneficiary.id),
+        "policy_number": beneficiary.policy.policy_number,
+        "reported_by": reported_by
+    })
+    
+    return beneficiary

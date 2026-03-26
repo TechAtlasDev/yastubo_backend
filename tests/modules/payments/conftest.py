@@ -1,7 +1,6 @@
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 from app.modules.payments.stripe_client import StripeClient, get_stripe_client
-from app.modules.emission.state_machine import PolicyStatus
 
 @pytest.fixture
 def mock_stripe():
