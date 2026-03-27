@@ -42,6 +42,9 @@ class PlanCreate(BaseModel):
     repatriation_countries: List[str]
     terms_es: Optional[str] = None
     terms_en: Optional[str] = None
+    vesting_accidental_days: int = 0
+    vesting_natural_days: int = 180
+    vesting_suicide_days: int = 365
     age_ranges: List[AgeRangeCreate]
     country_configs: List[CountryConfigCreate]
     coverage_ids: List[uuid.UUID]
@@ -56,6 +59,9 @@ class PlanUpdate(BaseModel):
     repatriation_countries: Optional[List[str]] = None
     terms_es: Optional[str] = None
     terms_en: Optional[str] = None
+    vesting_accidental_days: Optional[int] = None
+    vesting_natural_days: Optional[int] = None
+    vesting_suicide_days: Optional[int] = None
     age_ranges: Optional[List[AgeRangeCreate]] = None
     country_configs: Optional[List[CountryConfigCreate]] = None
     coverage_ids: Optional[List[uuid.UUID]] = None
@@ -74,6 +80,9 @@ class PlanResponse(BaseModel):
     repatriation_countries: List[str]
     terms_es: Optional[str]
     terms_en: Optional[str]
+    vesting_accidental_days: int
+    vesting_natural_days: int
+    vesting_suicide_days: int
     coverages: List[CoverageResponse]
     age_ranges: List[AgeRangeCreate]
     country_configs: List[CountryConfigCreate]

@@ -74,6 +74,11 @@ class Plan(BaseModel):
     terms_en: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     stripe_price_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
+    # Vesting Periods (Wait times)
+    vesting_accidental_days: Mapped[int] = mapped_column(Integer, default=0)
+    vesting_natural_days: Mapped[int] = mapped_column(Integer, default=180)
+    vesting_suicide_days: Mapped[int] = mapped_column(Integer, default=365)
+
     versions: Mapped[List["PlanVersion"]] = relationship("PlanVersion", back_populates="plan", cascade="all, delete-orphan")
     coverages: Mapped[List["Coverage"]] = relationship(
         secondary="plan_coverages", back_populates="plans"
