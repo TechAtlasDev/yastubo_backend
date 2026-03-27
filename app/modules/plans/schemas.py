@@ -4,6 +4,7 @@ from typing import List, Optional
 from decimal import Decimal
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
+
 class CoverageCreate(BaseModel):
     name: str
     description: Optional[str] = None
@@ -12,14 +13,17 @@ class CoverageCreate(BaseModel):
     notes_es: Optional[str] = None
     notes_en: Optional[str] = None
 
+
 class CoverageResponse(CoverageCreate):
     id: uuid.UUID
     model_config = ConfigDict(from_attributes=True)
+
 
 class AgeRangeCreate(BaseModel):
     min_age: int
     max_age: int
     surcharge_percentage: Decimal
+
 
 class CountryConfigCreate(BaseModel):
     country_code: str = Field(..., min_length=2, max_length=2)
@@ -31,6 +35,7 @@ class CountryConfigCreate(BaseModel):
     @classmethod
     def uppercase_country_code(cls, v: str) -> str:
         return v.upper()
+
 
 class PlanCreate(BaseModel):
     name: str
@@ -49,6 +54,7 @@ class PlanCreate(BaseModel):
     country_configs: List[CountryConfigCreate]
     coverage_ids: List[uuid.UUID]
 
+
 class PlanUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
@@ -66,9 +72,10 @@ class PlanUpdate(BaseModel):
     country_configs: Optional[List[CountryConfigCreate]] = None
     coverage_ids: Optional[List[uuid.UUID]] = None
 
+
 class PlanResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: uuid.UUID
     name: str
     description: Optional[str]
@@ -89,6 +96,7 @@ class PlanResponse(BaseModel):
     current_version: int = 1
     created_at: datetime
 
+
 class PriceCalculationRequest(BaseModel):
     plan_id: uuid.UUID
     age: int = Field(..., ge=0, le=120)
@@ -99,6 +107,7 @@ class PriceCalculationRequest(BaseModel):
     @classmethod
     def uppercase_country_code(cls, v: str) -> str:
         return v.upper()
+
 
 class PriceCalculationResponse(BaseModel):
     plan_id: uuid.UUID

@@ -10,6 +10,7 @@ from app.modules.audit.schemas import PaginatedAuditResponse
 
 router = APIRouter(prefix="/audit", tags=["Audit"])
 
+
 @router.get("/", response_model=PaginatedAuditResponse)
 async def get_audit_logs(
     user_id: Optional[uuid.UUID] = Query(None),
@@ -21,7 +22,7 @@ async def get_audit_logs(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    admin: bool = Depends(require_role("ADMIN"))
+    admin: bool = Depends(require_role("ADMIN")),
 ):
     items, total = await audit_service.list_audit_logs(
         db=db,
@@ -32,12 +33,7 @@ async def get_audit_logs(
         date_from=date_from,
         date_to=date_to,
         page=page,
-        page_size=page_size
+        page_size=page_size,
     )
-    
-    return {
-        "items": items,
-        "total": total,
-        "page": page,
-        "page_size": page_size
-    }
+
+    return {"items": items, "total": total, "page": page, "page_size": page_size}

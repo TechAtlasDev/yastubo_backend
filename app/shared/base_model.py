@@ -5,15 +5,17 @@ from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
+
 class GUID(TypeDecorator):
     """Platform-independent GUID type.
     Uses PostgreSQL's UUID type, otherwise uses CHAR(36), storing as string.
     """
+
     impl = CHAR
     cache_ok = True
 
     def load_dialect_impl(self, dialect):
-        if dialect.name == 'postgresql':
+        if dialect.name == "postgresql":
             return dialect.type_descriptor(PG_UUID())
         else:
             return dialect.type_descriptor(CHAR(36))
@@ -21,7 +23,7 @@ class GUID(TypeDecorator):
     def process_bind_param(self, value, dialect):
         if value is None:
             return value
-        elif dialect.name == 'postgresql':
+        elif dialect.name == "postgresql":
             return str(value)
         else:
             if not isinstance(value, uuid.UUID):
@@ -38,23 +40,16 @@ class GUID(TypeDecorator):
             else:
                 return value
 
+
 class BaseModel(Base):
     __abstract__ = True
 
     id: Mapped[uuid.UUID] = mapped_column(
-        GUID(),
-        primary_key=True,
-        default=uuid.uuid4,
-        index=True
+        GUID(), primary_key=True, default=uuid.uuid4, index=True
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        server_default=func.now(),
-        nullable=False
+        DateTime, server_default=func.now(), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
     )

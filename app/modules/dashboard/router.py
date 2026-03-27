@@ -7,10 +7,11 @@ from app.modules.dashboard import schemas, service
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
+
 @router.get("/metrics", response_model=schemas.DashboardKPIMetrics)
 async def get_dashboard_metrics(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN"))
+    current_user: User = Depends(require_role("ADMIN")),
 ):
     """
     Get KPI metrics for the current workspace dashboard.

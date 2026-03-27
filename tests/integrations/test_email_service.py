@@ -41,7 +41,9 @@ async def test_email_policy_confirmation_attaches_pdf(mock_httpx):
         currency="USD",
         final_price=50.0,
     )
-    client = SimpleNamespace(first_name="Ana", last_name="Pérez", email="ana@example.com")
+    client = SimpleNamespace(
+        first_name="Ana", last_name="Pérez", email="ana@example.com"
+    )
 
     ok = await service.send_policy_confirmation(policy, client, pdf_bytes=b"pdf-data")
 

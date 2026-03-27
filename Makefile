@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help setup build lint test test-interactive smoke hooks
+.PHONY: help setup build lint test test-interactive smoke hooks cli tui
 
 help:
 	@echo "Comandos disponibles:"
@@ -11,6 +11,7 @@ help:
 	@echo "  make test-interactive # selector interactivo de tests"
 	@echo "  make smoke            # tests de infraestructura"
 	@echo "  make hooks            # instala hooks de pre-commit"
+	@echo "  make cli              # lanza la Yastubo Dev Machine (TUI)"
 
 setup:
 	uv run python scripts/backend_setup.py
@@ -33,3 +34,8 @@ smoke:
 hooks:
 	uv run pre-commit install
 	uv run pre-commit install --hook-type pre-push
+
+cli:
+	uv run python scripts/cli/main.py
+
+tui: cli

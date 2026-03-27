@@ -1,6 +1,7 @@
 from pydantic import BaseModel
-from typing import Dict, List, Optional
+from typing import Dict, List
 from decimal import Decimal
+
 
 class DashboardKPIMetrics(BaseModel):
     total_revenue: Decimal

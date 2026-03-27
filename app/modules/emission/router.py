@@ -1,6 +1,6 @@
 import uuid
 from typing import List, Optional
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, File, Form
 from fastapi.responses import FileResponse, Response
 from app.modules.emission.passbook_service import get_passbook_service, PassbookService
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,62 +12,81 @@ from app.modules.emission import schemas, service
 
 router = APIRouter(prefix="/emission", tags=["Emission"])
 
-@router.post("/clients", response_model=schemas.ClientResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/clients",
+    response_model=schemas.ClientResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def register_client(
     data: schemas.ClientCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN", "VENDEDOR"))
+    current_user: User = Depends(require_role("ADMIN", "VENDEDOR")),
 ):
-    return await service.register_client(db, data, current_user.id)
+    workspace_id = current_user.workspaces[0].id
+    return await service.register_client(db, data, current_user.id, workspace_id)
+
 
 @router.get("/clients/{client_id}", response_model=schemas.ClientResponse)
 async def get_client(
     client_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN", "VENDEDOR"))
+    current_user: User = Depends(require_role("ADMIN", "VENDEDOR")),
 ):
     return await service.get_client(db, client_id)
 
-@router.post("/issue", response_model=schemas.PolicyResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/issue", response_model=schemas.PolicyResponse, status_code=status.HTTP_201_CREATED
+)
 async def issue_policy(
     data: schemas.EmissionRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN", "VENDEDOR"))
+    current_user: User = Depends(require_role("ADMIN", "VENDEDOR")),
 ):
     return await service.issue_policy(db, data, current_user.id)
+
 
 @router.get("/policies", response_model=List[schemas.PolicyResponse])
 async def list_policies(
     status: Optional[str] = None,
     client_id: Optional[uuid.UUID] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN", "VENDEDOR"))
+    current_user: User = Depends(require_role("ADMIN", "VENDEDOR")),
 ):
     return await service.list_policies(db, status=status, client_id=client_id)
+
 
 @router.get("/policies/{policy_id}", response_model=schemas.PolicyResponse)
 async def get_policy(
     policy_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN", "VENDEDOR"))
+    current_user: User = Depends(require_role("ADMIN", "VENDEDOR")),
 ):
     return await service.get_policy(db, policy_id)
+
 
 @router.post("/policies/{policy_id}/transition", response_model=schemas.PolicyResponse)
 async def change_policy_status(
     policy_id: uuid.UUID,
     data: schemas.StatusTransitionRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN"))
+    current_user: User = Depends(require_role("ADMIN")),
 ):
     return await service.change_policy_status(db, policy_id, data, current_user.id)
 
-@router.post("/beneficiaries/{beneficiary_id}/mark-deceased", response_model=schemas.BeneficiaryResponse)
+
+@router.post(
+    "/beneficiaries/{beneficiary_id}/mark-deceased",
+    response_model=schemas.BeneficiaryResponse,
+)
 async def mark_beneficiary_deceased(
     beneficiary_id: uuid.UUID,
     data: schemas.DeceasedReport,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN")) # Only admin/system can mark deceased
+    current_user: User = Depends(
+        require_role("ADMIN")
+    ),  # Only admin/system can mark deceased
 ):
     """
     Mark a beneficiary as deceased.
@@ -80,42 +99,46 @@ async def mark_beneficiary_deceased(
 async def download_policy_pdf(
     policy_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN", "VENDEDOR"))
+    current_user: User = Depends(require_role("ADMIN", "VENDEDOR")),
 ):
     policy = await service.get_policy(db, policy_id)
     if not policy.pdf_path:
         raise HTTPException(status_code=404, detail="PDF not generated for this policy")
-    
+
     return FileResponse(
         path=policy.pdf_path,
         filename=f"{policy.policy_number}.pdf",
-        media_type="application/pdf"
+        media_type="application/pdf",
     )
+
 
 @router.get("/policies/{policy_id}/passbook")
 async def get_policy_passbook(
     policy_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     pass_service: PassbookService = Depends(get_passbook_service),
-    current_user: User = Depends(require_role("ADMIN", "VENDEDOR"))
+    current_user: User = Depends(require_role("ADMIN", "VENDEDOR")),
 ):
     policy = await service.get_policy(db, policy_id)
     if not policy:
         raise HTTPException(status_code=404, detail="Policy not found")
-        
+
     # Multi-tenancy check
     if not any(ws.id == policy.workspace_id for ws in current_user.workspaces):
-         raise HTTPException(status_code=403, detail="You do not have access to this policy")
+        raise HTTPException(
+            status_code=403, detail="You do not have access to this policy"
+        )
 
     pass_bytes = await pass_service.generate_policy_pass(policy, policy.client)
-    
+
     return Response(
         content=pass_bytes,
         media_type="application/vnd.apple.pkpass",
-        headers={"Content-Disposition": f"attachment; filename=policy_{policy.policy_number}.pkpass"}
+        headers={
+            "Content-Disposition": f"attachment; filename=policy_{policy.policy_number}.pkpass"
+        },
     )
 
-from fastapi import UploadFile, File, Form
 
 @router.post("/bulk-upload", response_model=schemas.BulkEmissionResponse)
 async def bulk_upload_beneficiaries(
@@ -126,21 +149,21 @@ async def bulk_upload_beneficiaries(
     notes: Optional[str] = Form(None),
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN", "VENDEDOR"))
+    current_user: User = Depends(require_role("ADMIN", "VENDEDOR")),
 ):
     """
     Bulk upload beneficiaries from an Excel file.
     Expects columns: first_name, last_name, date_of_birth (YYYY-MM-DD), kinship_type, country_of_residence.
     """
     from datetime import datetime
-    
+
     data = schemas.BulkEmissionRequest(
         client_id=client_id,
         plan_id=plan_id,
         country_code=country_code,
         start_date=datetime.strptime(start_date, "%Y-%m-%d").date(),
-        notes=notes
+        notes=notes,
     )
-    
+
     file_content = await file.read()
     return await service.bulk_issue_policy(db, data, file_content, current_user.id)

@@ -7,7 +7,9 @@ from app.core.config import settings
 
 
 class WhatsAppService:
-    def __init__(self, account_sid: str, auth_token: str, from_number: str, enabled: bool):
+    def __init__(
+        self, account_sid: str, auth_token: str, from_number: str, enabled: bool
+    ):
         self.account_sid = account_sid
         self.auth_token = auth_token
         self.from_number = from_number
@@ -18,7 +20,9 @@ class WhatsAppService:
             logger.info("[WHATSAPP-DISABLED] to={} (simulated)", to_phone)
             return True
 
-        to_value = to_phone if to_phone.startswith("whatsapp:") else f"whatsapp:{to_phone}"
+        to_value = (
+            to_phone if to_phone.startswith("whatsapp:") else f"whatsapp:{to_phone}"
+        )
         url = f"https://api.twilio.com/2010-04-01/Accounts/{self.account_sid}/Messages.json"
 
         try:
@@ -33,7 +37,12 @@ class WhatsAppService:
                     },
                 )
             ok = response.status_code == 201
-            logger.info("[WHATSAPP] to={} status_code={} ok={}", to_phone, response.status_code, ok)
+            logger.info(
+                "[WHATSAPP] to={} status_code={} ok={}",
+                to_phone,
+                response.status_code,
+                ok,
+            )
             return ok
         except Exception as exc:
             logger.error("[WHATSAPP] to={} error={}", to_phone, exc)

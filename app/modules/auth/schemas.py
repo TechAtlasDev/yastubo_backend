@@ -3,15 +3,18 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
+
 class UserRegister(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8)
     full_name: str
     phone: Optional[str] = None
 
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -19,9 +22,10 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     expires_in: int  # in seconds
 
+
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: uuid.UUID
     email: EmailStr
     full_name: str
@@ -40,11 +44,13 @@ class UserResponse(BaseModel):
             phone=user.phone,
             is_active=user.is_active,
             roles=roles,
-            created_at=user.created_at
+            created_at=user.created_at,
         )
+
 
 class RefreshRequest(BaseModel):
     refresh_token: str
+
 
 class RoleAssign(BaseModel):
     user_id: uuid.UUID

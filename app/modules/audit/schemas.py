@@ -3,9 +3,10 @@ from datetime import datetime
 from typing import Optional, Any
 from pydantic import BaseModel, ConfigDict
 
+
 class AuditLogResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: uuid.UUID
     action: str
     entity: str
@@ -18,6 +19,7 @@ class AuditLogResponse(BaseModel):
     extra: Optional[dict[str, Any]] = None
     details: Optional[str] = None
     created_at: datetime
+
 
 class PaginatedAuditResponse(BaseModel):
     items: list[AuditLogResponse]

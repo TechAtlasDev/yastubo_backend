@@ -5,6 +5,7 @@ from decimal import Decimal
 from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 from app.modules.emission.state_machine import PolicyStatus
 
+
 class ClientCreate(BaseModel):
     first_name: str
     last_name: str
@@ -16,7 +17,7 @@ class ClientCreate(BaseModel):
     document_type: str
     document_number: str
     address: Optional[str] = None
-    
+
     # New Phase 1 fields
     acquisition_channel: Optional[str] = None
     campaign_name: Optional[str] = None
@@ -26,10 +27,12 @@ class ClientCreate(BaseModel):
     def uppercase_codes(cls, v: str) -> str:
         return v.upper()
 
+
 class ClientResponse(ClientCreate):
     id: uuid.UUID
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
 
 class BeneficiaryCreate(BaseModel):
     first_name: str
@@ -44,12 +47,14 @@ class BeneficiaryCreate(BaseModel):
     def uppercase_country_code(cls, v: str) -> str:
         return v.upper()
 
+
 class BeneficiaryResponse(BeneficiaryCreate):
     id: uuid.UUID
     individual_price: Decimal
     coverage_status: str
     deceased_flag: bool
     model_config = ConfigDict(from_attributes=True)
+
 
 class EmissionRequest(BaseModel):
     client_id: uuid.UUID
@@ -72,6 +77,7 @@ class EmissionRequest(BaseModel):
             raise ValueError("start_date cannot be in the past")
         return v
 
+
 class StatusHistoryResponse(BaseModel):
     id: uuid.UUID
     from_status: Optional[str]
@@ -80,6 +86,7 @@ class StatusHistoryResponse(BaseModel):
     reason: Optional[str]
     changed_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
 
 class PolicyResponse(BaseModel):
     id: uuid.UUID
@@ -104,17 +111,23 @@ class PolicyResponse(BaseModel):
     status_history: List[StatusHistoryResponse]
     model_config = ConfigDict(from_attributes=True)
 
+
 class EmissionResponse(BaseModel):
     policy: PolicyResponse
     pdf_url: str
     message: str
 
+
 class StatusTransitionRequest(BaseModel):
     target_status: PolicyStatus
     reason: Optional[str] = None
 
+
 class DeceasedReport(BaseModel):
-    reported_by: str = Field(..., description="Name or ID of the person/system reporting the death")
+    reported_by: str = Field(
+        ..., description="Name or ID of the person/system reporting the death"
+    )
+
 
 class BulkEmissionRequest(BaseModel):
     client_id: uuid.UUID
@@ -122,6 +135,7 @@ class BulkEmissionRequest(BaseModel):
     country_code: str = Field(..., min_length=2, max_length=2)
     start_date: date
     notes: Optional[str] = None
+
 
 class BulkEmissionResponse(BaseModel):
     policy_id: uuid.UUID

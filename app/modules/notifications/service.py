@@ -1,7 +1,10 @@
 from typing import Optional
 
 from app.modules.notifications.email_service import EmailService, get_email_service
-from app.modules.notifications.whatsapp_service import WhatsAppService, get_whatsapp_service
+from app.modules.notifications.whatsapp_service import (
+    WhatsAppService,
+    get_whatsapp_service,
+)
 
 
 class NotificationsService:

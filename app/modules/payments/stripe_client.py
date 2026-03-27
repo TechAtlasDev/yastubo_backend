@@ -3,6 +3,7 @@ import stripe
 from typing import Optional
 from app.core.config import settings
 
+
 class StripeClient:
     def __init__(self, api_key: str):
         self.api_key = api_key
@@ -10,28 +11,32 @@ class StripeClient:
 
     async def create_customer(self, email: str, name: str, metadata: dict) -> dict:
         return await asyncio.to_thread(
-            stripe.Customer.create,
-            email=email,
-            name=name,
-            metadata=metadata
+            stripe.Customer.create, email=email, name=name, metadata=metadata
         )
 
-    async def create_payment_intent(self, amount_cents: int, currency: str,
-                                    customer_id: str, payment_method_id: Optional[str],
-                                    metadata: dict) -> dict:
+    async def create_payment_intent(
+        self,
+        amount_cents: int,
+        currency: str,
+        customer_id: str,
+        payment_method_id: Optional[str],
+        metadata: dict,
+    ) -> dict:
         params = {
             "amount": amount_cents,
             "currency": currency,
             "customer": customer_id,
             "metadata": metadata,
-            "automatic_payment_methods": {"enabled": True, "allow_redirects": "always"}
+            "automatic_payment_methods": {"enabled": True, "allow_redirects": "always"},
         }
         if payment_method_id:
             params["payment_method"] = payment_method_id
-            
+
         return await asyncio.to_thread(stripe.PaymentIntent.create, **params)
 
-    async def confirm_payment_intent(self, pi_id: str, payment_method_id: Optional[str] = None) -> dict:
+    async def confirm_payment_intent(
+        self, pi_id: str, payment_method_id: Optional[str] = None
+    ) -> dict:
         params = {}
         if payment_method_id:
             params["payment_method"] = payment_method_id
@@ -41,42 +46,45 @@ class StripeClient:
             **params,
         )
 
-    async def create_subscription(self, customer_id: str, price_id: str,
-                                   payment_method_id: str, metadata: dict,
-                                   connect_account_id: Optional[str] = None,
-                                   application_fee_percent: Optional[float] = None) -> dict:
+    async def create_subscription(
+        self,
+        customer_id: str,
+        price_id: str,
+        payment_method_id: str,
+        metadata: dict,
+        connect_account_id: Optional[str] = None,
+        application_fee_percent: Optional[float] = None,
+    ) -> dict:
         # First attach PM to customer
         await asyncio.to_thread(
-            stripe.PaymentMethod.attach,
-            payment_method_id,
-            customer=customer_id
+            stripe.PaymentMethod.attach, payment_method_id, customer=customer_id
         )
         # Set as default
         await asyncio.to_thread(
             stripe.Customer.modify,
             customer_id,
-            invoice_settings={"default_payment_method": payment_method_id}
+            invoice_settings={"default_payment_method": payment_method_id},
         )
-        
+
         params = {
             "customer": customer_id,
             "items": [{"price": price_id}],
             "metadata": metadata,
-            "expand": ["latest_invoice.payment_intent"]
+            "expand": ["latest_invoice.payment_intent"],
         }
-        
+
         if connect_account_id:
             params["application_fee_percent"] = application_fee_percent
             params["transfer_data"] = {"destination": connect_account_id}
-            
+
         return await asyncio.to_thread(stripe.Subscription.create, **params)
 
-    async def cancel_subscription(self, subscription_id: str, at_period_end: bool) -> dict:
+    async def cancel_subscription(
+        self, subscription_id: str, at_period_end: bool
+    ) -> dict:
         if at_period_end:
             return await asyncio.to_thread(
-                stripe.Subscription.modify,
-                subscription_id,
-                cancel_at_period_end=True
+                stripe.Subscription.modify, subscription_id, cancel_at_period_end=True
             )
         else:
             return await asyncio.to_thread(stripe.Subscription.delete, subscription_id)
@@ -90,10 +98,12 @@ class StripeClient:
                 "card_payments": {"requested": True},
                 "transfers": {"requested": True},
             },
-            metadata=metadata
+            metadata=metadata,
         )
 
-    async def create_account_link(self, account_id: str, refresh_url: str, return_url: str) -> dict:
+    async def create_account_link(
+        self, account_id: str, refresh_url: str, return_url: str
+    ) -> dict:
         return await asyncio.to_thread(
             stripe.AccountLink.create,
             account=account_id,
@@ -102,10 +112,14 @@ class StripeClient:
             type="account_onboarding",
         )
 
-    async def construct_webhook_event(self, payload: bytes, sig_header: str, secret: str) -> dict:
+    async def construct_webhook_event(
+        self, payload: bytes, sig_header: str, secret: str
+    ) -> dict:
         return stripe.Webhook.construct_event(payload, sig_header, secret)
 
+
 _stripe_instance: Optional[StripeClient] = None
+
 
 def get_stripe_client() -> StripeClient:
     global _stripe_instance

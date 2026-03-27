@@ -1,9 +1,7 @@
 import os
-import uuid
-import json
 from typing import Optional
 from app.modules.emission.models import Policy, Client
-from app.core.config import settings
+
 
 class PassbookService:
     def __init__(self):
@@ -29,10 +27,12 @@ class PassbookService:
         #     }
         # }
         # return pkpass.sign(pass_info, cert, key)
-        
+
         return b"MOCK_PKPASS_CONTENT_FOR_YASTUBO_V2"
 
+
 _passbook_service: Optional[PassbookService] = None
+
 
 def get_passbook_service() -> PassbookService:
     global _passbook_service

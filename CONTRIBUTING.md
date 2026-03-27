@@ -21,6 +21,9 @@ app/modules/mi_modulo/
 └── router.py   # Endpoints FastAPI y dependencias de Auth
 ```
 
+> [!TIP]
+> **🚀 Usa el CLI (Yastubo Dev Machine):** No crees módulos a mano. Ejecuta `make cli`, ve a la pestaña **Modules** y usa el **Scaffolder** para generar esta estructura automáticamente.
+
 ## 3. Reglas de Asincronía y Rendimiento
 Somos una API de alto rendimiento.
 *   **Async/Await:** Todas las operaciones de I/O (DB, Redis, API Externas) **deben** ser asíncronas.

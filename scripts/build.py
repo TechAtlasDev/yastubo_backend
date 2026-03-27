@@ -35,9 +35,13 @@ def run_step(name: str, cmd: list[str]) -> bool:
 
     console.print("[red]✗ FAIL[/red]")
     if completed.stdout.strip():
-        console.print(Panel(completed.stdout.strip(), title="stdout", border_style="yellow"))
+        console.print(
+            Panel(completed.stdout.strip(), title="stdout", border_style="yellow")
+        )
     if completed.stderr.strip():
-        console.print(Panel(completed.stderr.strip(), title="stderr", border_style="red"))
+        console.print(
+            Panel(completed.stderr.strip(), title="stderr", border_style="red")
+        )
     return False
 
 
@@ -51,7 +55,9 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.lint_only and args.tests_only:
-        console.print("[red]No puedes usar --lint-only y --tests-only al mismo tiempo.[/red]")
+        console.print(
+            "[red]No puedes usar --lint-only y --tests-only al mismo tiempo.[/red]"
+        )
         return 2
 
     steps: list[tuple[str, list[str]]] = []
@@ -83,7 +89,9 @@ def main() -> int:
 
     all_ok = all(ok for _, ok in summary) and len(summary) == len(steps)
     if all_ok:
-        console.print("[bold green]Build exitoso: calidad y tests en verde.[/bold green]")
+        console.print(
+            "[bold green]Build exitoso: calidad y tests en verde.[/bold green]"
+        )
         return 0
 
     console.print("[bold red]Build fallido. Revisa los errores arriba.[/bold red]")

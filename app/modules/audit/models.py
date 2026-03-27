@@ -3,16 +3,25 @@ from typing import Optional, Any
 from sqlalchemy import String, ForeignKey, JSON, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from app.shared.base_model import BaseModel, GUID
-from sqlalchemy import String, ForeignKey, JSON, Index
+
 
 class AuditLog(BaseModel):
     __tablename__ = "audit_logs"
 
-    workspace_id: Mapped[Optional[uuid.UUID]] = mapped_column(GUID(), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
+    workspace_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        GUID(),
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     action: Mapped[str] = mapped_column(String(100), nullable=False)
     entity: Mapped[str] = mapped_column(String(100), nullable=False)
-    entity_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True, index=True)
-    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    entity_id: Mapped[Optional[str]] = mapped_column(
+        String(36), nullable=True, index=True
+    )
+    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id"), nullable=True
+    )
     ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
     user_agent: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     old_values: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)

@@ -30,7 +30,9 @@ def run_step(title: str, command: list[str]) -> tuple[bool, str]:
 
     console.print("[red]✗ ERROR[/red]")
     if completed.stderr:
-        console.print(Panel(completed.stderr.strip(), title="stderr", border_style="red"))
+        console.print(
+            Panel(completed.stderr.strip(), title="stderr", border_style="red")
+        )
     return False, completed.stderr.strip()
 
 
@@ -55,10 +57,20 @@ def main() -> int:
         description="Instala e inicializa el backend de Yastubo con un solo comando.",
     )
     parser.add_argument("--skip-sync", action="store_true", help="No ejecutar uv sync")
-    parser.add_argument("--skip-migrations", action="store_true", help="No ejecutar alembic upgrade head")
-    parser.add_argument("--skip-seed", action="store_true", help="No ejecutar scripts/seed_roles.py")
-    parser.add_argument("--skip-smoke-test", action="store_true", help="No ejecutar tests/test_infra.py")
-    parser.add_argument("--skip-hooks", action="store_true", help="No instalar hooks de pre-commit")
+    parser.add_argument(
+        "--skip-migrations",
+        action="store_true",
+        help="No ejecutar alembic upgrade head",
+    )
+    parser.add_argument(
+        "--skip-seed", action="store_true", help="No ejecutar scripts/seed_roles.py"
+    )
+    parser.add_argument(
+        "--skip-smoke-test", action="store_true", help="No ejecutar tests/test_infra.py"
+    )
+    parser.add_argument(
+        "--skip-hooks", action="store_true", help="No instalar hooks de pre-commit"
+    )
 
     args = parser.parse_args()
 
@@ -81,7 +93,9 @@ def main() -> int:
             return 1
 
     if not args.skip_hooks:
-        ok, _ = run_step("Instalando hook pre-commit", ["uv", "run", "pre-commit", "install"])
+        ok, _ = run_step(
+            "Instalando hook pre-commit", ["uv", "run", "pre-commit", "install"]
+        )
         results.append(("pre-commit install", ok))
         if not ok:
             return 1
@@ -95,19 +109,27 @@ def main() -> int:
             return 1
 
     if not args.skip_migrations:
-        ok, _ = run_step("Aplicando migraciones", ["uv", "run", "alembic", "upgrade", "head"])
+        ok, _ = run_step(
+            "Aplicando migraciones", ["uv", "run", "alembic", "upgrade", "head"]
+        )
         results.append(("alembic upgrade head", ok))
         if not ok:
             return 1
 
     if not args.skip_seed:
-        ok, _ = run_step("Sembrando roles y permisos", ["uv", "run", "python", "scripts/seed_roles.py"])
+        ok, _ = run_step(
+            "Sembrando roles y permisos",
+            ["uv", "run", "python", "scripts/seed_roles.py"],
+        )
         results.append(("seed_roles.py", ok))
         if not ok:
             return 1
 
     if not args.skip_smoke_test:
-        ok, _ = run_step("Ejecutando smoke test", ["uv", "run", "pytest", "tests/test_infra.py", "-q"])
+        ok, _ = run_step(
+            "Ejecutando smoke test",
+            ["uv", "run", "pytest", "tests/test_infra.py", "-q"],
+        )
         results.append(("pytest tests/test_infra.py -q", ok))
         if not ok:
             return 1
@@ -120,7 +142,9 @@ def main() -> int:
 
     console.print(table)
     console.print("[bold green]Backend listo.[/bold green]")
-    console.print("[dim]Comando sugerido para correr API: uv run uvicorn app.main:app --reload[/dim]")
+    console.print(
+        "[dim]Comando sugerido para correr API: uv run uvicorn app.main:app --reload[/dim]"
+    )
     return 0
 
 

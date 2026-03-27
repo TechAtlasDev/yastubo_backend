@@ -34,8 +34,7 @@ def run_pytest(extra_args: list[str]) -> int:
 def menu() -> int:
     console.print(
         Panel(
-            "[bold]Yastubo Test Console[/bold]\n"
-            "Selecciona qué quieres testear",
+            "[bold]Yastubo Test Console[/bold]\nSelecciona qué quieres testear",
             border_style="magenta",
         )
     )
@@ -53,7 +52,9 @@ def menu() -> int:
         table.add_row("0", "Salir")
         console.print(table)
 
-        option = Prompt.ask("Elige una opción", choices=["0", "1", "2", "3", "4", "5", "6"], default="2")
+        option = Prompt.ask(
+            "Elige una opción", choices=["0", "1", "2", "3", "4", "5", "6"], default="2"
+        )
 
         args: list[str] = ["-v"]
 
@@ -67,13 +68,20 @@ def menu() -> int:
             module = Prompt.ask("Módulo", choices=list(MODULE_PATHS.keys()))
             args.insert(0, MODULE_PATHS[module])
         elif option == "3":
-            file_path = Prompt.ask("Ruta del archivo de test", default="tests/modules/plans/test_plans.py")
+            file_path = Prompt.ask(
+                "Ruta del archivo de test", default="tests/modules/plans/test_plans.py"
+            )
             args.insert(0, file_path)
         elif option == "4":
-            node_id = Prompt.ask("Node id", default="tests/modules/plans/test_plans.py::test_create_plan_as_admin_returns_201")
+            node_id = Prompt.ask(
+                "Node id",
+                default="tests/modules/plans/test_plans.py::test_create_plan_as_admin_returns_201",
+            )
             args.insert(0, node_id)
         elif option == "5":
-            target = Prompt.ask("Target (archivo/carpeta)", default="tests/modules/payments/")
+            target = Prompt.ask(
+                "Target (archivo/carpeta)", default="tests/modules/payments/"
+            )
             keyword = Prompt.ask("Expresión -k", default="webhook and failed")
             args = [target, "-k", keyword, "-v"]
         elif option == "6":
@@ -98,8 +106,12 @@ def menu() -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Runner de tests interactivo con Rich")
-    parser.add_argument("--all", action="store_true", help="Ejecutar toda la suite sin menú")
-    parser.add_argument("--module", choices=list(MODULE_PATHS.keys()), help="Ejecutar un módulo")
+    parser.add_argument(
+        "--all", action="store_true", help="Ejecutar toda la suite sin menú"
+    )
+    parser.add_argument(
+        "--module", choices=list(MODULE_PATHS.keys()), help="Ejecutar un módulo"
+    )
     parser.add_argument("--target", help="Ruta o node id específico")
     parser.add_argument("-k", "--keyword", help="Filtro por expresión -k")
     parser.add_argument("--fail-fast", action="store_true", help="Agregar -x")

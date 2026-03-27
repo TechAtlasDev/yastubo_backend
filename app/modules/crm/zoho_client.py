@@ -8,7 +8,14 @@ from app.core.config import settings
 
 
 class ZohoClient:
-    def __init__(self, client_id: str, client_secret: str, refresh_token: str, base_url: str, enabled: bool):
+    def __init__(
+        self,
+        client_id: str,
+        client_secret: str,
+        refresh_token: str,
+        base_url: str,
+        enabled: bool,
+    ):
         self.client_id = client_id
         self.client_secret = client_secret
         self.refresh_token = refresh_token
@@ -22,7 +29,11 @@ class ZohoClient:
             return "disabled"
 
         now = datetime.now(timezone.utc)
-        if self._access_token and self._token_expires_at and now < self._token_expires_at:
+        if (
+            self._access_token
+            and self._token_expires_at
+            and now < self._token_expires_at
+        ):
             return self._access_token
 
         async with httpx.AsyncClient(timeout=15.0) as client:

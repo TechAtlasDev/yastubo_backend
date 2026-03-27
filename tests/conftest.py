@@ -14,10 +14,8 @@ from app.core.database import Base, get_db
 from app.core.redis import get_redis
 from app.modules.auth.models import User, Role, UserRole
 from app.modules.auth.security import get_password_hash, create_access_token
-from app.modules.plans.models import Coverage, Plan, AgeRange, CountryConfig
-from app.modules.emission.models import Client, Policy, Beneficiary
-from app.modules.leads.models import Lead
-from app.modules.payments.models import Subscription, Transaction
+from app.modules.plans.models import Coverage
+from app.modules.workspaces.models import Workspace, UserWorkspace
 
 # Register UUID adapter and converter for SQLite
 sqlite3.register_adapter(uuid.UUID, lambda u: u.hex)
@@ -26,11 +24,13 @@ sqlite3.register_converter("GUID", lambda b: uuid.UUID(b.decode()))
 # Use SQLite in-memory for testing
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
+
 @pytest.fixture(scope="session")
 def event_loop():
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
+
 
 @pytest.fixture(scope="session")
 async def test_engine():
@@ -39,29 +39,31 @@ async def test_engine():
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        
+
     yield engine
     await engine.dispose()
+
 
 @pytest.fixture(autouse=True)
 def patch_session_local(db_session, monkeypatch):
     from app.modules.payments import router
     from contextlib import asynccontextmanager
-    
+
     @asynccontextmanager
     async def mock_session_local():
         yield db_session
-        
+
     monkeypatch.setattr(router, "SessionLocal", mock_session_local)
+
 
 @pytest.fixture
 async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
     connection = await test_engine.connect()
     transaction = await connection.begin()
-    
+
     AsyncSessionLocal = async_sessionmaker(
         bind=connection,
         class_=AsyncSession,
@@ -75,15 +77,18 @@ async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
     await transaction.rollback()
     await connection.close()
 
+
 @pytest.fixture
 async def redis_client():
     client = FakeAsyncRedis(decode_responses=True)
     yield client
     await client.close()
 
+
 @pytest.fixture(scope="session")
 def app():
     return fastapi_app
+
 
 @pytest.fixture
 async def client(db_session, redis_client) -> AsyncGenerator[AsyncClient, None]:
@@ -95,14 +100,14 @@ async def client(db_session, redis_client) -> AsyncGenerator[AsyncClient, None]:
 
     fastapi_app.dependency_overrides[get_db] = override_get_db
     fastapi_app.dependency_overrides[get_redis] = override_get_redis
-    
+
     async with AsyncClient(
-        transport=ASGITransport(app=fastapi_app), 
-        base_url="http://test"
+        transport=ASGITransport(app=fastapi_app), base_url="http://test"
     ) as ac:
         yield ac
-    
+
     fastapi_app.dependency_overrides.clear()
+
 
 # Shared Auth Fixtures
 @pytest.fixture
@@ -112,6 +117,7 @@ async def roles(db_session):
     for name in role_names:
         # Check if exists
         from sqlalchemy import select
+
         res = await db_session.execute(select(Role).where(Role.name == name))
         role = res.scalar_one_or_none()
         if not role:
@@ -121,10 +127,29 @@ async def roles(db_session):
         roles_dict[name] = role
     return roles_dict
 
+
 @pytest.fixture
-async def admin_user(db_session, roles):
+async def default_workspace(db_session):
     from sqlalchemy import select
-    res = await db_session.execute(select(User).where(User.email == "admin@yastubo.com"))
+
+    res = await db_session.execute(
+        select(Workspace).where(Workspace.slug == "yastubo-default")
+    )
+    workspace = res.scalar_one_or_none()
+    if not workspace:
+        workspace = Workspace(name="Yastubo Default", slug="yastubo-default")
+        db_session.add(workspace)
+        await db_session.commit()
+    return workspace
+
+
+@pytest.fixture
+async def admin_user(db_session, roles, default_workspace):
+    from sqlalchemy import select
+
+    res = await db_session.execute(
+        select(User).where(User.email == "admin@yastubo.com")
+    )
     user = res.scalar_one_or_none()
     if not user:
         user = User(
@@ -132,21 +157,39 @@ async def admin_user(db_session, roles):
             hashed_password=get_password_hash("password123"),
             full_name="Admin User",
             is_active=True,
-            is_verified=True
+            is_verified=True,
         )
         db_session.add(user)
         await db_session.flush()
-        
+
         user_role = UserRole(user_id=user.id, role_id=roles["ADMIN"].id)
         db_session.add(user_role)
-        await db_session.commit()
-        await db_session.refresh(user, ["roles"])
+
+    # Always ensure workspace link
+    ws_res = await db_session.execute(
+        select(UserWorkspace).where(
+            UserWorkspace.user_id == user.id,
+            UserWorkspace.workspace_id == default_workspace.id,
+        )
+    )
+    if not ws_res.scalar_one_or_none():
+        user_ws = UserWorkspace(
+            user_id=user.id, workspace_id=default_workspace.id, is_owner=True
+        )
+        db_session.add(user_ws)
+
+    await db_session.commit()
+    await db_session.refresh(user, ["roles", "workspaces"])
     return user
 
+
 @pytest.fixture
-async def client_user(db_session, roles):
+async def client_user(db_session, roles, default_workspace):
     from sqlalchemy import select
-    res = await db_session.execute(select(User).where(User.email == "client@yastubo.com"))
+
+    res = await db_session.execute(
+        select(User).where(User.email == "client@yastubo.com")
+    )
     user = res.scalar_one_or_none()
     if not user:
         user = User(
@@ -154,16 +197,31 @@ async def client_user(db_session, roles):
             hashed_password=get_password_hash("password123"),
             full_name="Client User",
             is_active=True,
-            is_verified=True
+            is_verified=True,
         )
         db_session.add(user)
         await db_session.flush()
-        
+
         user_role = UserRole(user_id=user.id, role_id=roles["CLIENTE"].id)
         db_session.add(user_role)
-        await db_session.commit()
-        await db_session.refresh(user, ["roles"])
+
+    # Always ensure workspace link
+    ws_res = await db_session.execute(
+        select(UserWorkspace).where(
+            UserWorkspace.user_id == user.id,
+            UserWorkspace.workspace_id == default_workspace.id,
+        )
+    )
+    if not ws_res.scalar_one_or_none():
+        user_ws = UserWorkspace(
+            user_id=user.id, workspace_id=default_workspace.id, is_owner=False
+        )
+        db_session.add(user_ws)
+
+    await db_session.commit()
+    await db_session.refresh(user, ["roles", "workspaces"])
     return user
+
 
 # Shared Plan Fixtures
 @pytest.fixture
@@ -172,12 +230,13 @@ async def coverage(db_session):
         name="Repatriación",
         description="Traslado de restos",
         limit_amount=5000.00,
-        limit_unit="USD"
+        limit_unit="USD",
     )
     db_session.add(coverage)
     await db_session.commit()
     await db_session.refresh(coverage)
     return coverage
+
 
 @pytest.fixture
 def plan_payload(coverage):
@@ -193,43 +252,62 @@ def plan_payload(coverage):
         "terms_en": "Terms in english",
         "age_ranges": [
             {"min_age": 0, "max_age": 30, "surcharge_percentage": 0},
-            {"min_age": 31, "max_age": 65, "surcharge_percentage": 20}
+            {"min_age": 31, "max_age": 65, "surcharge_percentage": 20},
         ],
         "country_configs": [
-            {"country_code": "CO", "country_name": "Colombia", "base_price_override": None, "is_available": True},
-            {"country_code": "MX", "country_name": "México", "base_price_override": 60.00, "is_available": True}
+            {
+                "country_code": "CO",
+                "country_name": "Colombia",
+                "base_price_override": None,
+                "is_available": True,
+            },
+            {
+                "country_code": "MX",
+                "country_name": "México",
+                "base_price_override": 60.00,
+                "is_available": True,
+            },
         ],
-        "coverage_ids": [str(coverage.id)]
+        "coverage_ids": [str(coverage.id)],
     }
+
 
 @pytest.fixture
 async def created_plan(client: AsyncClient, admin_user, plan_payload):
-    token = create_access_token({"sub": str(admin_user.id), "roles": ["ADMIN"], "type": "access"})
+    token = create_access_token(
+        {"sub": str(admin_user.id), "roles": ["ADMIN"], "type": "access"}
+    )
     headers = {"Authorization": f"Bearer {token}"}
     response = await client.post("/api/v1/plans/", json=plan_payload, headers=headers)
     assert response.status_code == 201
     return response.json()
 
+
 # Shared Emission Fixtures
 @pytest.fixture
 async def test_client(client: AsyncClient, admin_user):
-    token = create_access_token({"sub": str(admin_user.id), "roles": ["ADMIN"], "type": "access"})
+    token = create_access_token(
+        {"sub": str(admin_user.id), "roles": ["ADMIN"], "type": "access"}
+    )
     headers = {"Authorization": f"Bearer {token}"}
     payload = {
         "first_name": "Juan",
         "last_name": "Pérez",
         "email": f"juan.{uuid.uuid4().hex[:8]}@example.com",
         "phone": "+573001234567",
-        "birth_date": str(date.today() - timedelta(days=30*365)), # 30 years old
+        "birth_date": str(date.today() - timedelta(days=30 * 365)),  # 30 years old
         "nationality": "CO",
         "country_of_residence": "MX",
         "document_type": "PASSPORT",
         "document_number": "P1234567",
-        "address": "Calle 123, Ciudad de México"
+        "address": "Calle 123, Ciudad de México",
     }
-    response = await client.post("/api/v1/emission/clients", json=payload, headers=headers)
+    response = await client.post(
+        "/api/v1/emission/clients", json=payload, headers=headers
+    )
     assert response.status_code == 201
     return response.json()
+
 
 @pytest.fixture
 def emission_request_payload(test_client, created_plan):
@@ -238,16 +316,25 @@ def emission_request_payload(test_client, created_plan):
         "plan_id": created_plan["id"],
         "country_code": "MX",
         "start_date": str(date.today() + timedelta(days=1)),
-        "notes": "Prueba de emisión"
+        "notes": "Prueba de emisión",
     }
+
 
 @pytest.fixture
 async def issued_policy(client: AsyncClient, admin_user, emission_request_payload):
-    token = create_access_token({"sub": str(admin_user.id), "roles": ["ADMIN"], "type": "access"})
+    token = create_access_token(
+        {"sub": str(admin_user.id), "roles": ["ADMIN"], "type": "access"}
+    )
     headers = {"Authorization": f"Bearer {token}"}
     # Mock weasyprint PDF generation
     from unittest.mock import patch
-    with patch("app.modules.emission.pdf_generator.generate_contract_pdf", return_value=b"%PDF-1.4 mock content"):
-        response = await client.post("/api/v1/emission/issue", json=emission_request_payload, headers=headers)
+
+    with patch(
+        "app.modules.emission.pdf_generator.generate_contract_pdf",
+        return_value=b"%PDF-1.4 mock content",
+    ):
+        response = await client.post(
+            "/api/v1/emission/issue", json=emission_request_payload, headers=headers
+        )
         assert response.status_code == 201
         return response.json()

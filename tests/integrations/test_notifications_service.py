@@ -10,7 +10,9 @@ async def test_on_policy_issued_calls_email_and_whatsapp(notifications_service):
     client = SimpleNamespace(first_name="Ana")
 
     notifications_service.email.send_policy_confirmation = AsyncMock(return_value=True)
-    notifications_service.whatsapp.send_policy_confirmation_wa = AsyncMock(return_value=True)
+    notifications_service.whatsapp.send_policy_confirmation_wa = AsyncMock(
+        return_value=True
+    )
 
     await notifications_service.on_policy_issued(policy, client, b"pdf")
 
@@ -24,9 +26,15 @@ async def test_on_payment_failed_twice_sends_whatsapp_reminder(notifications_ser
     client = SimpleNamespace(first_name="Ana")
 
     notifications_service.email.send_payment_failed = AsyncMock(return_value=True)
-    notifications_service.whatsapp.send_payment_reminder_wa = AsyncMock(return_value=True)
+    notifications_service.whatsapp.send_payment_reminder_wa = AsyncMock(
+        return_value=True
+    )
 
     await notifications_service.on_payment_failed(policy, client, attempt=2)
 
-    notifications_service.email.send_payment_failed.assert_awaited_once_with(policy, client, 2)
-    notifications_service.whatsapp.send_payment_reminder_wa.assert_awaited_once_with(policy, client)
+    notifications_service.email.send_payment_failed.assert_awaited_once_with(
+        policy, client, 2
+    )
+    notifications_service.whatsapp.send_payment_reminder_wa.assert_awaited_once_with(
+        policy, client
+    )

@@ -2,12 +2,10 @@ from typing import Literal, List
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=True,
-        extra="ignore"
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=True, extra="ignore"
     )
 
     APP_NAME: str = "Yastubo Backend"
@@ -30,13 +28,13 @@ class Settings(BaseSettings):
     STRIPE_SECRET_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
     STRIPE_CONNECT_CLIENT_ID: str = ""
-    
+
     # Google Gemini
     GOOGLE_API_KEY: str = ""
-    
+
     # ElevenLabs
     ELEVENLABS_API_KEY: str = ""
-    ELEVENLABS_VOICE_ID: str = "21m00Tcm4TlvDq8ikWAM" # Default Rachel
+    ELEVENLABS_VOICE_ID: str = "21m00Tcm4TlvDq8ikWAM"  # Default Rachel
 
     # External integrations feature flags
     NOTIFICATIONS_ENABLED: bool = False
@@ -73,5 +71,6 @@ class Settings(BaseSettings):
         elif isinstance(v, (list, str)):
             return v
         raise ValueError(v)
+
 
 settings = Settings()

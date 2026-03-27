@@ -3,6 +3,7 @@ import logging
 from loguru import logger
 from app.core.config import settings
 
+
 def setup_logging():
     # Remove default handler
     logger.remove()
@@ -28,10 +29,12 @@ def setup_logging():
                 frame = frame.f_back
                 depth += 1
 
-            logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
+            logger.opt(depth=depth, exception=record.exc_info).log(
+                level, record.getMessage()
+            )
 
     logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
-    
+
     # Silence some verbose loggers
     for logger_name in ("uvicorn.access", "uvicorn.error", "sqlalchemy.engine"):
         logging.getLogger(logger_name).handlers = [InterceptHandler()]

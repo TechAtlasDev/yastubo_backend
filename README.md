@@ -9,6 +9,22 @@ Backend monolítico modular para gestión de planes funerarios.
 - MySQL + Redis
 - Alembic
 - pytest + ruff
+- Textual (TUI)
+
+## Yastubo Dev Machine (CLI) 🚀
+
+Para centralizar el desarrollo, usamos una interfaz interactiva en la terminal que permite gestionar módulos, ejecutar tests y lanzar la documentación.
+
+```bash
+make cli
+```
+
+**Funcionalidades:**
+- **Dashboard:** Estado del sistema y checks de entorno.
+- **Modules (Scaffolder):** Crea nuevos módulos con la arquitectura oficial.
+- **Testing:** Runner visual para pytest por módulos.
+- **Docs:** Lanzar el servidor de Starlight (Astro).
+- **Ops:** Atajos de infraestructura.
 
 ## Instalación y configuración rápida
 
@@ -96,6 +112,7 @@ make lint
 make test
 make test-interactive
 make hooks
+make cli              # Yastubo Dev Machine
 ```
 
 ## Cómo aseguramos lint siempre

@@ -7,20 +7,27 @@ from app.modules.auth.models import User, Role, UserRole
 from app.modules.auth.security import get_password_hash, create_access_token
 from app.modules.emission.models import Client, Policy
 from app.modules.emission.state_machine import PolicyStatus
+from app.modules.workspaces.models import Workspace, UserWorkspace
+
 
 @pytest_asyncio.fixture
 async def client_user_with_profile(db_session: AsyncSession):
+    # 0. Ensure Workspace exists
+    workspace = Workspace(name="Test Workspace", slug=f"ws_{uuid.uuid4().hex[:6]}")
+    db_session.add(workspace)
+    await db_session.flush()
+
     # 1. Create User
     email = f"client_{uuid.uuid4().hex[:6]}@example.com"
     user = User(
         email=email,
         hashed_password=get_password_hash("password123"),
         full_name="Test Portal Client",
-        is_active=True
+        is_active=True,
     )
     db_session.add(user)
     await db_session.flush()
-    
+
     # 2. Ensure CLIENTE role exists
     res = await db_session.execute(select(Role).where(Role.name == "CLIENTE"))
     role = res.scalar_one_or_none()
@@ -31,7 +38,11 @@ async def client_user_with_profile(db_session: AsyncSession):
 
     user_role = UserRole(user_id=user.id, role_id=role.id)
     db_session.add(user_role)
-    
+
+    # Link to workspace
+    user_ws = UserWorkspace(user_id=user.id, workspace_id=workspace.id, is_owner=True)
+    db_session.add(user_ws)
+
     # 3. Create Client profile
     client_profile = Client(
         email=email,
@@ -44,13 +55,15 @@ async def client_user_with_profile(db_session: AsyncSession):
         country_of_residence="US",
         document_type="PASSPORT",
         document_number="P1234567",
-        created_by=user.id
+        created_by=user.id,
+        workspace_id=workspace.id,
     )
     db_session.add(client_profile)
     await db_session.commit()
     await db_session.refresh(user, ["roles"])
     await db_session.refresh(client_profile)
     return user, client_profile
+
 
 @pytest_asyncio.fixture
 async def client_user_token(client_user_with_profile):
@@ -59,9 +72,10 @@ async def client_user_token(client_user_with_profile):
         "sub": str(user.id),
         "email": user.email,
         "roles": ["CLIENTE"],
-        "type": "access"
+        "type": "access",
     }
     return create_access_token(token_data)
+
 
 @pytest_asyncio.fixture
 async def active_policy_for_client(db_session: AsyncSession, client_user_with_profile):
@@ -69,7 +83,7 @@ async def active_policy_for_client(db_session: AsyncSession, client_user_with_pr
     policy = Policy(
         policy_number=f"POL-{uuid.uuid4().hex[:6].upper()}",
         client_id=client.id,
-        plan_id=uuid.uuid4(), # Dummy ID
+        plan_id=uuid.uuid4(),  # Dummy ID
         plan_version_snapshot={"name": "Test Plan"},
         status=PolicyStatus.ACTIVE,
         base_price=100.0,
@@ -79,7 +93,8 @@ async def active_policy_for_client(db_session: AsyncSession, client_user_with_pr
         country_code="US",
         start_date=date.today(),
         end_date=date.today() + timedelta(days=365),
-        issued_by=user.id
+        issued_by=user.id,
+        workspace_id=client.workspace_id,
     )
     db_session.add(policy)
     await db_session.commit()

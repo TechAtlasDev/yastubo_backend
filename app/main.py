@@ -23,12 +23,13 @@ from app.modules.ai.router import router as ai_router
 from app.modules.voice.router import router as voice_router
 from app.modules.dashboard.router import router as dashboard_router
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     setup_logging()
     logger.info(f"Starting {settings.APP_NAME} in {settings.APP_ENV} mode")
-    
+
     # Verify DB connection
     try:
         async with engine.connect() as conn:
@@ -36,25 +37,22 @@ async def lifespan(app: FastAPI):
         logger.info("Database connection established")
     except Exception as e:
         logger.error(f"Database connection failed: {e}")
-        
+
     # Verify Redis connection
     if await check_redis_connection():
         logger.info("Redis connection established")
     else:
         logger.error("Redis connection failed")
-        
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down application")
     await redis_client.close()
     await engine.dispose()
 
-app = FastAPI(
-    title=settings.APP_NAME,
-    lifespan=lifespan,
-    debug=settings.DEBUG
-)
+
+app = FastAPI(title=settings.APP_NAME, lifespan=lifespan, debug=settings.DEBUG)
 
 # CORS Middleware
 app.add_middleware(
@@ -82,6 +80,7 @@ api_v1_router.include_router(ai_router)
 api_v1_router.include_router(voice_router)
 api_v1_router.include_router(dashboard_router)
 
+
 @api_v1_router.get("/health", tags=["Infrastructure"])
 async def health_check(db: AsyncSession = Depends(get_db)):
     db_status = "ok"
@@ -89,18 +88,20 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         await db.execute(text("SELECT 1"))
     except Exception:
         db_status = "error"
-        
+
     redis_status = "ok" if await check_redis_connection() else "error"
-    
+
     return {
         "status": "ok",
         "db": db_status,
         "redis": redis_status,
         "env": settings.APP_ENV,
-        "version": "0.2.0"
+        "version": "0.2.0",
     }
 
+
 app.include_router(api_v1_router)
+
 
 @app.get("/")
 async def root():

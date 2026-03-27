@@ -4,6 +4,7 @@ from typing import Optional
 from pydantic import BaseModel, EmailStr, ConfigDict, Field
 from app.modules.leads.models import LeadStatus, FunnelStage
 
+
 class LeadBase(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -16,7 +17,9 @@ class LeadBase(BaseModel):
     city: Optional[str] = None
     state_region: Optional[str] = None
 
+
 class LeadCreate(LeadBase):
+    workspace_id: Optional[uuid.UUID] = None
     # Attribution fields
     source_channel: Optional[str] = None
     campaign_name: Optional[str] = None
@@ -29,6 +32,7 @@ class LeadCreate(LeadBase):
     landing_page: Optional[str] = None
     referral_source: Optional[str] = None
 
+
 class LeadUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -37,7 +41,7 @@ class LeadUpdate(BaseModel):
     funnel_stage: Optional[FunnelStage] = None
     lead_score: Optional[int] = None
     intent_level: Optional[str] = None
-    
+
     # Checkout tracking updates
     form_started: Optional[bool] = None
     form_completed: Optional[bool] = None
@@ -46,6 +50,7 @@ class LeadUpdate(BaseModel):
     abandoned_checkout_flag: Optional[bool] = None
     purchase_completed: Optional[bool] = None
 
+
 class LeadResponse(LeadBase):
     id: uuid.UUID
     lead_status: LeadStatus
@@ -53,9 +58,9 @@ class LeadResponse(LeadBase):
     lead_score: int
     created_at: datetime
     updated_at: datetime
-    
+
     # Sync status
     zoho_lead_id: Optional[str] = None
     converted_to_contact_flag: bool
-    
+
     model_config = ConfigDict(from_attributes=True)
