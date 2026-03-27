@@ -114,3 +114,33 @@ async def get_policy_passbook(
         media_type="application/vnd.apple.pkpass",
         headers={"Content-Disposition": f"attachment; filename=policy_{policy.policy_number}.pkpass"}
     )
+
+from fastapi import UploadFile, File, Form
+
+@router.post("/bulk-upload", response_model=schemas.BulkEmissionResponse)
+async def bulk_upload_beneficiaries(
+    client_id: uuid.UUID = Form(...),
+    plan_id: uuid.UUID = Form(...),
+    country_code: str = Form(...),
+    start_date: str = Form(...),
+    notes: Optional[str] = Form(None),
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role("ADMIN", "VENDEDOR"))
+):
+    """
+    Bulk upload beneficiaries from an Excel file.
+    Expects columns: first_name, last_name, date_of_birth (YYYY-MM-DD), kinship_type, country_of_residence.
+    """
+    from datetime import datetime
+    
+    data = schemas.BulkEmissionRequest(
+        client_id=client_id,
+        plan_id=plan_id,
+        country_code=country_code,
+        start_date=datetime.strptime(start_date, "%Y-%m-%d").date(),
+        notes=notes
+    )
+    
+    file_content = await file.read()
+    return await service.bulk_issue_policy(db, data, file_content, current_user.id)

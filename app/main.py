@@ -21,6 +21,7 @@ from app.modules.portal.router import router as portal_router
 from app.modules.leads.router import router as leads_router
 from app.modules.ai.router import router as ai_router
 from app.modules.voice.router import router as voice_router
+from app.modules.dashboard.router import router as dashboard_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -79,6 +80,7 @@ api_v1_router.include_router(portal_router)
 api_v1_router.include_router(leads_router)
 api_v1_router.include_router(ai_router)
 api_v1_router.include_router(voice_router)
+api_v1_router.include_router(dashboard_router)
 
 @api_v1_router.get("/health", tags=["Infrastructure"])
 async def health_check(db: AsyncSession = Depends(get_db)):
@@ -95,7 +97,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         "db": db_status,
         "redis": redis_status,
         "env": settings.APP_ENV,
-        "version": "0.1.0"
+        "version": "0.2.0"
     }
 
 app.include_router(api_v1_router)

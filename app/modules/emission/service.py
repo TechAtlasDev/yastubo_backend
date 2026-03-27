@@ -9,7 +9,14 @@ from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
 from app.modules.emission.models import Client, Policy, PolicyStatusHistory, Beneficiary
-from app.modules.emission.schemas import ClientCreate, EmissionRequest, StatusTransitionRequest, BeneficiaryCreate
+from app.modules.emission.schemas import (
+    ClientCreate, 
+    EmissionRequest, 
+    StatusTransitionRequest, 
+    BeneficiaryCreate,
+    BulkEmissionRequest,
+    BulkEmissionResponse
+)
 from app.modules.emission import state_machine, pdf_generator
 from app.modules.plans import service as plans_service
 from app.modules.plans import calculator
@@ -311,3 +318,71 @@ async def mark_beneficiary_deceased(db: AsyncSession, beneficiary_id: uuid.UUID,
     })
     
     return beneficiary
+
+import pandas as pd
+from io import BytesIO
+
+async def bulk_issue_policy(db: AsyncSession, data: BulkEmissionRequest, file_content: bytes, issued_by: uuid.UUID) -> BulkEmissionResponse:
+    # 1. Read Excel
+    try:
+        df = pd.read_excel(BytesIO(file_content))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid Excel file: {str(e)}")
+    
+    # 2. Map to BeneficiaryCreate
+    beneficiaries = []
+    errors = []
+    
+    # Required columns
+    required = ["first_name", "last_name", "date_of_birth", "kinship_type", "country_of_residence"]
+    for col in required:
+        if col not in df.columns:
+            raise HTTPException(status_code=400, detail=f"Missing required column in Excel: {col}")
+            
+    for index, row in df.iterrows():
+        try:
+            # Basic validation/cleaning
+            dob = row["date_of_birth"]
+            if isinstance(dob, str):
+                dob = datetime.strptime(dob, "%Y-%m-%d").date()
+            elif isinstance(dob, (datetime, date)):
+                if isinstance(dob, datetime):
+                    dob = dob.date()
+            else:
+                # Handle potential pandas Timestamp
+                dob = pd.to_datetime(dob).date()
+                
+            beneficiary = BeneficiaryCreate(
+                first_name=str(row["first_name"]),
+                last_name=str(row["last_name"]),
+                date_of_birth=dob,
+                kinship_type=str(row["kinship_type"]).upper(),
+                country_of_residence=str(row["country_of_residence"]).upper(),
+                location_type=str(row.get("location_type", "URBAN")).upper()
+            )
+            beneficiaries.append(beneficiary)
+        except Exception as e:
+            errors.append(f"Row {index + 2}: {str(e)}")
+            
+    if not beneficiaries:
+         raise HTTPException(status_code=400, detail="No valid beneficiaries found in the file.")
+
+    # 3. Call standard issue_policy
+    emission_req = EmissionRequest(
+        client_id=data.client_id,
+        plan_id=data.plan_id,
+        country_code=data.country_code,
+        start_date=data.start_date,
+        notes=data.notes,
+        beneficiaries=beneficiaries
+    )
+    
+    policy = await issue_policy(db, emission_req, issued_by)
+    
+    return BulkEmissionResponse(
+        policy_id=policy.id,
+        policy_number=policy.policy_number,
+        beneficiaries_count=len(policy.beneficiaries),
+        errors=errors,
+        message=f"Successfully issued policy for {len(policy.beneficiaries)} beneficiaries."
+    )

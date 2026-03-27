@@ -115,3 +115,17 @@ class StatusTransitionRequest(BaseModel):
 
 class DeceasedReport(BaseModel):
     reported_by: str = Field(..., description="Name or ID of the person/system reporting the death")
+
+class BulkEmissionRequest(BaseModel):
+    client_id: uuid.UUID
+    plan_id: uuid.UUID
+    country_code: str = Field(..., min_length=2, max_length=2)
+    start_date: date
+    notes: Optional[str] = None
+
+class BulkEmissionResponse(BaseModel):
+    policy_id: uuid.UUID
+    policy_number: str
+    beneficiaries_count: int
+    errors: List[str] = []
+    message: str

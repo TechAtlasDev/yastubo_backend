@@ -11,6 +11,8 @@ description: Registro de cambios y mejoras arquitectónicas del backend de Yastu
     - `vesting_natural_days`: Días de espera para muerte natural (por defecto 180).
     - `vesting_suicide_days`: Días de espera para suicidio (por defecto 365).
 - **Esquemas de API**: Actualización de los esquemas Pydantic `PlanCreate`, `PlanUpdate` y `PlanResponse` para incluir los nuevos campos.
+- **Carga Masiva (Stretch)**: Implementación de `POST /emission/bulk-upload` para cargar beneficiarios vía Excel (Pandas).
+- **Dashboard de KPIs (Stretch)**: Nuevo módulo `dashboard` con métricas de negocio en tiempo real (LTV, CAC, Churn, MRR, Atribución por Canal).
 - **Migraciones**: Nueva revisión de Alembic (`ecb513a9360b`) para actualizar la tabla `plans`.
 
 ### Mejoras
