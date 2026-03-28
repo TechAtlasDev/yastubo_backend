@@ -112,6 +112,25 @@ class StripeClient:
             type="account_onboarding",
         )
 
+    async def get_payment_method(self, pm_id: str) -> dict:
+        try:
+            return await asyncio.to_thread(stripe.PaymentMethod.retrieve, pm_id)
+        except stripe.error.InvalidRequestError as e:
+            raise ValueError(f"Stripe PaymentMethod not found: {e}") from e
+        except stripe.error.StripeError as e:
+            raise RuntimeError(f"Stripe error retrieving payment method: {e}") from e
+
+    async def get_customer_id_by_email(self, email: str) -> Optional[str]:
+        try:
+            customers = await asyncio.to_thread(
+                stripe.Customer.list, email=email, limit=1
+            )
+            if customers and customers.get("data"):
+                return customers["data"][0]["id"]
+            return None
+        except stripe.error.StripeError as e:
+            raise RuntimeError(f"Stripe error looking up customer by email: {e}") from e
+
     async def construct_webhook_event(
         self, payload: bytes, sig_header: str, secret: str
     ) -> dict:

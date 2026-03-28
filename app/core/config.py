@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     ZOHO_REFRESH_TOKEN: str = ""
     ZOHO_BASE_URL: str = "https://www.zohoapis.com/crm/v3"
 
+    # n8n automation
+    N8N_WEBHOOK_URL: str = ""
+
     # URLs
     FRONTEND_URL: str = "http://localhost:3000"
 

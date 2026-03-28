@@ -12,7 +12,7 @@ async def dispatch_event(
     Sends an event payload to the configured n8n webhook URL.
     This is used to trigger CRM syncs, automated messaging, etc.
     """
-    webhook_url = getattr(settings, "N8N_WEBHOOK_URL", None)
+    webhook_url = settings.N8N_WEBHOOK_URL
 
     if not webhook_url:
         logger.warning(f"N8N_WEBHOOK_URL not configured. Skipping event: {event_type}")
