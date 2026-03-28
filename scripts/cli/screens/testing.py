@@ -7,7 +7,7 @@ from scripts.cli.utils.runner import stream_command
 
 
 class TestingScreen(Vertical):
-    """Test Lab interface for executing pytest."""
+    """Laboratorio de Tests para ejecutar pytest."""
 
     DEFAULT_CSS = """
     #test-controls {
@@ -22,12 +22,12 @@ class TestingScreen(Vertical):
     """
 
     def compose(self) -> ComposeResult:
-        yield Label("🧪 Test Lab", classes="section-title")
+        yield Label("🧪 Laboratorio de Tests", classes="section-title")
 
         with Horizontal(id="test-controls"):
-            yield Select([], prompt="Select Target...", id="test-target-select")
-            yield Button("Run Tests", variant="success", id="run-tests-btn")
-            yield Button("Clear Log", variant="default", id="clear-log-btn")
+            yield Select([], prompt="Seleccionar objetivo...", id="test-target-select")
+            yield Button("▶ Ejecutar Tests", variant="success", id="run-tests-btn")
+            yield Button("🗑 Limpiar Registro", variant="default", id="clear-log-btn")
 
         yield RichLog(id="test-log", highlight=True, markup=True)
 
@@ -35,7 +35,7 @@ class TestingScreen(Vertical):
         self.populate_targets()
 
     def populate_targets(self) -> None:
-        options = [("All Tests (tests/)", "all")]
+        options = [("Todo el proyecto (tests/)", "all")]
 
         tests_dir = os.path.join(
             os.path.dirname(
@@ -49,7 +49,9 @@ class TestingScreen(Vertical):
 
         if os.path.exists(tests_dir):
             for d in sorted(os.listdir(tests_dir)):
-                options.append((f"Module: {d}", f"tests/modules/{d}"))
+                options.append((f"Módulo: {d}", f"tests/modules/{d}"))
+
+        options.append(("Integraciones (tests/integrations/)", "tests/integrations"))
 
         self.query_one("#test-target-select", Select).set_options(options)
 
@@ -64,16 +66,15 @@ class TestingScreen(Vertical):
 
         if not target:
             self.query_one("#test-log", RichLog).write(
-                "[red]Select a target first.[/red]"
+                "[red]⚠ Selecciona un objetivo primero.[/red]"
             )
             return
 
         cmd = "uv run pytest -v" if target == "all" else f"uv run pytest {target} -v"
 
         log = self.query_one("#test-log", RichLog)
-        log.write(f"\n[bold yellow]Running: {cmd}[/bold yellow]")
+        log.write(f"\n[bold yellow]⚙ Ejecutando: {cmd}[/bold yellow]")
 
-        # Disable button during run
         self.query_one("#run-tests-btn", Button).disabled = True
 
         cwd = os.path.dirname(
@@ -90,8 +91,9 @@ class TestingScreen(Vertical):
 
         async def on_exit(code: int):
             color = "green" if code == 0 else "red"
+            icon = "✅" if code == 0 else "❌"
             msg = (
-                f"\n[bold {color}]Tests finished with exit code: {code}[/bold {color}]"
+                f"\n[bold {color}]{icon} Tests finalizados con código de salida: {code}[/bold {color}]"
             )
             log.write(msg)
             self.query_one("#run-tests-btn", Button).disabled = False

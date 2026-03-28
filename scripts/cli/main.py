@@ -16,9 +16,10 @@ from scripts.cli.screens.ops import OpsScreen
 
 
 class YastuboDevApp(App):
-    """The developer concierge for Yastubo."""
+    """Consola de desarrollo para Yastubo Backend."""
 
     TITLE = "Yastubo Dev CLI 🚀"
+    SUB_TITLE = "Panel de Control del Desarrollador"
     CSS = """
     TabbedContent {
         height: 100%;
@@ -26,27 +27,41 @@ class YastuboDevApp(App):
     TabPane {
         padding: 1 2;
     }
+    .section-title {
+        text-style: bold;
+        margin-bottom: 1;
+        color: $accent;
+    }
     """
 
     BINDINGS = [
-        ("q", "quit", "Quit CLI"),
-        ("d", "toggle_dark", "Toggle Dark/Light Mode"),
+        ("q", "quit", "Salir"),
+        ("d", "toggle_dark", "Cambiar Tema"),
+        ("1", "switch_tab('dashboard-tab')", "Inicio"),
+        ("2", "switch_tab('modules-tab')", "Módulos"),
+        ("3", "switch_tab('test-tab')", "Tests"),
+        ("4", "switch_tab('docs-tab')", "Docs"),
+        ("5", "switch_tab('ops-tab')", "Operaciones"),
     ]
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with TabbedContent(initial="dashboard-tab"):
-            with TabPane("🏠 Dashboard", id="dashboard-tab"):
+            with TabPane("🏠 Inicio", id="dashboard-tab"):
                 yield DashboardScreen()
-            with TabPane("📂 Modules", id="modules-tab"):
+            with TabPane("📂 Módulos", id="modules-tab"):
                 yield ModulesScreen()
-            with TabPane("🧪 Test Lab", id="test-tab"):
+            with TabPane("🧪 Laboratorio de Tests", id="test-tab"):
                 yield TestingScreen()
-            with TabPane("📚 Docs Center", id="docs-tab"):
+            with TabPane("📚 Centro de Docs", id="docs-tab"):
                 yield DocsScreen()
-            with TabPane("🛠️ Ops Panel", id="ops-tab"):
+            with TabPane("🛠️ Operaciones", id="ops-tab"):
                 yield OpsScreen()
         yield Footer()
+
+    def action_switch_tab(self, tab_id: str) -> None:
+        """Cambia a la pestaña indicada por su id."""
+        self.query_one(TabbedContent).active = tab_id
 
 
 if __name__ == "__main__":

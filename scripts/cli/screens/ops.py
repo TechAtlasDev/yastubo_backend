@@ -7,7 +7,7 @@ from scripts.cli.utils.runner import stream_command
 
 
 class OpsScreen(Vertical):
-    """Operations Panel for running Makefile and infrastructure commands."""
+    """Panel de Operaciones para comandos Makefile e infraestructura."""
 
     DEFAULT_CSS = """
     #ops-buttons {
@@ -24,15 +24,15 @@ class OpsScreen(Vertical):
     """
 
     def compose(self) -> ComposeResult:
-        yield Label("🛠️ Ops Panel (Makefile & System)", classes="section-title")
+        yield Label("🛠️ Panel de Operaciones (Makefile & Sistema)", classes="section-title")
 
         with Horizontal(id="ops-buttons"):
             yield Button("📦 make setup", id="btn-make-setup", variant="primary")
             yield Button("🛡️ make build", id="btn-make-build", variant="warning")
-            yield Button("🧹 make lint", id="btn-make-lint")
+            yield Button("🔍 make lint", id="btn-make-lint")
             yield Button("🔥 make smoke", id="btn-make-smoke", variant="error")
             yield Button("📥 uv sync", id="btn-uv-sync")
-            yield Button("🧹 Clear Log", id="btn-clear-log", variant="default")
+            yield Button("🗑 Limpiar Registro", id="btn-clear-log", variant="default")
 
         yield RichLog(id="ops-log", highlight=True, markup=True)
 
@@ -60,9 +60,8 @@ class OpsScreen(Vertical):
 
     def run_ops_command(self, cmd: str) -> None:
         log = self.query_one("#ops-log", RichLog)
-        log.write(f"\n[bold yellow]Running: {cmd}[/bold yellow]")
+        log.write(f"\n[bold yellow]⚙ Ejecutando: {cmd}[/bold yellow]")
 
-        # Disable all buttons
         for btn in self.query("Button"):
             btn.disabled = True
 
@@ -80,10 +79,10 @@ class OpsScreen(Vertical):
 
         async def on_exit(code: int):
             color = "green" if code == 0 else "red"
-            msg = f"\n[bold {color}]Command finished with exit code: {code}[/bold {color}]"
+            icon = "✅" if code == 0 else "❌"
+            msg = f"\n[bold {color}]{icon} Comando finalizado con código de salida: {code}[/bold {color}]"
             log.write(msg)
 
-            # Re-enable buttons
             for btn in self.query("Button"):
                 btn.disabled = False
 
