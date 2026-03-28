@@ -7,7 +7,7 @@ from scripts.cli.utils.scaffolder import scaffold_module
 
 
 class ModulesScreen(Vertical):
-    """Screen for browsing existing modules and scaffolding new ones."""
+    """Pantalla para explorar módulos existentes y crear nuevos."""
 
     DEFAULT_CSS = """
     #modules-container {
@@ -41,34 +41,34 @@ class ModulesScreen(Vertical):
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="modules-container"):
-            # Left panel: List existing modules
+            # Panel izquierdo: lista de módulos existentes
             with Vertical(id="modules-list-container", classes="modules-list"):
-                yield Label("📦 Existing Modules", classes="section-title")
+                yield Label("📦 Módulos Existentes", classes="section-title")
                 yield ListView(id="modules-list")
 
-            # Right panel: Actions (Scaffold)
+            # Panel derecho: acciones (scaffold)
             with Vertical(id="module-actions"):
                 with Vertical(classes="scaffold-box"):
-                    yield Label("🛠️ Scaffold New Module", classes="section-title")
+                    yield Label("🛠️ Crear Nuevo Módulo", classes="section-title")
                     yield Label(
-                        "Generates models.py, schemas.py, service.py, router.py"
+                        "Genera: models.py, schemas.py, service.py, router.py, state_machine.py"
                     )
                     yield Input(
-                        placeholder="Module name (e.g. invoices, claims)",
+                        placeholder="Nombre del módulo (ej. facturas, siniestros)",
                         id="scaffold-input",
                     )
                     yield Button(
-                        "Generate Scaffold", id="scaffold-btn", variant="primary"
+                        "Generar Estructura", id="scaffold-btn", variant="primary"
                     )
 
-                yield Label("Output Log:")
+                yield Label("📋 Registro de Salida:")
                 yield RichLog(id="scaffold-log", wrap=True)
 
     def on_mount(self) -> None:
         self.refresh_modules()
 
     def refresh_modules(self) -> None:
-        """Loads modules from app/modules directory."""
+        """Carga los módulos desde el directorio app/modules."""
         app_modules_dir = os.path.join(
             os.path.dirname(
                 os.path.dirname(
@@ -98,7 +98,7 @@ class ModulesScreen(Vertical):
         log_widget = self.query_one("#scaffold-log", RichLog)
 
         if not module_name:
-            log_widget.write("[red]Error: Please specify a module name.[/red]")
+            log_widget.write("[red]Error: Por favor especifica un nombre de módulo.[/red]")
             return
 
         result = scaffold_module(module_name)
