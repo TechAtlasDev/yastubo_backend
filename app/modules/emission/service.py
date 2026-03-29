@@ -23,7 +23,7 @@ from app.modules.emission import state_machine, pdf_generator
 from app.modules.plans import service as plans_service
 from app.modules.plans import calculator
 from app.modules.notifications.service import get_notifications_service
-from app.modules.crm.service import sync_policy_to_crm, update_policy_stage_in_crm
+from app.modules.crm.service import sync_policy_to_crm, update_policy_stage_in_crm, sync_beneficiary_to_crm
 from app.modules.crm.zoho_client import get_zoho_client
 from app.modules.audit.decorator import audited
 from app.core.events import dispatch_event_background
@@ -421,6 +421,9 @@ async def get_beneficiary(db: AsyncSession, beneficiary_id: uuid.UUID) -> Benefi
 async def mark_beneficiary_deceased(
     db: AsyncSession, beneficiary_id: uuid.UUID, reported_by: str
 ) -> Beneficiary:
+    from app.modules.payments.models import Subscription
+    from app.modules.payments.stripe_client import get_stripe_client
+
     beneficiary = await get_beneficiary(db, beneficiary_id)
 
     if beneficiary.deceased_flag:
@@ -431,9 +434,55 @@ async def mark_beneficiary_deceased(
     beneficiary.deceased_reported_by = reported_by
     beneficiary.coverage_status = "DECEASED"
 
-    # Trigger billing adjustment logic (Integration with Stripe would go here)
-    # For Phase 3, we mark it and notify n8n/Zoho
-    beneficiary.billing_adjustment_confirmed = True  # Assume confirmed for now
+    # Adjust the Stripe subscription to exclude the deceased beneficiary's price
+    policy = beneficiary.policy
+    new_price = float(policy.final_price) - float(beneficiary.individual_price)
+    new_price_cents = max(0, int(round(new_price * 100)))
+
+    sub_res = await db.execute(
+        select(Subscription).where(Subscription.policy_id == policy.id)
+    )
+    subscription = sub_res.scalar_one_or_none()
+
+    if subscription and new_price_cents > 0:
+        try:
+            stripe_client = get_stripe_client()
+            await stripe_client.update_subscription_item_price(
+                subscription_id=subscription.stripe_subscription_id,
+                new_amount_cents=new_price_cents,
+                currency=policy.currency.lower(),
+            )
+            # Update local snapshot
+            subscription.monthly_price = new_price
+            subscription.mrr_snapshot = new_price
+            beneficiary.billing_adjustment_confirmed = True
+        except Exception as exc:
+            from loguru import logger
+            logger.error(
+                "[BILLING_ADJUSTMENT] Failed to update Stripe subscription for policy={} beneficiary={}: {}",
+                policy.policy_number,
+                beneficiary_id,
+                exc,
+            )
+            # billing_adjustment_confirmed stays False until manually resolved
+    elif subscription and new_price_cents == 0:
+        # All beneficiaries deceased — cancel subscription
+        try:
+            stripe_client = get_stripe_client()
+            await stripe_client.cancel_subscription(
+                subscription.stripe_subscription_id, at_period_end=True
+            )
+            beneficiary.billing_adjustment_confirmed = True
+        except Exception as exc:
+            from loguru import logger
+            logger.error(
+                "[BILLING_ADJUSTMENT] Failed to cancel Stripe subscription for policy={}: {}",
+                policy.policy_number,
+                exc,
+            )
+
+    # Update policy final_price to reflect the removal
+    policy.final_price = new_price
 
     await db.commit()
     await db.refresh(beneficiary)
@@ -445,6 +494,13 @@ async def mark_beneficiary_deceased(
             "policy_number": beneficiary.policy.policy_number,
             "reported_by": reported_by,
         },
+    )
+
+    # Sync updated beneficiary status to Zoho CRM (best-effort)
+    asyncio.create_task(
+        sync_beneficiary_to_crm(
+            get_zoho_client(), beneficiary, beneficiary.policy.policy_number
+        )
     )
 
     return beneficiary

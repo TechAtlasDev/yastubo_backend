@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.modules.auth.dependencies import require_role
@@ -17,6 +17,7 @@ async def get_dashboard_metrics(
     Get KPI metrics for the current workspace dashboard.
     Only accessible by ADMIN.
     """
-    # Assuming user has a default workspace or we use the first one
+    if not current_user.workspaces:
+        raise HTTPException(status_code=404, detail="No workspace found for this user")
     workspace_id = current_user.workspaces[0].id
     return await service.get_dashboard_metrics(db, workspace_id)

@@ -174,15 +174,8 @@ async def pay_pending_policy(
         metadata={"policy_id": str(policy.id), "source": "portal"},
     )
 
-    # In some test environments with mocks, pi might be a MagicMock that needs careful handling
-    pi_status = "succeeded"
-    pi_id = "pi_mock"
-    if hasattr(pi, "get") and not hasattr(pi, "assert_called"):
-        pi_status = pi.get("status", "succeeded")
-        pi_id = pi.get("id", "pi_mock")
-    elif hasattr(pi, "status") and not hasattr(pi.status, "assert_called"):
-        pi_status = pi.status
-        pi_id = getattr(pi, "id", "pi_mock")
+    pi_status = pi.get("status", "requires_action")
+    pi_id = pi.get("id")
 
     is_succeeded = str(pi_status).lower() == "succeeded"
 

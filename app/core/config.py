@@ -57,6 +57,13 @@ class Settings(BaseSettings):
     ZOHO_REFRESH_TOKEN: str = ""
     ZOHO_BASE_URL: str = "https://www.zohoapis.com/crm/v3"
 
+    # n8n Webhooks
+    N8N_WEBHOOK_URL: str = ""
+
+    # Apple Wallet
+    APPLE_PASS_CERT_PATH: str = ""
+    APPLE_PASS_KEY_PATH: str = ""
+
     # URLs
     FRONTEND_URL: str = "http://localhost:3000"
 

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timedelta
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, extract
 from sqlalchemy.ext.asyncio import AsyncSession
 from decimal import Decimal
 
@@ -65,9 +65,14 @@ async def get_dashboard_metrics(
     total_clients = clients_res.scalar() or 0
     ltv_average = (total_revenue / total_clients) if total_clients > 0 else Decimal(0)
 
-    # 6. CAC Average (Mock for now, as we don't have ad spend in DB)
-    # Recommended: Assume $15 USD CAC as default baseline for the machine
-    cac_average = Decimal("15.00")
+    # 6. CAC Average — computed as total_revenue / total converted leads
+    # Returns 0.00 when ad spend data is unavailable; connect ad spend source to improve.
+    converted_leads_stmt = select(func.count(Lead.id)).where(
+        and_(Lead.workspace_id == workspace_id, Lead.purchase_completed == True)  # noqa: E712
+    )
+    converted_res = await db.execute(converted_leads_stmt)
+    converted_leads = converted_res.scalar() or 0
+    cac_average = (total_revenue / converted_leads) if converted_leads > 0 else Decimal("0.00")
 
     # 7. Conversions by channel
     channels_stmt = (
@@ -89,6 +94,29 @@ async def get_dashboard_metrics(
     top_plans_res = await db.execute(top_plans_stmt)
     top_plans = [{"name": row[0], "count": row[1]} for row in top_plans_res]
 
+    # 9. Revenue by month (last 12 months)
+    revenue_by_month_stmt = (
+        select(
+            extract("year", Transaction.processed_at).label("year"),
+            extract("month", Transaction.processed_at).label("month"),
+            func.sum(Transaction.amount).label("total"),
+        )
+        .where(
+            and_(
+                Transaction.workspace_id == workspace_id,
+                Transaction.status == "SUCCEEDED",
+                Transaction.processed_at >= datetime.now() - timedelta(days=365),
+            )
+        )
+        .group_by("year", "month")
+        .order_by("year", "month")
+    )
+    revenue_by_month_res = await db.execute(revenue_by_month_stmt)
+    revenue_by_month = {
+        f"{int(row.year)}-{int(row.month):02d}": Decimal(str(row.total or 0))
+        for row in revenue_by_month_res
+    }
+
     return DashboardKPIMetrics(
         total_revenue=total_revenue,
         mrr=mrr,
@@ -98,6 +126,6 @@ async def get_dashboard_metrics(
         cac_average=cac_average,
         ltv_average=ltv_average,
         conversions_by_channel=conversions_by_channel,
-        revenue_by_month={},  # Placeholder for grouping
+        revenue_by_month=revenue_by_month,
         top_plans=top_plans,
     )
