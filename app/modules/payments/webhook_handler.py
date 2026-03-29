@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from loguru import logger
 
-from app.modules.payments.models import Transaction, Subscription
+from app.modules.payments.models import Transaction, Subscription, StripeEvent
 from app.modules.payments import service
 from app.modules.emission.models import Policy
 from app.modules.emission.state_machine import PolicyStatus
@@ -13,10 +13,17 @@ from app.modules.notifications.service import get_notifications_service
 
 
 async def handle_stripe_event(event: dict, db: AsyncSession) -> None:
+    event_id = event.get("id")
     event_type = event.get("type")
     data_obj = event.get("data", {}).get("object", {})
 
-    logger.info(f"Handling Stripe event: {event_type}")
+    # 1. Idempotency Check
+    res = await db.execute(select(StripeEvent).where(StripeEvent.event_id == event_id))
+    if res.scalar_one_or_none():
+        logger.info(f"Stripe event {event_id} already processed. Skipping.")
+        return
+
+    logger.info(f"Handling Stripe event: {event_type} ({event_id})")
 
     if event_type == "payment_intent.succeeded":
         pi_id = data_obj.get("id")
@@ -55,6 +62,8 @@ async def handle_stripe_event(event: dict, db: AsyncSession) -> None:
                     policy, policy.client, transaction
                 )
 
+            # Record event as processed
+            db.add(StripeEvent(event_id=event_id, event_type=event_type))
             await db.commit()
 
     elif event_type == "payment_intent.payment_failed":
@@ -115,6 +124,9 @@ async def handle_stripe_event(event: dict, db: AsyncSession) -> None:
                 details=f"Payment failed for {pi_id}",
             )
             db.add(audit)
+
+            # Record event as processed
+            db.add(StripeEvent(event_id=event_id, event_type=event_type))
             await db.commit()
 
     elif event_type == "customer.subscription.updated":
@@ -131,6 +143,9 @@ async def handle_stripe_event(event: dict, db: AsyncSession) -> None:
             subscription.current_period_end = datetime.fromtimestamp(
                 data_obj.get("current_period_end")
             )
+
+            # Record event as processed
+            db.add(StripeEvent(event_id=event_id, event_type=event_type))
             await db.commit()
 
     elif event_type == "customer.subscription.deleted":
@@ -166,6 +181,9 @@ async def handle_stripe_event(event: dict, db: AsyncSession) -> None:
                 details=f"Subscription deleted for {sub_id}",
             )
             db.add(audit)
+
+            # Record event as processed
+            db.add(StripeEvent(event_id=event_id, event_type=event_type))
             await db.commit()
 
     elif event_type == "invoice.payment_succeeded":
@@ -197,4 +215,11 @@ async def handle_stripe_event(event: dict, db: AsyncSession) -> None:
                     details=f"Subscription invoice paid for {sub_id}",
                 )
                 db.add(audit)
+
+                # Record event as processed
+                db.add(StripeEvent(event_id=event_id, event_type=event_type))
                 await db.commit()
+    else:
+        # For unhandled events, we still record them as "seen" to avoid redundant processing if we add them later
+        # OR we just log them. Let's just log them for now and not record as processed unless we actually do something.
+        logger.debug(f"Unhandled Stripe event type: {event_type}")

@@ -150,3 +150,13 @@ class StripeAccount(BaseModel):
     onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False)
 
     user: Mapped["User"] = relationship("User")
+
+
+class StripeEvent(BaseModel):
+    __tablename__ = "stripe_events"
+
+    event_id: Mapped[str] = mapped_column(
+        String(255), unique=True, nullable=False, index=True
+    )
+    event_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    processed_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

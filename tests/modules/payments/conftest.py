@@ -30,6 +30,7 @@ def mock_stripe():
     stripe.create_connect_account.return_value = {"id": "acct_123"}
     stripe.create_account_link.return_value = {"url": "https://stripe.com/onboarding"}
     stripe.construct_webhook_event.side_effect = lambda payload, sig, secret: {
+        "id": "evt_test_default",
         "type": "payment_intent.succeeded",
         "data": {"object": {"id": "pi_123"}},
     }
