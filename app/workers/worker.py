@@ -3,7 +3,11 @@ from arq.connections import RedisSettings
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.modules.payments.stripe_client import StripeClient
-from app.workers.tasks import send_payment_reminders, retry_failed_payments
+from app.workers.tasks import (
+    send_payment_reminders,
+    retry_failed_payments,
+    process_approved_claim,
+)
 from app.modules.leads.tasks import check_abandoned_checkouts
 
 
@@ -24,6 +28,7 @@ class WorkerSettings:
         send_payment_reminders,
         retry_failed_payments,
         check_abandoned_checkouts,
+        process_approved_claim,
     ]
     cron_jobs = [
         cron(send_payment_reminders, hour=9, minute=0),  # 9am daily

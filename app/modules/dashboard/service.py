@@ -5,8 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from decimal import Decimal
 
 from app.modules.payments.models import Transaction, Subscription
-from app.modules.emission.models import Policy
+from app.modules.emission.models import Policy, Beneficiary
 from app.modules.leads.models import Lead
+from app.modules.claims.models import Claim, ClaimExpense
 from app.modules.dashboard.schemas import DashboardKPIMetrics
 
 
@@ -65,7 +66,34 @@ async def get_dashboard_metrics(
     total_clients = clients_res.scalar() or 0
     ltv_average = (total_revenue / total_clients) if total_clients > 0 else Decimal(0)
 
-    # 6. CAC Average — computed as total_revenue / total converted leads
+    # 6. Claims & Loss Ratio
+    claims_stmt = (
+        select(func.sum(ClaimExpense.amount))
+        .join(Claim)
+        .join(Policy, Claim.policy_id == Policy.id)
+        .where(Policy.workspace_id == workspace_id)
+    )
+    claims_res = await db.execute(claims_stmt)
+    total_claims_amount = Decimal(str(claims_res.scalar() or 0))
+    loss_ratio = (
+        (float(total_claims_amount / total_revenue) * 100) if total_revenue > 0 else 0.0
+    )
+
+    # 7. Active Beneficiaries
+    beneficiaries_stmt = (
+        select(func.count(Beneficiary.id))
+        .join(Policy)
+        .where(
+            and_(
+                Policy.workspace_id == workspace_id,
+                Beneficiary.coverage_status == "ACTIVE",
+            )
+        )
+    )
+    beneficiaries_res = await db.execute(beneficiaries_stmt)
+    active_beneficiaries = beneficiaries_res.scalar() or 0
+
+    # 8. CAC Average — computed as total_revenue / total converted leads
     # Returns 0.00 when ad spend data is unavailable; connect ad spend source to improve.
     converted_leads_stmt = select(func.count(Lead.id)).where(
         and_(Lead.workspace_id == workspace_id, Lead.purchase_completed == True)  # noqa: E712
@@ -76,7 +104,7 @@ async def get_dashboard_metrics(
         (total_revenue / converted_leads) if converted_leads > 0 else Decimal("0.00")
     )
 
-    # 7. Conversions by channel
+    # 9. Conversions by channel
     channels_stmt = (
         select(Lead.source_channel, func.count(Lead.id))
         .where(and_(Lead.workspace_id == workspace_id, Lead.purchase_completed))
@@ -85,7 +113,7 @@ async def get_dashboard_metrics(
     channels_res = await db.execute(channels_stmt)
     conversions_by_channel = {row[0] or "Direct": row[1] for row in channels_res}
 
-    # 8. Top Plans
+    # 10. Top Plans
     top_plans_stmt = (
         select(Policy.plan_version_snapshot["name"], func.count(Policy.id))
         .where(Policy.workspace_id == workspace_id)
@@ -96,7 +124,7 @@ async def get_dashboard_metrics(
     top_plans_res = await db.execute(top_plans_stmt)
     top_plans = [{"name": row[0], "count": row[1]} for row in top_plans_res]
 
-    # 9. Revenue by month (last 12 months)
+    # 11. Revenue by month (last 12 months)
     revenue_by_month_stmt = (
         select(
             extract("year", Transaction.processed_at).label("year"),
@@ -127,6 +155,9 @@ async def get_dashboard_metrics(
         churn_rate=churn_rate,
         cac_average=cac_average,
         ltv_average=ltv_average,
+        loss_ratio=loss_ratio,
+        total_claims_amount=total_claims_amount,
+        active_beneficiaries=active_beneficiaries,
         conversions_by_channel=conversions_by_channel,
         revenue_by_month=revenue_by_month,
         top_plans=top_plans,

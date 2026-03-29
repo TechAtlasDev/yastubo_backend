@@ -22,6 +22,7 @@ from app.modules.leads.router import router as leads_router
 from app.modules.ai.router import router as ai_router
 from app.modules.voice.router import router as voice_router
 from app.modules.dashboard.router import router as dashboard_router
+from app.modules.claims.router import router as claims_router
 
 
 @asynccontextmanager
@@ -79,6 +80,7 @@ api_v1_router.include_router(leads_router)
 api_v1_router.include_router(ai_router)
 api_v1_router.include_router(voice_router)
 api_v1_router.include_router(dashboard_router)
+api_v1_router.include_router(claims_router)
 
 
 @api_v1_router.get("/health", tags=["Infrastructure"])

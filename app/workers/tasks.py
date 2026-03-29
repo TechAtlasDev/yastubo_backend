@@ -2,7 +2,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.core.database import SessionLocal
-from app.modules.emission.models import Policy
+from app.modules.emission.models import Policy, Beneficiary
 from app.modules.emission.state_machine import PolicyStatus
 from app.modules.payments.models import Transaction, Subscription
 from app.modules.payments.stripe_client import StripeClient
@@ -90,3 +90,26 @@ async def retry_failed_payments(ctx):
                 tx.last_error = f"Retry error: {str(e)}"
 
         await db.commit()
+
+
+async def process_approved_claim(ctx, claim_id: str, beneficiary_id: str):
+    """Processes an approved claim: sets beneficiary deceased_flag and adjusts policy."""
+    async with SessionLocal() as db:
+        result = await db.execute(
+            select(Beneficiary).where(Beneficiary.id == beneficiary_id)
+        )
+        beneficiary = result.scalar_one_or_none()
+        if beneficiary:
+            beneficiary.deceased_flag = True
+            beneficiary.deceased_reported_at = datetime.utcnow()
+            beneficiary.coverage_status = "CLAIMED"
+            await db.commit()
+
+            # Additional logic such as updating policy price via Stripe could be added here
+            await audit_service.log(
+                db=db,
+                action="BENEFICIARY_CLAIM_PROCESSED",
+                entity="Beneficiary",
+                entity_id=beneficiary.id,
+                extra={"claim_id": claim_id},
+            )

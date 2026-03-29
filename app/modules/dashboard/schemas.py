@@ -11,6 +11,9 @@ class DashboardKPIMetrics(BaseModel):
     churn_rate: float
     cac_average: Decimal
     ltv_average: Decimal
+    loss_ratio: float
+    total_claims_amount: Decimal
+    active_beneficiaries: int
     conversions_by_channel: Dict[str, int]
     revenue_by_month: Dict[str, Decimal]
     top_plans: List[Dict[str, str | int]]
