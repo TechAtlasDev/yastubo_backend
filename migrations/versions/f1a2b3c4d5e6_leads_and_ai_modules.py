@@ -11,6 +11,7 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
+from pgvector.sqlalchemy import Vector
 
 # revision identifiers, used by Alembic.
 revision: str = "f1a2b3c4d5e6"
@@ -156,7 +157,7 @@ def upgrade() -> None:
         sa.Column("workspace_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("title", sa.String(255), nullable=False),
         sa.Column("content", sa.Text(), nullable=False),
-        sa.Column("embedding", postgresql.ARRAY(sa.Float()), nullable=True),
+        sa.Column("embedding", Vector(768), nullable=True),
         sa.Column("metadata_json", postgresql.JSONB(), nullable=True),
         sa.Column("source_url", sa.String(500), nullable=True),
         sa.ForeignKeyConstraint(

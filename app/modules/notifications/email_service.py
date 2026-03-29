@@ -22,7 +22,10 @@ class EmailService:
         self.from_name = from_name
         self.enabled = enabled
 
-        templates_dir = Path(__file__).parent / "templates"
+        templates_dir = (Path(__file__).parent / "templates").resolve()
+        if not templates_dir.exists():
+            logger.error(f"Email templates directory not found at: {templates_dir}")
+
         self.jinja_env = Environment(
             loader=FileSystemLoader(str(templates_dir)),
             autoescape=select_autoescape(["html", "xml"]),
