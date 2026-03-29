@@ -112,6 +112,44 @@ class StripeClient:
             type="account_onboarding",
         )
 
+    async def retrieve_subscription(self, subscription_id: str) -> dict:
+        return await asyncio.to_thread(stripe.Subscription.retrieve, subscription_id)
+
+    async def update_subscription_item_price(
+        self,
+        subscription_id: str,
+        new_amount_cents: int,
+        currency: str,
+    ) -> dict:
+        """Update the first subscription item to a new unit amount using price_data."""
+        sub = await asyncio.to_thread(stripe.Subscription.retrieve, subscription_id)
+        item = sub["items"]["data"][0]
+        item_id = item["id"]
+        product_id = item["price"]["product"]
+        billing_interval = item["price"]["recurring"]["interval"]
+        return await asyncio.to_thread(
+            stripe.SubscriptionItem.modify,
+            item_id,
+            price_data={
+                "currency": currency,
+                "product": product_id,
+                "unit_amount": new_amount_cents,
+                "recurring": {"interval": billing_interval},
+            },
+            proration_behavior="none",
+        )
+
+    async def get_payment_method(self, pm_id: str) -> dict:
+        return await asyncio.to_thread(stripe.PaymentMethod.retrieve, pm_id)
+
+    async def get_customer_id_by_email(self, email: str) -> Optional[str]:
+        customers = await asyncio.to_thread(
+            stripe.Customer.list, email=email, limit=1
+        )
+        if customers and customers.data:
+            return customers.data[0].id
+        return None
+
     async def construct_webhook_event(
         self, payload: bytes, sig_header: str, secret: str
     ) -> dict:

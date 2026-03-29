@@ -24,8 +24,9 @@ from app.core.config import settings
 
 
 async def get_or_create_customer(stripe: StripeClient, client_user: User) -> str:
-    # In this MVP we check if metadata or a field has stripe_id
-    # For now, we create a new one each time OR we assume one exists.
+    existing_id = await stripe.get_customer_id_by_email(client_user.email)
+    if existing_id:
+        return existing_id
     customer = await stripe.create_customer(
         email=client_user.email,
         name=f"{client_user.first_name} {client_user.last_name}",
@@ -325,11 +326,35 @@ async def get_reseller_dashboard(db: AsyncSession, workspace_id: uuid.UUID) -> d
     platform_rate = float(workspace.commission_rate) / 100.0
     earned = float(total_amount) * (1.0 - platform_rate)
 
+    # Fetch pending balance from Stripe Connect account
+    pending_commissions = 0.0
+    stripe_acc_res = await db.execute(
+        select(StripeAccount).where(StripeAccount.workspace_id == workspace_id)
+    )
+    stripe_acc = stripe_acc_res.scalar_one_or_none()
+    if stripe_acc:
+        try:
+            import stripe as stripe_lib
+            from app.core.config import settings as _settings
+            stripe_lib.api_key = _settings.STRIPE_SECRET_KEY
+            import asyncio as _asyncio
+            balance = await _asyncio.to_thread(
+                stripe_lib.Balance.retrieve,
+                stripe_account=stripe_acc.stripe_account_id,
+            )
+            pending = balance.get("pending", [])
+            pending_commissions = sum(
+                p.get("amount", 0) / 100.0 for p in pending if p.get("currency", "usd") == "usd"
+            )
+        except Exception as exc:
+            from loguru import logger as _logger
+            _logger.warning("[RESELLER_DASHBOARD] Could not fetch Stripe balance: {}", exc)
+
     return {
         "total_sales_count": sales_stats.count,
         "total_sales_amount": total_amount,
         "total_commissions_earned": earned,
-        "pending_commissions": 0.0,  # Stripe Connect handles payouts automatically or we can query Stripe Balance
+        "pending_commissions": pending_commissions,
         "currency": "USD",
     }
 

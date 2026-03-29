@@ -4,7 +4,7 @@ from typing import List, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
-from app.modules.ai.models import KnowledgeDocument
+from app.modules.ai.models import KnowledgeDocument, ChatConversation, ChatMessage
 
 
 class AIService:
@@ -41,30 +41,66 @@ class AIService:
     async def chat_with_context(
         self, db: AsyncSession, workspace_id: uuid.UUID, session_id: str, message: str
     ) -> str:
-        # 1. Get relevant docs (RAG)
+        # 1. Find or create the conversation for this session
+        conv_res = await db.execute(
+            select(ChatConversation).where(ChatConversation.session_id == session_id)
+        )
+        conversation = conv_res.scalar_one_or_none()
+        if not conversation:
+            conversation = ChatConversation(
+                workspace_id=workspace_id, session_id=session_id
+            )
+            db.add(conversation)
+            await db.flush()
+
+        # 2. Persist the incoming user message
+        user_msg = ChatMessage(
+            conversation_id=conversation.id, role="user", content=message
+        )
+        db.add(user_msg)
+        await db.flush()
+
+        # 3. Retrieve recent history (last 10 messages) for context
+        history_res = await db.execute(
+            select(ChatMessage)
+            .where(ChatMessage.conversation_id == conversation.id)
+            .order_by(ChatMessage.created_at.desc())
+            .limit(10)
+        )
+        recent_messages = list(reversed(history_res.scalars().all()))
+        history_text = "\n".join(
+            [f"{m.role.capitalize()}: {m.content}" for m in recent_messages[:-1]]
+        )
+
+        # 4. Get relevant docs (RAG)
         docs = await self.get_relevant_documents(db, workspace_id, message)
         context = "\n".join([f"Source: {d.title}\nContent: {d.content}" for d in docs])
 
-        # 2. Build system prompt
-        system_prompt = f"""
-        Eres un asistente inteligente para la plataforma Yastubo. 
-        Utiliza el siguiente contexto para responder a la pregunta del usuario.
-        Si la información no está en el contexto, indícalo educadamente.
-        
-        CONTEXTO:
-        {context}
-        """
+        # 5. Build prompt with history and RAG context
+        system_prompt = f"""Eres un asistente inteligente para la plataforma Yastubo.
+Utiliza el siguiente contexto para responder a la pregunta del usuario.
+Si la información no está en el contexto, indícalo educadamente.
 
-        # 3. Call Gemini
-        # For simplicity in this MVP, we pass context in the prompt.
-        # For production, we should handle history in ChatConversation model.
-        full_prompt = f"{system_prompt}\n\nUsuario: {message}\nAsistente:"
+CONTEXTO:
+{context}"""
+
+        history_section = f"\n\nHISTORIAL PREVIO:\n{history_text}" if history_text else ""
+        full_prompt = f"{system_prompt}{history_section}\n\nUsuario: {message}\nAsistente:"
+
+        # 6. Call Gemini
         response = await self.model.generate_content_async(full_prompt)
+        assistant_text = response.text
 
-        # 4. Save message (optional: save history)
-        # TODO: Implement full history management
+        # 7. Persist the assistant response
+        assistant_msg = ChatMessage(
+            conversation_id=conversation.id,
+            role="assistant",
+            content=assistant_text,
+        )
+        db.add(assistant_msg)
+        await db.commit()
 
-        return response.text
+        return assistant_text
 
 
 _ai_service: Optional[AIService] = None

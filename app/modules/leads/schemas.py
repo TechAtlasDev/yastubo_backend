@@ -1,14 +1,24 @@
 import uuid
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, EmailStr, ConfigDict, Field
+from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 from app.modules.leads.models import LeadStatus, FunnelStage
 
 
 class LeadBase(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
-    phone_e164: str = Field(..., pattern=r"^\+?[1-9]\d{1,14}$")
+    phone_e164: str = Field(..., pattern=r"^\+[1-9]\d{1,14}$")
+
+    @field_validator("phone_e164", mode="before")
+    @classmethod
+    def normalize_e164(cls, v: str) -> str:
+        if isinstance(v, str):
+            stripped = v.strip()
+            if stripped and not stripped.startswith("+"):
+                stripped = "+" + stripped
+            return stripped
+        return v
     phone_raw: Optional[str] = None
     email: Optional[EmailStr] = None
     preferred_language: str = "es"

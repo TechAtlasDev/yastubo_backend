@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from datetime import datetime
 from typing import List, Optional
@@ -9,6 +10,8 @@ from loguru import logger
 from app.modules.leads.models import Lead, LeadStatus, FunnelStage
 from app.modules.leads.schemas import LeadCreate, LeadUpdate
 from app.core.events import dispatch_event_background
+from app.modules.crm.service import sync_lead_to_crm
+from app.modules.crm.zoho_client import get_zoho_client
 
 
 async def create_or_update_lead(db: AsyncSession, data: LeadCreate) -> Lead:
@@ -54,6 +57,10 @@ async def create_or_update_lead(db: AsyncSession, data: LeadCreate) -> Lead:
 
     await db.commit()
     await db.refresh(lead)
+
+    # Sync to Zoho CRM (best-effort, non-blocking)
+    asyncio.create_task(sync_lead_to_crm(get_zoho_client(), lead))
+
     return lead
 
 

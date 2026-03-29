@@ -4,6 +4,8 @@ from app.modules.crm.mapper import (
     client_to_zoho_contact,
     policy_status_to_zoho_stage,
     policy_to_zoho_deal,
+    lead_to_zoho_lead,
+    beneficiary_to_zoho_contact,
 )
 
 
@@ -34,6 +36,32 @@ async def sync_policy_to_crm(zoho, policy, client, plan_name: str) -> str | None
         return deal_id
     except Exception as exc:
         logger.error("[CRM] sync_policy_to_crm error={}", exc)
+        return None
+
+
+async def sync_lead_to_crm(zoho, lead) -> str | None:
+    try:
+        payload = lead_to_zoho_lead(lead)
+        zoho_lead_id = await zoho.create_or_update_lead(payload)
+        logger.info(
+            "[CRM] sync_lead phone={} zoho_lead_id={}", lead.phone_e164, zoho_lead_id
+        )
+        return zoho_lead_id
+    except Exception as exc:
+        logger.error("[CRM] sync_lead_to_crm error={}", exc)
+        return None
+
+
+async def sync_beneficiary_to_crm(zoho, beneficiary, policy_number: str) -> str | None:
+    try:
+        payload = beneficiary_to_zoho_contact(beneficiary, policy_number)
+        contact_id = await zoho.create_or_update_contact(payload)
+        logger.info(
+            "[CRM] sync_beneficiary id={} contact_id={}", beneficiary.id, contact_id
+        )
+        return contact_id
+    except Exception as exc:
+        logger.error("[CRM] sync_beneficiary_to_crm error={}", exc)
         return None
 
 

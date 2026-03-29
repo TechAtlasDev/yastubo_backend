@@ -98,6 +98,27 @@ class ZohoClient:
             logger.error("[CRM] create_or_update_deal error={}", exc)
             return None
 
+    async def create_or_update_lead(self, data: dict) -> str | None:
+        if not self.enabled:
+            logger.info("[CRM-DISABLED] lead sync skipped")
+            return "disabled"
+        try:
+            token = await self._get_access_token()
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/Leads/upsert",
+                    headers={"Authorization": f"Zoho-oauthtoken {token}"},
+                    json={"data": [data], "duplicate_check_fields": ["Phone"]},
+                )
+                response.raise_for_status()
+                payload = response.json()
+
+            item = payload.get("data", [{}])[0]
+            return item.get("details", {}).get("id")
+        except Exception as exc:
+            logger.error("[CRM] create_or_update_lead error={}", exc)
+            return None
+
     async def update_deal_stage(self, deal_id: str, stage: str) -> bool:
         if not self.enabled:
             logger.info("[CRM-DISABLED] update_deal_stage skipped")
