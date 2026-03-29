@@ -61,7 +61,9 @@ def lead_to_zoho_lead(lead) -> dict:
         "Last_Name": lead.last_name or "Unknown",
         "Phone": lead.phone_e164,
         "Email": lead.email or "",
-        "Lead_Status": lead.lead_status if isinstance(lead.lead_status, str) else lead.lead_status.value,
+        "Lead_Status": lead.lead_status
+        if isinstance(lead.lead_status, str)
+        else lead.lead_status.value,
         "Lead_Source": lead.source_channel or "",
         "Country": lead.country_of_residence or "",
         "Description": f"Funnel: {lead.funnel_stage} | Score: {lead.lead_score}",

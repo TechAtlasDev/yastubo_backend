@@ -9,6 +9,7 @@ def mock_stripe():
 
     # Defaults
     stripe.create_customer.return_value = {"id": "cus_123"}
+    stripe.get_customer_id_by_email.return_value = None
     stripe.create_payment_intent.return_value = {
         "id": "pi_123",
         "client_secret": "pi_123_secret",

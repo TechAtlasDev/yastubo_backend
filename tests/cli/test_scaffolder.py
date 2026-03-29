@@ -1,10 +1,9 @@
 """Pruebas unitarias para scripts/cli/utils/scaffolder.py"""
+
 from __future__ import annotations
 
-import os
 from unittest.mock import patch
 
-import pytest
 
 from scripts.cli.utils.scaffolder import scaffold_module
 

@@ -336,19 +336,26 @@ async def get_reseller_dashboard(db: AsyncSession, workspace_id: uuid.UUID) -> d
         try:
             import stripe as stripe_lib
             from app.core.config import settings as _settings
+
             stripe_lib.api_key = _settings.STRIPE_SECRET_KEY
             import asyncio as _asyncio
+
             balance = await _asyncio.to_thread(
                 stripe_lib.Balance.retrieve,
                 stripe_account=stripe_acc.stripe_account_id,
             )
             pending = balance.get("pending", [])
             pending_commissions = sum(
-                p.get("amount", 0) / 100.0 for p in pending if p.get("currency", "usd") == "usd"
+                p.get("amount", 0) / 100.0
+                for p in pending
+                if p.get("currency", "usd") == "usd"
             )
         except Exception as exc:
             from loguru import logger as _logger
-            _logger.warning("[RESELLER_DASHBOARD] Could not fetch Stripe balance: {}", exc)
+
+            _logger.warning(
+                "[RESELLER_DASHBOARD] Could not fetch Stripe balance: {}", exc
+            )
 
     return {
         "total_sales_count": sales_stats.count,

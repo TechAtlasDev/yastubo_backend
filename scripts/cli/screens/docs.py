@@ -25,16 +25,23 @@ class DocsScreen(Vertical):
     process_task = None
 
     def compose(self) -> ComposeResult:
-        yield Label("📚 Centro de Documentación (Astro Starlight)", classes="section-title")
+        yield Label(
+            "📚 Centro de Documentación (Astro Starlight)", classes="section-title"
+        )
 
         with Horizontal(id="docs-controls"):
             yield Button(
                 "🚀 Iniciar Servidor de Docs", variant="success", id="launch-docs-btn"
             )
             yield Button(
-                "🛑 Detener Servidor", variant="error", id="stop-docs-btn", disabled=True
+                "🛑 Detener Servidor",
+                variant="error",
+                id="stop-docs-btn",
+                disabled=True,
             )
-            yield Button("🗑 Limpiar Registro", variant="default", id="clear-docs-log-btn")
+            yield Button(
+                "🗑 Limpiar Registro", variant="default", id="clear-docs-log-btn"
+            )
 
         yield RichLog(id="docs-log", highlight=True, markup=True)
 

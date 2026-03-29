@@ -84,8 +84,12 @@ Si la información no está en el contexto, indícalo educadamente.
 CONTEXTO:
 {context}"""
 
-        history_section = f"\n\nHISTORIAL PREVIO:\n{history_text}" if history_text else ""
-        full_prompt = f"{system_prompt}{history_section}\n\nUsuario: {message}\nAsistente:"
+        history_section = (
+            f"\n\nHISTORIAL PREVIO:\n{history_text}" if history_text else ""
+        )
+        full_prompt = (
+            f"{system_prompt}{history_section}\n\nUsuario: {message}\nAsistente:"
+        )
 
         # 6. Call Gemini
         response = await self.model.generate_content_async(full_prompt)

@@ -3,7 +3,7 @@ import os
 import platform
 from textual.app import ComposeResult
 from textual.widgets import Static, Rule
-from textual.containers import Vertical, Horizontal, ScrollableContainer
+from textual.containers import Vertical, Horizontal
 from textual import work
 
 BANNER = r"""
@@ -18,9 +18,7 @@ BANNER = r"""
 def _get_modules_dir() -> str:
     return os.path.join(
         os.path.dirname(
-            os.path.dirname(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            )
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         ),
         "app",
         "modules",
@@ -153,10 +151,14 @@ class DashboardScreen(Vertical):
         with Horizontal(classes="info-grid"):
             with Vertical(classes="info-card"):
                 yield Static("🐍 Versión de Python", classes="info-card-title")
-                yield Static("Cargando...", id="python-version", classes="info-card-value")
+                yield Static(
+                    "Cargando...", id="python-version", classes="info-card-value"
+                )
             with Vertical(classes="info-card"):
                 yield Static("📦 Módulos del Proyecto", classes="info-card-title")
-                yield Static("Cargando...", id="module-count", classes="info-card-value")
+                yield Static(
+                    "Cargando...", id="module-count", classes="info-card-value"
+                )
             with Vertical(classes="info-card"):
                 yield Static("🧪 Archivos de Test", classes="info-card-title")
                 yield Static("Cargando...", id="test-count", classes="info-card-value")
@@ -272,4 +274,3 @@ class DashboardScreen(Vertical):
         )
 
         self.query_one("#env-checks", Static).update("\n".join(env_lines))
-

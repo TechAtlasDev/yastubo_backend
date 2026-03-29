@@ -1,12 +1,9 @@
 """Pruebas unitarias para scripts/cli/screens/dashboard.py (funciones auxiliares)."""
+
 from __future__ import annotations
 
 import os
-import sys
-from pathlib import Path
-from unittest.mock import patch
 
-import pytest
 
 from scripts.cli.screens.dashboard import (
     _check_env_vars,

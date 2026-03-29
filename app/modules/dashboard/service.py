@@ -72,7 +72,9 @@ async def get_dashboard_metrics(
     )
     converted_res = await db.execute(converted_leads_stmt)
     converted_leads = converted_res.scalar() or 0
-    cac_average = (total_revenue / converted_leads) if converted_leads > 0 else Decimal("0.00")
+    cac_average = (
+        (total_revenue / converted_leads) if converted_leads > 0 else Decimal("0.00")
+    )
 
     # 7. Conversions by channel
     channels_stmt = (

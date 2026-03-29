@@ -143,9 +143,7 @@ class StripeClient:
         return await asyncio.to_thread(stripe.PaymentMethod.retrieve, pm_id)
 
     async def get_customer_id_by_email(self, email: str) -> Optional[str]:
-        customers = await asyncio.to_thread(
-            stripe.Customer.list, email=email, limit=1
-        )
+        customers = await asyncio.to_thread(stripe.Customer.list, email=email, limit=1)
         if customers and customers.data:
             return customers.data[0].id
         return None

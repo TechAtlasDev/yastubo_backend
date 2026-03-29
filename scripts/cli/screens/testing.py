@@ -92,9 +92,7 @@ class TestingScreen(Vertical):
         async def on_exit(code: int):
             color = "green" if code == 0 else "red"
             icon = "✅" if code == 0 else "❌"
-            msg = (
-                f"\n[bold {color}]{icon} Tests finalizados con código de salida: {code}[/bold {color}]"
-            )
+            msg = f"\n[bold {color}]{icon} Tests finalizados con código de salida: {code}[/bold {color}]"
             log.write(msg)
             self.query_one("#run-tests-btn", Button).disabled = False
 

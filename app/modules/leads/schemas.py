@@ -19,6 +19,7 @@ class LeadBase(BaseModel):
                 stripped = "+" + stripped
             return stripped
         return v
+
     phone_raw: Optional[str] = None
     email: Optional[EmailStr] = None
     preferred_language: str = "es"

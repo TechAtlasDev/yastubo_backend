@@ -23,7 +23,11 @@ from app.modules.emission import state_machine, pdf_generator
 from app.modules.plans import service as plans_service
 from app.modules.plans import calculator
 from app.modules.notifications.service import get_notifications_service
-from app.modules.crm.service import sync_policy_to_crm, update_policy_stage_in_crm, sync_beneficiary_to_crm
+from app.modules.crm.service import (
+    sync_policy_to_crm,
+    update_policy_stage_in_crm,
+    sync_beneficiary_to_crm,
+)
 from app.modules.crm.zoho_client import get_zoho_client
 from app.modules.audit.decorator import audited
 from app.core.events import dispatch_event_background
@@ -458,6 +462,7 @@ async def mark_beneficiary_deceased(
             beneficiary.billing_adjustment_confirmed = True
         except Exception as exc:
             from loguru import logger
+
             logger.error(
                 "[BILLING_ADJUSTMENT] Failed to update Stripe subscription for policy={} beneficiary={}: {}",
                 policy.policy_number,
@@ -475,6 +480,7 @@ async def mark_beneficiary_deceased(
             beneficiary.billing_adjustment_confirmed = True
         except Exception as exc:
             from loguru import logger
+
             logger.error(
                 "[BILLING_ADJUSTMENT] Failed to cancel Stripe subscription for policy={}: {}",
                 policy.policy_number,

@@ -20,7 +20,11 @@ async def shutdown(ctx):
 
 
 class WorkerSettings:
-    functions = [send_payment_reminders, retry_failed_payments, check_abandoned_checkouts]
+    functions = [
+        send_payment_reminders,
+        retry_failed_payments,
+        check_abandoned_checkouts,
+    ]
     cron_jobs = [
         cron(send_payment_reminders, hour=9, minute=0),  # 9am daily
         cron(retry_failed_payments, hour={6, 12, 18, 0}),  # every 6h

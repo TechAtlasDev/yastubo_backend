@@ -3,6 +3,29 @@ title: Historial de Lanzamientos (Releases)
 description: Registro de cambios y mejoras arquitectónicas del backend de Yastubo.
 ---
 
+## [0.3.0] - 2026-03-29
+
+### Añadido
+- **Módulo AI (Historial & RAG)**: Persistencia de conversaciones (`ChatConversation`) y mensajes (`ChatMessage`) con contexto multi-turno (últimos 10 mensajes) para Gemini.
+- **Sincronización Zoho Leads**: Los prospectos creados/actualizados se sincronizan automáticamente con Zoho CRM de forma asíncrona.
+- **Ajuste de Suscripción Stripe**: Implementación real de `update_subscription_item_price` en `StripeClient`, activada automáticamente al marcar un beneficiario como fallecido.
+- **Normalización E.164**: Validación y normalización automática de teléfonos en el módulo de Leads usando Pydantic.
+- **Testing**: Nueva suite de pruebas de integración (`tests/test_debt_fixes.py`) para verificar Stripe, AI History y Zoho Sync.
+
+### Solucionado (Deuda Técnica Crítica)
+- **StripeClient**: Implementación de métodos faltantes `get_payment_method` y `get_customer_id_by_email`.
+- **Detección de Duplicados**: `get_or_create_customer` ahora realiza lookup por email antes de crear en Stripe.
+- **Email Templates**: Corrección de rutas de carga de plantillas en `notifications/email_service.py`.
+- **Seguridad Dashboard**: Validación de existencia de workspace para evitar `IndexError`.
+- **Configuración**: Registro de `N8N_WEBHOOK_URL` y certificados Apple en el modelo centralizado de `Settings`.
+- **Worker**: Conexión de la tarea de "Checkouts Abandonados" al worker de ARQ.
+
+### Mejoras
+- **Dashboard de KPIs**: CAC y Revenue por Mes ahora utilizan datos reales de transacciones y leads en lugar de valores hardcodeados.
+- **Limpieza de Código**: Eliminación de lógica de detección de `MagicMock` en código de producción del portal.
+
+---
+
 ## [0.2.0] - 2026-03-26
 
 ### Añadido

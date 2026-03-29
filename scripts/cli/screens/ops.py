@@ -24,7 +24,9 @@ class OpsScreen(Vertical):
     """
 
     def compose(self) -> ComposeResult:
-        yield Label("🛠️ Panel de Operaciones (Makefile & Sistema)", classes="section-title")
+        yield Label(
+            "🛠️ Panel de Operaciones (Makefile & Sistema)", classes="section-title"
+        )
 
         with Horizontal(id="ops-buttons"):
             yield Button("📦 make setup", id="btn-make-setup", variant="primary")

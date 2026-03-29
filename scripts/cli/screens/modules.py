@@ -98,7 +98,9 @@ class ModulesScreen(Vertical):
         log_widget = self.query_one("#scaffold-log", RichLog)
 
         if not module_name:
-            log_widget.write("[red]Error: Por favor especifica un nombre de módulo.[/red]")
+            log_widget.write(
+                "[red]Error: Por favor especifica un nombre de módulo.[/red]"
+            )
             return
 
         result = scaffold_module(module_name)

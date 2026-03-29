@@ -6,7 +6,7 @@ from app.modules.leads.models import LeadStatus, FunnelStage
 
 
 @pytest.mark.asyncio
-async def test_create_lead_success(client: AsyncClient):
+async def test_create_lead_success(client: AsyncClient, default_workspace):
     payload = {
         "first_name": "Test",
         "last_name": "Lead",
@@ -25,7 +25,7 @@ async def test_create_lead_success(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_duplicate_lead_updates_existing(client: AsyncClient):
+async def test_duplicate_lead_updates_existing(client: AsyncClient, default_workspace):
     # First creation
     payload = {"phone_e164": "+573009998877", "first_name": "Original Name"}
     await client.post("/api/v1/leads/", json=payload)

@@ -148,9 +148,7 @@ async def test_client_can_set_default_payment_method(
 
 
 @pytest.mark.asyncio
-@patch("app.modules.portal.service.StripeClient")
 async def test_client_can_pay_pending_policy(
-    mock_stripe,
     client: AsyncClient,
     client_user_token: str,
     db_session: AsyncSession,
@@ -180,16 +178,19 @@ async def test_client_can_pay_pending_policy(
         "status": "succeeded",
     }
 
-    with patch(
-        "app.modules.portal.service.StripeClient", return_value=mock_stripe_instance
-    ):
+    from app.main import app as fastapi_app
+    from app.modules.payments.stripe_client import get_stripe_client
+
+    fastapi_app.dependency_overrides[get_stripe_client] = lambda: mock_stripe_instance
+    try:
         response = await client.post(
             f"/api/v1/portal/policies/{active_policy_for_client.id}/pay",
             headers={"Authorization": f"Bearer {client_user_token}"},
         )
+    finally:
+        fastapi_app.dependency_overrides.pop(get_stripe_client, None)
 
     assert response.status_code == 200
-
     # Check DB directly
     from sqlalchemy import select
     from app.modules.payments.models import Transaction

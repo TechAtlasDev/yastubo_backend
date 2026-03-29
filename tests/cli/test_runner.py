@@ -1,10 +1,9 @@
 """Pruebas unitarias para scripts/cli/utils/runner.py"""
+
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 
 from scripts.cli.utils.runner import stream_command
 
@@ -151,4 +150,4 @@ class TestStreamCommand:
         await stream_command("echo yastubo", "/tmp", on_output, on_exit)
 
         assert exit_codes == [0]
-        assert any("yastubo" in l for l in received_lines)
+        assert any("yastubo" in line for line in received_lines)
