@@ -1,0 +1,69 @@
+---
+title: Automatización con IA (Automating with AI)
+description: Uso de Google Gemini 1.5 y RAG para asistencia inteligente en el dominio de seguros.
+---
+
+Yastubo no solo es un motor transaccional, es un sistema inteligente. Mediante el uso de **Google Gemini 1.5 Flash** y una arquitectura de **RAG (Retrieval-Augmented Generation)**, la plataforma asiste a los usuarios en la toma de decisiones y el análisis de riesgos.
+
+## Core Benefits
+* **RAG Contextual**: La IA no alucina; responde basándose en documentos de conocimiento específicos del workspace.
+* **Memoria de Conversación**: Seguimiento del historial para diálogos coherentes.
+* **Procesamiento Vectorial**: Uso de `pgvector` en PostgreSQL para búsquedas semánticas ultra-rápidas.
+* **Multimodalidad**: Preparado para analizar documentos, PDFs y chats en un solo flujo.
+
+## Deep Dive Técnico
+
+### 1. El Ciclo de RAG
+El sistema no envía el prompt del usuario directamente a Gemini. Primero, realiza una búsqueda de similitud en la base de datos vectorial:
+1. **Embedding**: Se genera un vector del mensaje del usuario usando `text-embedding-004`.
+2. **Búsqueda Vectorial**: Se obtienen los 5 fragmentos más relevantes de la base de conocimientos (`KnowledgeDocument`).
+3. **Augmentación**: Se inyectan estos fragmentos como contexto en el `System Prompt`.
+
+### 2. Memoria de Sesión
+Cada conversación se identifica por un `session_id`. El sistema recupera los últimos 10 mensajes para mantener el hilo conductor sin sobrecargar el contexto de la ventana (context window).
+
+:::tip
+La memoria es persistente. Un usuario puede cerrar su sesión y volver horas después para continuar su consulta con el asistente de IA.
+:::
+
+## Ejemplo de Implementación
+
+Lógica central del chat con contexto (`app/modules/ai/service.py`):
+
+```python
+async def chat_with_context(
+    self, db: AsyncSession, workspace_id: uuid.UUID, session_id: str, message: str
+) -> str:
+    # 1. Recuperar contexto vectorial (RAG)
+    docs = await self.get_relevant_documents(db, workspace_id, message)
+    context_text = "\n".join([d.content for d in docs])
+
+    # 2. Recuperar historial reciente
+    history = await self.get_recent_history(db, session_id, limit=10)
+
+    # 3. Construir el Prompt Maestro
+    full_prompt = f"""
+    Eres un experto en seguros de Yastubo.
+    Responde solo con base en este CONTEXTO: {context_text}
+    
+    HISTORIAL: {history}
+    USUARIO: {message}
+    """
+
+    # 4. Generación asíncrona con Gemini
+    response = await self.model.generate_content_async(full_prompt)
+    
+    # 5. Guardar respuesta para persistencia
+    await self.save_message(db, session_id, "assistant", response.text)
+    
+    return response.text
+```
+
+### Explicación de Pasos Clave:
+1. **`get_relevant_documents`**: Utiliza el operador de distancia de coseno de `pgvector` para encontrar la información más cercana semánticamente.
+2. **`generate_content_async`**: Al ser asíncrono, no bloquea el servidor FastAPI mientras espera la respuesta de la API de Google.
+3. **`KnowledgeDocument`**: Cada documento en la base de conocimientos está vinculado a un `workspace_id`, garantizando el aislamiento de datos entre diferentes socios.
+
+## Diagrama de Proceso
+
+> [FLOW: El nodo "Usuario" con contenido "Pregunta por cobertura" se conecta al nodo "Embedding Engine" con contenido "text-embedding-004", el cual realiza una búsqueda en el nodo "pgvector DB". Los resultados se inyectan en el nodo "Gemini 1.5 Flash" junto con el historial para devolver una "Respuesta Contextual"].

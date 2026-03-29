@@ -1,0 +1,73 @@
+---
+title: Estrategia de Pruebas
+description: Cómo diseñamos y ejecutamos pruebas unitarias, de integración y mocks en Yastubo Backend.
+---
+
+Yastubo Backend sigue una política de **cero regresiones**. El sistema está cubierto por una suite exhaustiva de pruebas automáticas que garantizan la integridad de la lógica actuarial, los flujos financieros y la estabilidad de la API.
+
+## Core Benefits / Key Features
+
+*   **Pruebas Asíncronas**: Soporte nativo para `pytest-asyncio` en todas las suites de prueba.
+*   **Aislamiento de Infraestructura**: Uso de `aiosqlite` y `fakeredis` para ejecutar tests sin dependencias externas.
+*   **Mocks de Servicios Externos**: Simulación de APIs como Stripe y Zoho para pruebas rápidas y fiables.
+*   **Selector Interactivo**: Herramienta de consola para ejecutar tests de forma selectiva durante el desarrollo.
+
+## Arquitectura de Tests
+
+Las pruebas se dividen en tres categorías principales dentro del directorio `/tests`:
+
+### 1. Pruebas Unitarias (`tests/modules/`)
+Cada módulo tiene su propio conjunto de pruebas que validan la lógica de negocio en el archivo `service.py` y los esquemas en `schemas.py`.
+
+### 2. Pruebas de Integración (`tests/integrations/`)
+Validan la comunicación real (o simulada mediante mocks) con servicios externos como Email, WhatsApp y pasarelas de pago.
+
+### 3. Pruebas de Infraestructura (`tests/test_infra.py`)
+Conocidas como *Smoke Tests*, verifican que las conexiones a la base de datos y Redis están correctamente configuradas.
+
+:::tip[Ejecutar tests de un módulo específico]
+Para ahorrar tiempo durante el desarrollo, puedes ejecutar solo los tests del módulo en el que estás trabajando:
+```bash
+PYTHONPATH=. uv run pytest tests/modules/plans/ -v
+```
+:::
+
+## Ejemplo Práctico: Test Asíncrono con Mocks
+
+A continuación, un ejemplo de cómo probar la creación de un siniestro asegurando que no se bloquee por dependencias externas.
+
+```python
+# tests/modules/claims/test_claims_service.py
+import pytest
+from unittest.mock import AsyncMock
+from app.modules.claims import service as claims_service
+
+@pytest.mark.asyncio
+async def test_create_claim_success(db_session, mock_notification_service):
+    """
+    Prueba la creación exitosa de un siniestro.
+    Lógica técnica: utiliza un db_session de aiosqlite in-memory.
+    """
+    # GIVEN
+    claim_data = {"policy_id": 1, "description": "Accidente leve"}
+    
+    # WHEN
+    result = await claims_service.create_claim(db_session, claim_data)
+    
+    # THEN
+    assert result.status == "DRAFT"
+    mock_notification_service.send.assert_called_once()
+```
+
+## Manejo de Mocks
+
+Para servicios que cuestan dinero o dependen de la red (Stripe, Zoho, WhatsApp), utilizamos `unittest.mock` para simular respuestas exitosas o fallidas sin realizar llamadas reales.
+
+> [FLOW: "Pytest" inicializa el "Fixtures" (DB efímera, Redis simulado). El test llama al "Service". El Service interactúa con la "DB Efímera" y los "Mocks" de APIs externas. Al terminar, el test valida los cambios en la DB y que los Mocks fueron invocados con los parámetros correctos].
+
+## Herramienta Interactiva: Laboratorio de Tests
+
+Puedes usar `make test-interactive` para lanzar una interfaz visual que permite:
+*   Seleccionar módulos específicos.
+*   Filtrar tests por nombre o marcador.
+*   Ver informes detallados de cobertura y errores.

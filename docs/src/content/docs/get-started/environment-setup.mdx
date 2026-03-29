@@ -1,0 +1,79 @@
+---
+title: Configuración del Entorno
+description: Guía detallada de secretos y variables de entorno (.env).
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+# Configuración del Entorno
+
+Yastubo Backend utiliza variables de entorno para gestionar secretos, conexiones a bases de datos y configuraciones de servicios de terceros. Este enfoque permite que el mismo código se ejecute de forma segura en entornos de desarrollo, staging y producción.
+
+## El archivo `.env`
+
+Al ejecutar el script de instalación automática, se crea un archivo `.env` en la raíz del proyecto basado en `.env.example`. Debes editar este archivo para incluir tus credenciales reales.
+
+---
+
+## Variables Críticas
+
+### 1. Seguridad y Aplicación
+*   **`SECRET_KEY`**: Clave maestra para firmar los tokens JWT. En producción, debe ser una cadena aleatoria larga y compleja.
+*   **`APP_ENV`**: Define el comportamiento del sistema. Puede ser `development`, `staging` o `production`.
+
+### 2. Persistencia (Bases de Datos)
+*   **`DATABASE_URL`**: URL de conexión asíncrona (ej. `postgresql+asyncpg://...`).
+*   **`REDIS_URL`**: Conexión para caché y gestión de colas de tareas.
+
+### 3. Fintech (Stripe)
+*   **`STRIPE_SECRET_KEY`**: Tu clave secreta de la consola de Stripe.
+*   **`STRIPE_WEBHOOK_SECRET`**: Necesaria para validar que las notificaciones de pago provienen realmente de Stripe.
+*   **`STRIPE_CONNECT_CLIENT_ID`**: ID de cliente para la integración multi-tenant con resellers.
+
+---
+
+## Integraciones Externas (Feature Flags)
+
+Yastubo permite habilitar o deshabilitar módulos completos mediante "flags". Esto es útil para desarrollo local si no tienes todas las API Keys.
+
+| Variable | Descripción |
+| :--- | :--- |
+| `NOTIFICATIONS_ENABLED` | Habilita el envío de correos vía SendGrid. |
+| `WHATSAPP_ENABLED` | Habilita las notificaciones automáticas vía Twilio. |
+| `CRM_ENABLED` | Activa la sincronización bidireccional con Zoho CRM. |
+
+---
+
+## Deep Dive: Gestión de Secretos en Producción
+
+Para entornos productivos, recomendamos **no utilizar archivos .env** directamente en el servidor. En su lugar, utiliza un gestor de secretos como:
+*   AWS Secrets Manager
+*   HashiCorp Vault
+*   Variables de CI/CD (GitHub Secrets) inyectadas en el contenedor Docker.
+
+<Aside type="caution">
+  **Nunca** subas tu archivo `.env` al control de versiones (Git). El archivo `.gitignore` ya está configurado para evitarlo, pero es responsabilidad del equipo mantener esta seguridad.
+</Aside>
+
+## Ejemplo de Configuración Completa
+
+```bash
+# Ejemplo de configuración para desarrollo local
+APP_NAME="Yastubo Dev"
+APP_ENV="development"
+DEBUG=True
+
+# Base de Datos (Docker default)
+DATABASE_URL="mysql+aiomysql://root:root@localhost:3306/yastubo"
+REDIS_URL="redis://localhost:6379"
+
+# Stripe (Test Mode)
+STRIPE_SECRET_KEY="sk_test_51P..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+```
+
+---
+
+## Diagrama de Flujo de Carga de Configuración
+
+> [FLOW: Al arrancar la aplicación, el módulo 'app.core.config' utiliza Pydantic Settings para buscar el archivo .env. Primero intenta leer las variables del sistema (OS Environment), si no existen, recurre al archivo .env. Valida los tipos de datos y, si falta alguna variable crítica (como DATABASE_URL), la aplicación falla inmediatamente con un error descriptivo (fail-fast).]

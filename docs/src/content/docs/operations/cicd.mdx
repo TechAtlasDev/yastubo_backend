@@ -1,0 +1,61 @@
+---
+title: CI/CD y Despliegue Automatizado
+description: Pipelines de integración y despliegue continuo mediante GitHub Actions y GHCR.
+---
+
+Yastubo Backend implementa un flujo de **entrega continua** (Continuous Delivery) que garantiza que cada cambio en la rama principal ha pasado por estrictos controles de calidad antes de ser desplegado automáticamente en producción.
+
+## Core Benefits / Key Features
+
+*   **Quality Gate Automatizado**: Ejecución de tests unitarios, de integración y linting en cada Pull Request.
+*   **Gestión de Imágenes con GHCR**: Las imágenes Docker se versionan y almacenan en el GitHub Container Registry.
+*   **Despliegue Atómico vía SSH**: Actualización de contenedores en el servidor de producción sin intervención manual.
+*   **Seguridad**: Uso de GitHub Secrets para la gestión de claves SSH y variables de entorno sensibles.
+
+## Deep Dive Técnico: Pipeline de Integración Continua (CI)
+
+El flujo de CI se dispara en cada `push` o `pull_request` a las ramas `main` y `develop`. Su objetivo es validar que el código no rompe ninguna funcionalidad existente.
+
+### Pasos Críticos del CI
+1.  **Instalación con uv**: Configuración rápida del entorno Python 3.12.
+2.  **Linting y Formateo**: Validación de estándares de código mediante `ruff`.
+3.  **Ejecución de Tests**: Pruebas sobre una base de datos SQLite efímera para verificar la lógica de negocio.
+
+:::note[Scripts de Construcción]
+El pipeline de CI utiliza `scripts/build.py`, un script centralizado que encapsula toda la lógica de validación de calidad.
+:::
+
+## Ejemplo Práctico: Flujo de Despliegue (CD)
+
+El pipeline de CD se activa automáticamente solo después de un éxito en el CI. Realiza la construcción de la imagen de producción y la despliega en el servidor final.
+
+```yaml
+# .github/workflows/cd.yml (fragmento)
+
+- name: Build and push image
+  uses: docker/build-push-action@v6
+  with:
+    context: .
+    push: true
+    tags: ghcr.io/yastubo/yastubo-backend:latest
+
+- name: Deploy on server via SSH
+  uses: appleboy/ssh-action@v1.2.0
+  with:
+    host: ${{ secrets.DEPLOY_SSH_HOST }}
+    script: |
+      cd /opt/yastubo
+      docker compose pull app worker
+      docker compose up -d
+```
+
+### Gestión de Tags de Docker
+Las imágenes se etiquetan con el hash del commit (`sha`) para permitir **rollback** instantáneos en caso de error, y con `latest` para la versión actual en producción.
+
+## Diagrama del Pipeline de Despliegue
+
+> [FLOW: Un desarrollador hace merge en "main". GitHub Actions lanza el workflow "CI" (Tests + Lint). Al finalizar con éxito, el workflow "CD" construye la imagen "Docker" y la sube a "GHCR". Finalmente, el workflow se conecta por "SSH" al servidor, descarga la nueva imagen con "Docker Compose" y reinicia los contenedores].
+
+## Seguridad en el Pipeline
+
+Todas las credenciales (claves de servidor, tokens de base de datos, secretos de Stripe) están protegidas en **GitHub Secrets** y nunca se exponen en los logs de los workflows.

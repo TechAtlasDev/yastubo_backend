@@ -1,0 +1,85 @@
+---
+title: Emisión de Pólizas (Issuing a Policy)
+description: Guía detallada sobre el flujo de conversión de un Lead a un Cliente Activo con una póliza emitida.
+---
+
+El flujo de emisión de pólizas en Yastubo es el corazón del sistema. Este proceso transforma un **Lead** (prospecto) en un **Cliente Activo**, gestionando cálculos actuariales, validaciones de elegibilidad y generación de documentos legales en segundos.
+
+## Core Benefits
+* **Validación en Tiempo Real**: Comprobación automática de edad y disponibilidad por país.
+* **Cálculo Actuarial Dinámico**: Motor de precios que aplica recargos por edad de forma instantánea.
+* **Trazabilidad Total**: Registro de cada cambio de estado en la máquina de estados.
+* **Sincronización Multicanal**: Actualización automática en Zoho CRM y notificaciones vía Email/WhatsApp.
+
+## Deep Dive Técnico
+
+### 1. Captura y Deduplicación de Leads
+La "Regla de Oro" del sistema es nunca duplicar registros por teléfono (`phone_e164`). Si un lead reingresa al embudo, sus datos se actualizan pero se mantiene su identidad única para análisis de atribución.
+
+### 2. Lógica de Precios y Recargos
+El motor de emisión utiliza un `calculator` que procesa la edad de cada beneficiario basándose en su fecha de nacimiento y la fecha de inicio de la póliza.
+
+**Fórmula de Cálculo:**
+`Precio Final = (Precio Base del Plan o Override por País) * (1 + % Recargo por Rango de Edad)`
+
+:::note
+Si un plan tiene un `base_price_override` para un país específico, este prevalece sobre el precio base general del plan.
+:::
+
+### 3. Máquina de Estados de la Póliza
+La póliza nace en estado `DRAFT`, transiciona inmediatamente a `PENDING_PAYMENT` y solo alcanza el estado `ACTIVE` tras la confirmación del pago.
+
+> [FLOW: Lead (Status: NEW) -> Registro de Cliente -> Emisión (Status: DRAFT) -> Cambio automático a (Status: PENDING_PAYMENT) -> Pago Exitoso -> (Status: ACTIVE)]
+
+## Ejemplo de Implementación
+
+A continuación se muestra un fragmento simplificado del servicio de emisión (`app/modules/emission/service.py`):
+
+```python
+@audited(action="POLICY_ISSUED", entity="Policy")
+async def issue_policy(
+    db: AsyncSession, data: EmissionRequest, issued_by: uuid.UUID
+) -> Policy:
+    # 1. Obtener Cliente y Plan
+    client = await get_client(db, data.client_id)
+    plan = await plans_service.get_plan(db, data.plan_id)
+
+    # 2. Calcular precios por cada beneficiario
+    total_final_price = Decimal("0.00")
+    for b_data in data.beneficiaries:
+        age = calculate_age(b_data.date_of_birth, data.start_date)
+        
+        # Validar edad máxima de ingreso
+        if age > plan.max_entry_age:
+            raise HTTPException(status_code=422, detail="Excede edad máxima")
+
+        calc_result = calculator.calculate_price(
+            base_price=Decimal(str(plan.base_price)),
+            age=age,
+            age_ranges=plan_age_ranges
+        )
+        total_final_price += calc_result["final_price"]
+
+    # 3. Crear Póliza en estado DRAFT
+    policy = Policy(
+        policy_number=generate_unique_number(),
+        status=PolicyStatus.DRAFT,
+        final_price=float(total_final_price),
+        # ... otros campos
+    )
+    
+    # 4. Transicionar a PENDING_PAYMENT
+    policy.status = state_machine.transition(policy.status, PolicyStatus.PENDING_PAYMENT)
+    
+    await db.commit()
+    return policy
+```
+
+### Explicación de Pasos Clave:
+1. **`@audited`**: El decorador asegura que la emisión quede grabada en los logs de auditoría para cumplimiento (compliance).
+2. **`calculate_age`**: Función crítica que determina la edad actuarial (no necesariamente la cronológica dependiendo de la zona horaria).
+3. **`state_machine.transition`**: Valida que el salto de estado sea legal según las reglas de negocio.
+
+## Diagrama de Proceso
+
+> [FLOW: El nodo "Lead" con contenido "Interés inicial" se conecta al nodo "Emission Service" con contenido "Cálculo de Prima", indicando que si la edad es válida se genera la póliza en "PENDING_PAYMENT". Si la edad excede el límite, se marca como "REJECTED"].

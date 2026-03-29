@@ -1,90 +1,73 @@
 ---
-title: Audit
-description: Paginated system-wide audit log — admin access only.
+title: Audit (Trazabilidad Total)
+description: Registro automático de acciones, trazabilidad de entidades y auditoría de seguridad.
 ---
 
-Base path: `/api/v1/audit`
+El módulo de **Audit** es el pilar de transparencia de Yastubo. Implementa una capa de observabilidad que registra cada cambio crítico en el sistema, vinculándolo a un usuario, una entidad y una marca de tiempo inalterable.
 
----
+## Key Features
 
-## GET `/audit`
+*   **Decorator-Based Auditing**: Los desarrolladores pueden auditar cualquier función de servicio simplemente añadiendo el decorador `@audited`.
+*   **Trazabilidad de Entidades**: Permite reconstruir el historial de cambios de una póliza, un usuario o un plan desde su creación.
+*   **Identificación de Actores**: Registra automáticamente quién realizó la acción, incluso en flujos complejos con múltiples intervinientes.
+*   **Persistencia de Logs**: Los registros se almacenan en una tabla dedicada (`audit_logs`) diseñada para consultas rápidas y cumplimiento normativo.
 
-Retrieve a paginated list of audit log entries. Every action performed in the system (policy transitions, payments, role assignments, etc.) is recorded here.
+:::tip[Buenas Prácticas]
+Utiliza siempre `@audited` en funciones que muten el estado de la base de datos. Esto facilita la resolución de conflictos y el soporte técnico al permitir ver exactamente cuándo y quién cambió un dato.
+:::
 
-**Authentication:** Required — `ADMIN` role only
+## Deep Dive Técnico
 
-**Query parameters:**
+### El Decorador `@audited`
+El núcleo de la auditoría reside en un decorador inteligente que:
+1.  **Analiza la firma**: Inspecciona los argumentos de la función para extraer la sesión de base de datos (`db`) y el ID del usuario (`user_id`).
+2.  **Ejecuta y Captura**: Llama a la función original y captura el resultado.
+3.  **Extracción de ID de Entidad**: Si la función devuelve un objeto (ej. una Póliza), el decorador extrae automáticamente su ID para vincularlo al log.
+4.  **Auditoría Asíncrona**: Registra la acción en la base de datos de forma asíncrona sin bloquear la respuesta al cliente.
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `user_id` | UUID | — | Filter by the user who performed the action |
-| `action` | string | — | Filter by action name (e.g. `"issue_policy"`, `"login"`) |
-| `entity` | string | — | Filter by entity type (e.g. `"Policy"`, `"User"`) |
-| `entity_id` | UUID | — | Filter by the specific entity affected |
-| `date_from` | datetime (ISO 8601) | — | Start of date range |
-| `date_to` | datetime (ISO 8601) | — | End of date range |
-| `page` | integer (≥1) | `1` | Page number |
-| `page_size` | integer (1–100) | `50` | Number of results per page |
+### Estructura de un Log de Auditoría
+Cada entrada en el log contiene:
+*   **`action`**: El nombre semántico de la acción (ej. `POLICY_ISSUED`).
+*   **`entity`**: El nombre de la tabla o entidad afectada (ej. `Policy`).
+*   **`entity_id`**: El UUID del registro específico que fue modificado.
+*   **`user_id`**: El UUID del usuario que ejecutó la operación.
+*   **`timestamp`**: Fecha y hora exacta de la acción.
 
-**Example request:**
+## Ejemplo Práctico: Implementación del Decorador
 
-```http
-GET /api/v1/audit?entity=Policy&action=status_transition&page=1&page_size=20
-Authorization: Bearer <admin_token>
+El siguiente código muestra cómo se aplica la auditoría de forma transparente en un servicio:
+
+```python
+@audited(action="PLAN_CREATED", entity="Plan")
+async def create_plan(
+    db: AsyncSession, 
+    data: PlanCreate, 
+    created_by: uuid.UUID
+) -> Plan:
+    """
+    Crea un nuevo plan. 
+    Gracias al decorador, el sistema registrará automáticamente:
+    - Que se creó un 'Plan'
+    - El ID del plan generado (extraído del retorno)
+    - Quién lo creó (extraído del argumento 'created_by')
+    """
+    plan = Plan(**data.model_dump())
+    db.add(plan)
+    await db.commit()
+    return plan
 ```
 
-**Response `200 OK`:**
+## Diagrama de Proceso
 
-```json
-{
-  "items": [
-    {
-      "id": "550e8400-e29b-41d4-a716-446655440000",
-      "action": "status_transition",
-      "entity": "Policy",
-      "entity_id": "661f9511-f3ac-52e5-b827-557766551111",
-      "user_id": "772a0622-e4bd-63f6-c938-668877662222",
-      "ip_address": "192.168.1.100",
-      "user_agent": "Mozilla/5.0 ...",
-      "old_values": { "status": "PENDING_PAYMENT" },
-      "new_values": { "status": "ACTIVE" },
-      "extra": null,
-      "details": "Payment confirmed",
-      "created_at": "2024-01-15T10:30:00Z"
-    }
-  ],
-  "total": 1,
-  "page": 1,
-  "page_size": 20
-}
-```
+> [FLOW: Un servicio es invocado con el decorador @audited. El decorador captura los parámetros de entrada (user_id, db). La función de negocio se ejecuta y retorna un objeto. El decorador extrae el ID del objeto resultante. Finalmente, se inserta un registro en la tabla audit_logs con toda la información consolidada].
 
----
+## Estructura del Log (Modelo)
 
-## Schemas
-
-### PaginatedAuditResponse
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `items` | AuditLogResponse[] | List of audit entries for the current page |
-| `total` | integer | Total number of matching entries |
-| `page` | integer | Current page number |
-| `page_size` | integer | Number of entries per page |
-
-### AuditLogResponse
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | UUID | Audit log entry identifier |
-| `action` | string | Name of the action performed |
-| `entity` | string | Entity type affected (e.g. `"Policy"`, `"User"`, `"Plan"`) |
-| `entity_id` | string \| null | Identifier of the affected entity |
-| `user_id` | UUID \| null | ID of the user who performed the action |
-| `ip_address` | string \| null | IP address of the request |
-| `user_agent` | string \| null | Browser / client user agent |
-| `old_values` | object \| null | Previous state before the action |
-| `new_values` | object \| null | New state after the action |
-| `extra` | object \| null | Additional context-specific metadata |
-| `details` | string \| null | Human-readable description |
-| `created_at` | datetime | Timestamp of the audit event |
+| Campo | Tipo | Descripción |
+| :--- | :--- | :--- |
+| `id` | UUID | Identificador único del log. |
+| `action` | String | Acción realizada (ej. `USER_LOGIN`). |
+| `entity` | String | Tipo de entidad afectada. |
+| `entity_id` | UUID | ID del recurso específico. |
+| `user_id` | UUID | ID del autor de la acción. |
+| `created_at` | DateTime | Marca de tiempo del registro. |

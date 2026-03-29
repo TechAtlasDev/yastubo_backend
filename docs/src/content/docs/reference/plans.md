@@ -1,265 +1,93 @@
 ---
-title: Plans
-description: Funeral insurance plan management — create, update, price calculation, and versioning.
+title: Plans (Lógica Actuarial)
+description: Configuración de productos, gestión de coberturas y motor de cálculo de precios.
 ---
 
-Base path: `/api/v1/plans`
+El módulo de **Plans** es el motor financiero de Yastubo. Define qué productos están disponibles, en qué países, y cómo se calculan las primas de seguros basadas en factores de riesgo como la edad del asegurado.
 
-All endpoints require a valid JWT. Write operations (create/update/toggle) require the `ADMIN` role.
+## Key Features
 
----
+*   **Actuarial Calculator**: Motor de cálculo dinámico que aplica recargos por rangos de edad y sobrecostos por país.
+*   **Versionamiento de Planes**: Cada cambio en un plan genera una nueva versión con un "snapshot" de las condiciones en ese momento.
+*   **Vesting Periods (Carencias)**: Control granular de días de espera para coberturas por causas naturales, accidentales o suicidio.
+*   **Geofencing**: Disponibilidad de planes y overrides de precios específicos por código de país (ISO).
 
-## GET `/plans`
+:::note[Importante]
+Las pólizas emitidas se vinculan a una versión específica de un plan. Esto garantiza que, si las tarifas cambian en el futuro, los contratos existentes mantengan sus condiciones originales.
+:::
 
-List all funeral insurance plans.
+## Deep Dive Técnico
 
-**Authentication:** Required (any role)
+### Lógica de Cálculo de Precios
+El sistema desglosa el precio final siguiendo un flujo secuencial:
 
-**Query parameters:**
+1.  **Precio Base**: Se toma el `base_price` definido en el plan o el `base_price_override` si el país del asegurado tiene una configuración específica.
+2.  **Recargo por Edad**: Se identifica el rango de edad aplicable (`AgeRange`) y se calcula el monto proporcional del recargo.
+3.  **Fórmula Matemática**:
+    $$P_{final} = (P_{base} + (P_{base} \times \%_{recargo\_edad})) \times Q$$
+    Donde $P$ es precio y $Q$ es cantidad.
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `active_only` | boolean | `true` | When `true`, only returns plans where `is_active = true` |
+### Estructura de Datos
+*   **Plan**: El modelo raíz que contiene la configuración general.
+*   **AgeRange**: Define los límites de edad y el porcentaje de recargo (ej. 18-30 años -> 0%, 65-70 años -> 50%).
+*   **CountryConfig**: Define en qué países opera el plan y si existe un precio base diferencial.
+*   **Coverage**: Catálogo maestro de coberturas que se asocian a los planes.
 
-**Response `200 OK`:** Array of `PlanResponse` objects.
+## Ejemplo Práctico: El Motor de Cálculo
 
-```json
-[
-  {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "name": "Plan Básico",
-    "description": "Basic funeral coverage for migrants",
-    "base_price": "150.00",
-    "currency": "USD",
-    "is_active": true,
-    "max_entry_age": 65,
-    "max_renewal_age": 75,
-    "repatriation_countries": ["MX", "GT", "SV"],
-    "terms_es": "...",
-    "terms_en": "...",
-    "coverages": [...],
-    "age_ranges": [...],
-    "country_configs": [...],
-    "current_version": 3,
-    "created_at": "2024-01-10T08:00:00Z"
-  }
-]
+El siguiente fragmento muestra la lógica pura de cálculo que reside en el núcleo del sistema:
+
+```python
+def calculate_price(
+    base_price: Decimal,
+    age: int,
+    age_ranges: List[dict],
+    country_override: Optional[Decimal],
+    quantity: int = 1,
+) -> dict:
+    """
+    Lógica pura de cálculo de precios.
+    Calcula el precio unitario aplicando recargos por edad y país.
+    """
+    # 1. Determinar el precio base efectivo (con o sin override de país)
+    effective_base = country_override if country_override is not None else base_price
+
+    # 2. Buscar el rango de edad aplicable al asegurado
+    selected_range = None
+    for r in age_ranges:
+        if r["min_age"] <= age <= r["max_age"]:
+            selected_range = r
+            break
+
+    if selected_range is None:
+        raise ValueError("La edad no está cubierta por ningún rango configurado")
+
+    # 3. Calcular el recargo por edad
+    surcharge_pct = Decimal(str(selected_range["surcharge_percentage"]))
+    surcharge_amount = (effective_base * surcharge_pct / Decimal("100")).quantize(
+        Decimal("0.01")
+    )
+
+    # 4. Calcular el precio final según la cantidad
+    unit_price = effective_base + surcharge_amount
+    final_price = (unit_price * Decimal(str(quantity))).quantize(Decimal("0.01"))
+
+    return {
+        "final_price": final_price,
+        "age_surcharge_amount": surcharge_amount,
+        "unit_price": unit_price
+    }
 ```
 
----
+## Diagrama de Proceso
 
-## POST `/plans`
+> [FLOW: El usuario solicita una cotización proporcionando plan_id, edad y país. El sistema valida que el plan esté activo y disponible en el país solicitado. Se busca el rango de edad correspondiente. Se aplica la fórmula actuarial. Se devuelve el desglose completo del precio al cliente].
 
-Create a new funeral insurance plan.
+## Endpoints Principales
 
-**Authentication:** Required — `ADMIN` role
-
-**Request body:**
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | ✅ | Plan name |
-| `description` | string | ❌ | Plan description |
-| `base_price` | decimal | ✅ | Base monthly price |
-| `currency` | string | ❌ | Currency code (default: `"USD"`) |
-| `max_entry_age` | integer | ✅ | Maximum age to enroll |
-| `max_renewal_age` | integer | ✅ | Maximum age to renew coverage |
-| `repatriation_countries` | string[] | ✅ | ISO-3166-1 alpha-2 country codes covered for repatriation |
-| `terms_es` | string | ❌ | Terms and conditions in Spanish |
-| `terms_en` | string | ❌ | Terms and conditions in English |
-| `age_ranges` | AgeRangeCreate[] | ✅ | Age bracket surcharge rules |
-| `country_configs` | CountryConfigCreate[] | ✅ | Per-country pricing overrides |
-| `coverage_ids` | UUID[] | ✅ | IDs of coverage items to include in the plan |
-
-**AgeRangeCreate:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `min_age` | integer | Minimum age (inclusive) |
-| `max_age` | integer | Maximum age (inclusive) |
-| `surcharge_percentage` | decimal | Percentage surcharge applied to the base price |
-
-**CountryConfigCreate:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `country_code` | string (2 chars) | ISO-3166-1 alpha-2 country code (auto-uppercased) |
-| `country_name` | string | Human-readable country name |
-| `base_price_override` | decimal \| null | Override base price for this country |
-| `is_available` | boolean | Whether the plan is available in this country (default: `true`) |
-
-```json
-{
-  "name": "Plan Familiar",
-  "description": "Family funeral coverage",
-  "base_price": "200.00",
-  "currency": "USD",
-  "max_entry_age": 70,
-  "max_renewal_age": 80,
-  "repatriation_countries": ["MX", "GT"],
-  "age_ranges": [
-    { "min_age": 0,  "max_age": 45, "surcharge_percentage": "0.00" },
-    { "min_age": 46, "max_age": 60, "surcharge_percentage": "15.00" },
-    { "min_age": 61, "max_age": 70, "surcharge_percentage": "30.00" }
-  ],
-  "country_configs": [
-    { "country_code": "MX", "country_name": "Mexico", "is_available": true },
-    { "country_code": "GT", "country_name": "Guatemala", "base_price_override": "180.00", "is_available": true }
-  ],
-  "coverage_ids": ["<uuid>", "<uuid>"]
-}
-```
-
-**Response `201 Created`:** `PlanResponse` object.
-
----
-
-## GET `/plans/{plan_id}`
-
-Get details of a specific plan.
-
-**Authentication:** Required (any role)
-
-**Path parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `plan_id` | UUID | Plan identifier |
-
-**Response `200 OK`:** `PlanResponse` object. Returns `404` if not found.
-
----
-
-## PUT `/plans/{plan_id}`
-
-Update an existing plan. Every successful update creates a new version snapshot.
-
-**Authentication:** Required — `ADMIN` role
-
-**Path parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `plan_id` | UUID | Plan identifier |
-
-**Request body:** Same fields as `PlanCreate`, all optional (`PlanUpdate`).
-
-**Response `200 OK`:** Updated `PlanResponse` object.
-
----
-
-## PATCH `/plans/{plan_id}/toggle`
-
-Toggle the `is_active` status of a plan (activate ↔ deactivate).
-
-**Authentication:** Required — `ADMIN` role
-
-**Path parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `plan_id` | UUID | Plan identifier |
-
-**Request body:** None
-
-**Response `200 OK`:** Updated `PlanResponse` object with the new `is_active` value.
-
----
-
-## POST `/plans/calculate-price`
-
-Calculate the final price for a plan given a client's age and country.
-
-**Authentication:** Required (any role)
-
-**Request body:**
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `plan_id` | UUID | ✅ | Plan to price |
-| `age` | integer (0–120) | ✅ | Client's age |
-| `country_code` | string (2 chars) | ✅ | Client's country of residence (auto-uppercased) |
-| `quantity` | integer (≥1) | ❌ | Number of insured (default: `1`) |
-
-```json
-{
-  "plan_id": "550e8400-e29b-41d4-a716-446655440000",
-  "age": 52,
-  "country_code": "MX",
-  "quantity": 1
-}
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "plan_id": "550e8400-e29b-41d4-a716-446655440000",
-  "plan_name": "Plan Familiar",
-  "base_price": "200.00",
-  "country_override": null,
-  "age_surcharge_percentage": "15.00",
-  "age_surcharge_amount": "30.00",
-  "final_price": "230.00",
-  "currency": "USD",
-  "breakdown": {
-    "base": "200.00",
-    "age_surcharge": "30.00",
-    "country_override": null,
-    "total": "230.00"
-  }
-}
-```
-
----
-
-## GET `/plans/{plan_id}/versions`
-
-List all historical versions of a plan (newest first).
-
-**Authentication:** Required — `ADMIN` role
-
-**Path parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `plan_id` | UUID | Plan identifier |
-
-**Response `200 OK`:** Array of `PlanVersion` objects ordered by `version_number` descending.
-
----
-
-## Schemas
-
-### PlanResponse
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | UUID | Plan identifier |
-| `name` | string | Plan name |
-| `description` | string \| null | Plan description |
-| `base_price` | decimal | Monthly base price |
-| `currency` | string | Currency code |
-| `is_active` | boolean | Whether the plan is currently active |
-| `max_entry_age` | integer | Maximum enrollment age |
-| `max_renewal_age` | integer | Maximum renewal age |
-| `repatriation_countries` | string[] | Country codes covered |
-| `terms_es` | string \| null | Terms in Spanish |
-| `terms_en` | string \| null | Terms in English |
-| `coverages` | CoverageResponse[] | Included coverage items |
-| `age_ranges` | AgeRangeCreate[] | Age bracket surcharge rules |
-| `country_configs` | CountryConfigCreate[] | Per-country configuration |
-| `current_version` | integer | Current version number |
-| `created_at` | datetime | Creation timestamp |
-
-### CoverageResponse
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | UUID | Coverage item identifier |
-| `name` | string | Coverage name |
-| `description` | string \| null | Coverage description |
-| `limit_amount` | decimal \| null | Maximum benefit amount |
-| `limit_unit` | string \| null | Unit for the limit (e.g. `"USD"`) |
-| `notes_es` | string \| null | Notes in Spanish |
-| `notes_en` | string \| null | Notes in English |
+| Método | Ruta | Descripción |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/plans` | Lista de planes disponibles y activos. |
+| `POST` | `/api/v1/plans/calculate-price` | Simulación de precios según edad y país. |
+| `POST` | `/api/v1/plans/admin/create` | Creación de nuevos productos (Solo ADMIN). |
+| `GET` | `/api/v1/plans/{id}` | Detalle completo de un plan, incluyendo versiones. |

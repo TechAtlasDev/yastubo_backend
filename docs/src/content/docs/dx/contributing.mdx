@@ -1,0 +1,54 @@
+---
+title: Cómo Contribuir
+description: Guía de bienvenida y normas para desarrolladores que deseen colaborar en Yastubo Backend.
+---
+
+¡Bienvenido a Yastubo Backend! Valoramos enormemente las contribuciones que nos ayudan a construir la plataforma líder en seguros para migrantes. Antes de realizar tu primera contribución, es fundamental que comprendas nuestro modelo de desarrollo y estándares arquitectónicos.
+
+## Core Benefits / Key Features
+
+*   **Flujo de Git Transparente**: Uso de ramas por funcionalidad y Pull Requests con revisiones de código obligatorias.
+*   **Aislamiento de Dominios**: Estructura modular estricta que evita el acoplamiento excesivo.
+*   **Auditoría Nativa**: Sistema de trazabilidad obligatorio para cualquier cambio de estado.
+*   **Calidad Automatizada**: Verificación de estándares y tests en el proceso de pre-commit.
+
+## El Proceso de Contribución
+
+### 1. Preparación del Entorno
+Antes de comenzar, asegúrate de tener instalado `uv` y configurar tu entorno local.
+```bash
+make setup
+make hooks  # Instala los pre-commit hooks
+```
+
+### 2. Flujo de Trabajo con Git
+Seguimos el modelo de `feature-branching`:
+1.  Crea una rama desde `develop`: `git checkout -b feat/mi-funcionalidad`.
+2.  Realiza tus cambios siguiendo las convenciones de `Conventional Commits`.
+3.  Asegúrate de pasar el **Quality Gate** local antes de subir: `make build`.
+
+### 3. Estructura Obligatoria de Archivos
+Si estás creando o modificando un módulo en `app/modules/`, debes respetar la siguiente estructura jerárquica para mantener la coherencia arquitectónica:
+
+| Archivo | Responsabilidad |
+| :--- | :--- |
+| `models.py` | Definiciones de esquemas de base de datos SQLAlchemy. |
+| `schemas.py` | Definiciones de validación Pydantic para entrada y salida de datos. |
+| `service.py` | Lógica de negocio pura y orquestación de otros módulos. |
+| `router.py` | Definición de endpoints FastAPI y gestión de seguridad. |
+| `state_machine.py` | (Opcional) Lógica de transiciones de estado para entidades complejas. |
+
+## Reglas de Oro para Colaboradores
+
+*   **No "Joins" Cruzados**: Nunca realices consultas SQL que unan tablas de diferentes módulos.
+*   **Usa el CLI**: Utiliza la **Yastubo Dev Machine** (`make cli`) para generar el scaffolding de nuevos módulos.
+*   **Auditoría Obligatoria**: Cualquier cambio que afecte al estado de una entidad (Póliza, Cliente, Plan) debe ser decorado con `@audited`.
+*   **Tests en Espejo**: Todo nuevo código en `app/modules/X/` debe tener su correspondiente suite de tests en `tests/modules/X/`.
+
+:::tip[Filosofía de Código]
+Escribe código pensando que el próximo desarrollador que tenga que mantenerlo es una persona impaciente que conoce bien la arquitectura del sistema. ¡Sé claro y modular!
+:::
+
+## Diagrama de Proceso de Colaboración
+
+> [FLOW: El colaborador crea una "Rama" desde develop. Implementa cambios respetando la "Estructura de Módulos". Ejecuta "make build" para validación local. Envía un "Pull Request". Un mantenedor realiza la "Revisión de Código". El "CI" aprueba el build. Merge en "develop"].

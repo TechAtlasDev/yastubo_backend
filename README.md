@@ -1,151 +1,91 @@
-# Yastubo Backend
+# 🌟 Yastubo Backend v1
 
-Backend monolítico modular para gestión de planes funerarios.
+> **El motor inteligente diseñado para transformar los seguros funerarios de migrantes.** 🌍✈️
 
-## Stack
+<p align="center">
+  <img src="docs/src/assets/logo_yastubo.png" alt="Yastubo Logo" width="350px" />
+</p>
 
-- Python 3.12 + uv
-- FastAPI + SQLAlchemy async
-- MySQL + Redis
-- Alembic
-- pytest + ruff
-- Textual (TUI)
+<p align="center">
+  <a href="http://localhost:4321/get-started/installation/"><img src="https://img.shields.io/badge/Gu%C3%ADa-Instalaci%C3%B3n-8350F9?style=for-the-badge" /></a>
+  <a href="http://localhost:4321"><img src="https://img.shields.io/badge/Docs-Oficiales-black?style=for-the-badge" /></a>
+</p>
 
-## Yastubo Dev Machine (CLI) 🚀
+---
 
-Para centralizar el desarrollo, usamos una interfaz interactiva en la terminal que permite gestionar módulos, ejecutar tests y lanzar la documentación.
+## ✨ ¿Por qué Yastubo?
+
+Yastubo no es solo una API; es una **infraestructura modular de alta fidelidad** diseñada para orquestar cada aspecto de la protección familiar funeraria. 
+
+### 🚀 Capacidades Core
+*   **🏦 Stripe Connect Native:** Gestión de carteras, suscripciones y pagos recurrentes sin fricciones.
+*   **📜 State Machine Mastery:** Una máquina de estados determinística que controla cada fase de la póliza (Draft → Active → Cancelled).
+*   **🤖 AI Integration:** Agentes inteligentes que automatizan el análisis de riesgo y el soporte operativo.
+*   **🔍 Auditoría Total:** Trazabilidad absoluta mediante nuestro motor `@audited` (sabemos quién, qué y cuándo cambió cada dato).
+*   **⚙️ Modular por Diseño:** Dominios desacoplados que permiten escalar y evolucionar el producto sin generar deuda técnica.
+
+---
+
+## 🛠️ Yastubo Dev Machine (CLI)
+
+Olvídate de memorizar comandos complejos. Hemos construido una **Terminal User Interface (TUI)** interactiva para que gestiones todo el ecosistema desde un solo lugar.
 
 ```bash
 make cli
 ```
 
-**Funcionalidades:**
-- **Dashboard:** Estado del sistema y checks de entorno.
-- **Modules (Scaffolder):** Crea nuevos módulos con la arquitectura oficial.
-- **Testing:** Runner visual para pytest por módulos.
-- **Docs:** Lanzar el servidor de Starlight (Astro).
-- **Ops:** Atajos de infraestructura.
+> **¿Qué puedes hacer?**
+> - 📊 **Dashboard:** Monitorear la salud del sistema y configuración en tiempo real.
+> - 🏗️ **Scaffolder:** Crear nuevos módulos siguiendo los estándares de arquitectura.
+> - 🧪 **Testing:** Runner visual para ejecutar pruebas por módulos o archivos.
+> - 📖 **Docs:** Lanzar el servidor de documentación local de forma instantánea.
 
-## Instalación y configuración rápida
+---
 
-### Opción recomendada (1 comando)
+## ⚡ Get Started
+
+### 1. El camino rápido (Recomendado) 🚀
+Levanta todo el entorno de desarrollo (dependencias, base de datos, hooks de git y semillas de datos) con un solo comando:
 
 ```bash
 uv run python scripts/backend_setup.py
 ```
 
-Este setup:
-- instala dependencias (`uv sync --dev`)
-- instala hooks de git (`pre-commit`, `pre-push`)
-- aplica migraciones (`alembic upgrade head`)
-- ejecuta seed de roles/permisos
-- corre smoke test (`tests/test_infra.py`)
+### 2. Estructura de Módulos 🧩
+Cada pieza del sistema está en su lugar. Así se organiza la inteligencia de Yastubo:
 
-Opciones:
+*   **🔐 Auth:** Identidad robusta basada en JWT y control de acceso por roles (RBAC).
+*   **📋 Plans:** Lógica actuarial profunda con recargos por edad, países y versionado dinámico.
+*   **🖋️ Emission:** El corazón del negocio; orquestación de leads, clientes y emisión de pólizas.
+*   **💳 Payments:** Integración profunda con el ecosistema de Stripe y manejo de webhooks financieros.
+*   **🩺 Claims:** Gestión sensible de siniestros, validación de beneficiarios y coordinación de servicios.
+*   **🤖 AI:** Modelos y prompts optimizados para la automatización inteligente del flujo de trabajo.
 
-```bash
-uv run python scripts/backend_setup.py --skip-migrations
-uv run python scripts/backend_setup.py --skip-seed
-uv run python scripts/backend_setup.py --skip-smoke-test
-uv run python scripts/backend_setup.py --skip-hooks
-```
+---
 
-### Opción manual (paso a paso)
+## 🧪 Quality Gate
 
-```bash
-cp .env.example .env
-uv sync --dev
-uv run alembic upgrade head
-uv run python scripts/seed_roles.py
-PYTHONPATH=$PWD uv run pytest tests/test_infra.py -q
-```
+En Yastubo, la calidad no es una opción, es nuestra base. Nuestro "Quality Gate" asegura que cada cambio cumpla con los estándares técnicos más altos.
 
-## Scripts principales
+*   **Check de Integridad:** `uv run python scripts/build.py` (Ejecuta Lint obligatorio + Test Suite completa).
+*   **Consola de Pruebas:** `uv run python scripts/test_console.py` para un desarrollo iterativo rápido.
+*   **Mantenimiento:** `make build` para asegurar que el proyecto está listo para producción.
 
-### Quality gate (equivalente a "npm run build")
+---
 
-```bash
-uv run python scripts/build.py
-```
+## 📖 Documentación Viva
 
-Qué hace:
-- lint obligatorio con Ruff
-- test suite completa con pytest
-- falla inmediatamente si algún paso no pasa
+Hemos construido una experiencia de documentación de clase mundial con **Astro Starlight**. Encontrarás guías interactivas, diagramas de flujo y la referencia completa de la API.
 
-Opciones:
+*   **Acceso Principal:** `http://localhost:4321`
+*   **Atajos Rápidos:**
+    *   [🚀 Guía de Instalación](http://localhost:4321/get-started/installation/)
+    *   [🏛️ Arquitectura Técnica](http://localhost:4321/guides/architecture/)
+    *   [💻 CLI Master Guide](http://localhost:4321/dx/cli/)
+    *   [🤝 Cómo Contribuir](http://localhost:4321/dx/contributing/)
 
-```bash
-uv run python scripts/build.py --lint-only
-uv run python scripts/build.py --tests-only
-uv run python scripts/build.py --fail-fast
-```
+---
 
-### Consola interactiva de tests
-
-```bash
-uv run python scripts/test_console.py
-```
-
-Permite ejecutar:
-- suite completa
-- módulo completo
-- archivo específico
-- test puntual por node id
-- subconjunto por `-k`
-
-Modo no interactivo:
-
-```bash
-uv run python scripts/test_console.py --all
-uv run python scripts/test_console.py --module payments
-uv run python scripts/test_console.py --target tests/modules/payments/ -k webhook
-```
-
-### Atajos con Makefile
-
-```bash
-make help
-make setup
-make build
-make lint
-make test
-make test-interactive
-make hooks
-make cli              # Yastubo Dev Machine
-```
-
-## Cómo aseguramos lint siempre
-
-1. Hooks locales:
-	- `pre-commit` y `pre-push` instalados por `backend_setup.py`
-	- Configuración en `.pre-commit-config.yaml`
-2. CI obligatorio:
-	- Workflow de CI ejecuta `scripts/build.py` en push/PR
-3. Recomendado en GitHub:
-	- branch protection para `main` con status checks requeridos
-
-## CI/CD (GitHub Actions)
-
-- CI: `.github/workflows/ci.yml`
-  - push/PR sobre `main` y `develop`
-  - ejecuta quality gate (`scripts/build.py`)
-
-- CD: `.github/workflows/cd.yml`
-  - al terminar CI con éxito en `main` (o manual)
-  - build/push de imagen Docker a GHCR
-  - deploy opcional vía SSH
-
-Secrets opcionales para deploy:
-
-- `DEPLOY_SSH_HOST`
-- `DEPLOY_SSH_USER`
-- `DEPLOY_SSH_KEY`
-- `DEPLOY_PATH`
-
-## Documentación adicional
-
-- Guía de instalación: `docs/INSTALLATION.md`
-- Guía de scripts: `docs/SCRIPTS.md`
-- Filosofía de proyecto: `docs/PROJECT_PHILOSOPHY.md`
-- Contribución: `CONTRIBUTING.md`
+<p align="center">
+  Hecho con ❤️ por el equipo de <b>TechAtlas</b> para transformar el futuro de los seguros.
+</p>

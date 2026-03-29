@@ -1,202 +1,89 @@
 ---
-title: Authentication
-description: User registration, login, token management, and role assignment endpoints.
+title: Auth (Identidad y Acceso)
+description: Gestión de usuarios, sesiones JWT y Control de Acceso Basado en Roles (RBAC).
 ---
 
-Base path: `/api/v1/auth`
+El módulo de **Auth** es el guardián de la seguridad en Yastubo. No solo gestiona quién puede entrar al sistema, sino qué acciones puede realizar según su rol y pertenencia a un espacio de trabajo (Workspace).
 
----
+## Key Features
 
-## POST `/auth/register`
+*   **Durable Sessions**: Implementación de tokens de acceso (JWT) y de refresco (Redis) para sesiones seguras y persistentes.
+*   **Audit-First Design**: Cada registro y asignación de rol se audita automáticamente mediante decoradores de sistema.
+*   **RBAC Nativo**: Soporte para roles como `ADMIN`, `VENDEDOR` y `CLIENTE` desde el núcleo.
+*   **Cifrado Robusto**: Uso de algoritmos de hash modernos para la protección de credenciales.
 
-Register a new user account.
+:::tip[Seguridad]
+Los tokens de acceso son de vida corta (30 min), mientras que los tokens de refresco se almacenan en Redis con un tiempo de expiración configurable, permitiendo la revocación inmediata de sesiones si es necesario.
+:::
 
-**Authentication:** Not required
+## Deep Dive Técnico
 
-**Request body:**
+### Flujo de Autenticación
+El sistema utiliza una arquitectura de doble token:
+1.  **Access Token (JWT)**: Contiene los `roles` y el `user_id`. Se envía en el header `Authorization: Bearer`.
+2.  **Refresh Token**: Un identificador único almacenado en **Redis** vinculado al usuario. Se utiliza exclusivamente para obtener un nuevo par de tokens sin requerir las credenciales nuevamente.
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `email` | string (email) | ✅ | Unique email address |
-| `password` | string | ✅ | Minimum 8 characters |
-| `full_name` | string | ✅ | User's full name |
-| `phone` | string | ❌ | Phone number |
+### Lógica de Registro
+Al registrar un nuevo usuario, el sistema:
+*   Verifica la unicidad del email.
+*   Genera un hash de la contraseña usando `bcrypt` (o similar).
+*   Asigna automáticamente el rol `CLIENTE`.
+*   Crea una entrada en el log de auditoría (`USER_REGISTERED`).
 
-```json
-{
-  "email": "user@example.com",
-  "password": "securepass",
-  "full_name": "John Doe",
-  "phone": "+1234567890"
-}
+### Gestión de Roles (RBAC)
+Los roles no son simples strings; están vinculados a capacidades dentro del sistema. La asignación de roles requiere privilegios de `ADMIN` y se rastrea quién realizó la asignación.
+
+## Ejemplo Práctico
+
+A continuación, un ejemplo de cómo se implementa el registro de un usuario en el servicio de backend:
+
+```python
+@audited(action="USER_REGISTERED", entity="User")
+async def register_user(db: AsyncSession, data: UserRegister) -> User:
+    """
+    Registra un nuevo usuario y le asigna el rol CLIENTE por defecto.
+    """
+    # 1. Verificar si el correo ya existe para evitar duplicados
+    existing_user = await get_user_by_email(db, data.email)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, 
+            detail="El correo ya está registrado"
+        )
+
+    # 2. Cifrar la contraseña antes de guardarla
+    hashed_password = get_password_hash(data.password)
+    user = User(
+        email=data.email,
+        hashed_password=hashed_password,
+        full_name=data.full_name,
+        phone=data.phone,
+        is_active=True, # El usuario se activa inmediatamente
+    )
+    db.add(user)
+    await db.flush()  # Obtenemos el ID generado
+
+    # 3. Asignación automática de rol inicial
+    role_result = await db.execute(select(Role).where(Role.name == "CLIENTE"))
+    cliente_role = role_result.scalar_one_or_none()
+    if cliente_role:
+        user_role = UserRole(user_id=user.id, role_id=cliente_role.id)
+        db.add(user_role)
+
+    await db.commit()
+    await db.refresh(user, ["roles"])
+    return user
 ```
 
-**Response `201 Created`:**
+## Diagrama de Proceso
 
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "email": "user@example.com",
-  "full_name": "John Doe",
-  "phone": "+1234567890",
-  "is_active": true,
-  "roles": [],
-  "created_at": "2024-01-15T10:00:00Z"
-}
-```
+> [FLOW: El usuario envía credenciales al endpoint /login. El sistema valida el hash de la contraseña en la base de datos PostgreSQL. Si es válido, genera un Access Token y un Refresh Token. El Refresh Token se persiste en Redis con un TTL específico. Finalmente, se devuelven ambos tokens al cliente].
 
----
+## Endpoints Principales
 
-## POST `/auth/login`
-
-Authenticate a user and receive JWT tokens.
-
-**Authentication:** Not required
-
-**Request body:**
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `email` | string (email) | ✅ | Registered email |
-| `password` | string | ✅ | Account password |
-
-```json
-{
-  "email": "user@example.com",
-  "password": "securepass"
-}
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "access_token": "<JWT>",
-  "refresh_token": "<JWT>",
-  "token_type": "bearer",
-  "expires_in": 1800
-}
-```
-
-| Field | Description |
-|-------|-------------|
-| `access_token` | Short-lived JWT (default: 30 min) used in `Authorization: Bearer` header |
-| `refresh_token` | Long-lived JWT (default: 7 days) used only to get a new token pair |
-| `expires_in` | Access token lifetime in seconds |
-
----
-
-## POST `/auth/refresh`
-
-Exchange a valid refresh token for a new access/refresh token pair.
-
-**Authentication:** Not required (refresh token is the credential)
-
-**Request body:**
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `refresh_token` | string | ✅ | Valid refresh token |
-
-```json
-{
-  "refresh_token": "<refresh_token>"
-}
-```
-
-**Response `200 OK`:** Same shape as the login response.
-
----
-
-## POST `/auth/logout`
-
-Invalidate the current user's tokens (stored in Redis).
-
-**Authentication:** Required (any authenticated user)
-
-**Request body:** None
-
-**Response `204 No Content`**
-
----
-
-## POST `/auth/roles/assign`
-
-Assign a role to a user.
-
-**Authentication:** Required — `ADMIN` role
-
-**Request body:**
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `user_id` | UUID | ✅ | ID of the user to update |
-| `role_name` | string | ✅ | Role to assign (`ADMIN`, `VENDEDOR`, …) |
-
-```json
-{
-  "user_id": "550e8400-e29b-41d4-a716-446655440000",
-  "role_name": "VENDEDOR"
-}
-```
-
-**Response `200 OK`:** Updated `UserResponse` object.
-
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "email": "user@example.com",
-  "full_name": "John Doe",
-  "phone": null,
-  "is_active": true,
-  "roles": ["VENDEDOR"],
-  "created_at": "2024-01-15T10:00:00Z"
-}
-```
-
----
-
-## GET `/auth/me`
-
-Retrieve the profile of the currently authenticated user.
-
-**Authentication:** Required (any authenticated user)
-
-**Response `200 OK`:**
-
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "email": "user@example.com",
-  "full_name": "John Doe",
-  "phone": "+1234567890",
-  "is_active": true,
-  "roles": ["ADMIN"],
-  "created_at": "2024-01-15T10:00:00Z"
-}
-```
-
----
-
-## Schemas
-
-### UserResponse
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | UUID | Unique user identifier |
-| `email` | string | Email address |
-| `full_name` | string | Full name |
-| `phone` | string \| null | Phone number |
-| `is_active` | boolean | Whether the account is active |
-| `roles` | string[] | List of role names assigned to the user |
-| `created_at` | datetime (ISO 8601) | Account creation timestamp |
-
-### TokenResponse
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `access_token` | string | JWT access token |
-| `refresh_token` | string | JWT refresh token |
-| `token_type` | string | Always `"bearer"` |
-| `expires_in` | integer | Access token TTL in seconds |
+| Método | Ruta | Descripción |
+| :--- | :--- | :--- |
+| `POST` | `/api/v1/auth/register` | Registro de nuevos usuarios. |
+| `POST` | `/api/v1/auth/login` | Intercambio de credenciales por tokens. |
+| `POST` | `/api/v1/auth/refresh` | Renovación de sesión usando Refresh Token. |
+| `GET` | `/api/v1/auth/me` | Obtención del perfil del usuario actual. |

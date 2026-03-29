@@ -1,0 +1,71 @@
+---
+title: Ciclo de Vida de Siniestros (Claims Lifecycle)
+description: Gestión de reportes de siniestros, validación de beneficiarios y flujos de aprobación.
+---
+
+El módulo de **Claims** gestiona los momentos críticos de la relación con el cliente: el reporte de un fallecimiento o una emergencia médica. Este flujo asegura que cada reclamación sea evaluada con rigor técnico y auditoría constante.
+
+## Core Benefits
+* **Detección Proactiva**: Integración con el motor de emisión para marcar beneficiarios fallecidos automáticamente tras aprobación.
+* **Máquina de Estados de Siniestros**: Flujo controlado desde el reporte (`REPORTED`) hasta la resolución (`APPROVED`/`REJECTED`).
+* **Gestión de Gastos**: Seguimiento detallado de cada costo asociado al siniestro.
+* **Alertas en Tiempo Real**: Notificaciones vía Redis Pub/Sub para otros módulos del sistema.
+
+## Deep Dive Técnico
+
+### 1. El Reporte Inicial
+Cuando se crea un siniestro, se vincula a un `beneficiary_id` y a una `policy_id`. El estado inicial es siempre `REPORTED`. En este punto, el sistema valida que la póliza esté activa.
+
+### 2. Estados y Transiciones
+La máquina de estados de siniestros es estricta. Un siniestro aprobado (`APPROVED`) no puede volver a `REPORTED`, garantizando la inmutabilidad de la resolución.
+
+:::caution
+Solo los usuarios con roles de `COORDINADOR` o `ADMIN` pueden aprobar o rechazar siniestros que impliquen desembolsos económicos.
+:::
+
+### 3. Conexión con Emisión (The Death Trigger)
+Uno de los flujos más potentes es la actualización automática de la póliza. Si un siniestro por fallecimiento es aprobado, el sistema:
+1. Marca al beneficiario como `deceased_flag = True`.
+2. Calcula el nuevo precio de la póliza (restando la prima de ese beneficiario).
+3. Ajusta o cancela la suscripción en Stripe proporcionalmente.
+
+## Ejemplo de Implementación
+
+Lógica de aprobación y disparo de eventos (`app/modules/claims/service.py`):
+
+```python
+@audited(action="UPDATE_CLAIM_STATUS", entity="Claim")
+async def update_claim_status(
+    db: AsyncSession, claim_id: uuid.UUID, status_update: ClaimUpdateStatus
+) -> Claim:
+    # 1. Obtener el siniestro
+    claim = await get_claim_using_sqlalchemy(db, claim_id)
+
+    # 2. Validar transición de estado
+    if not can_transition(claim.status, status_update.status):
+        raise HTTPException(status_code=400, detail="Transición no válida")
+
+    claim.status = status_update.status
+    if claim.status in [ClaimStatus.APPROVED, ClaimStatus.REJECTED]:
+        claim.resolved_at = datetime.utcnow()
+
+    # 3. Si se aprueba, encolar tarea de impacto en emisión
+    if claim.status == ClaimStatus.APPROVED:
+        await arq_redis.enqueue_job(
+            "process_approved_claim", 
+            str(claim.id), 
+            str(claim.beneficiary_id)
+        )
+
+    await db.commit()
+    return claim
+```
+
+### Explicación de Pasos Clave:
+1. **`can_transition`**: Función de utilidad que previene errores humanos en el flujo del siniestro.
+2. **`arq_redis.enqueue_job`**: El procesamiento de un siniestro aprobado puede ser pesado (ajuste de Stripe, actualización de CRM, envío de emails), por lo que se delega a un worker asíncrono.
+3. **`resolved_at`**: Marca temporal crítica para los reportes de SLA (Service Level Agreement).
+
+## Diagrama de Proceso
+
+> [FLOW: El nodo "Coordinador" con contenido "Aprueba Siniestro" se conecta al nodo "Background Job" con contenido "process_approved_claim", el cual a su vez actualiza el nodo "Beneficiary" con contenido "deceased_flag = True" y notifica al nodo "Stripe" para ajustar el precio mensual].

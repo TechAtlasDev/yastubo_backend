@@ -1,0 +1,98 @@
+---
+title: Instalación
+description: Prepara tu entorno local para desarrollar en Yastubo Backend.
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+# Preparando tu entorno local
+
+Para garantizar la consistencia entre los desarrolladores del equipo, Yastubo utiliza **Python 3.12** y **uv** como gestor de paquetes y entornos virtuales. 
+
+## Requisitos Previos
+
+Antes de comenzar, asegúrate de tener instalado:
+
+*   **Python 3.12+**
+*   **uv** (Recomendado): `curl -LsSf https://astral.sh/uv/install.sh | sh`
+*   **Docker y Docker Compose:** Para levantar la infraestructura (Base de Datos y Redis).
+*   **Make** (Opcional): Para utilizar los atajos del `Makefile`.
+
+---
+
+## Instalación Automática (Recomendado)
+
+Hemos diseñado un script que automatiza todo el proceso de inicialización, desde la instalación de dependencias hasta la ejecución de pruebas de humo.
+
+1. **Clonar el repositorio:**
+   ```bash
+   git clone https://github.com/TechAtlasDev/yastubo_backend_v1.git
+   cd yastubo_backend_v1
+   ```
+2. **Ejecutar el Setup:**
+   ```bash
+   uv run python scripts/backend_setup.py
+   ```
+
+### ¿Qué hace este script?
+
+El script `backend_setup.py` realiza las siguientes acciones de forma secuencial:
+*   **Gestión de Secretos:** Crea tu archivo `.env` inicial a partir de `.env.example`.
+*   **Sincronización:** Instala todas las dependencias (incluyendo las de desarrollo) usando `uv sync --dev`.
+*   **Calidad de Código:** Instala los hooks de `pre-commit` para asegurar que el código siempre pase el lint antes de cada commit.
+*   **Persistencia:** Aplica todas las migraciones de base de datos pendientes con `alembic`.
+*   **Semilla de Datos:** Ejecuta el script `seed_roles.py` para crear los roles iniciales (`ADMIN`, `VENDEDOR`).
+*   **Verificación:** Ejecuta un "Smoke Test" (`tests/test_infra.py`) para confirmar que la conexión a DB y Redis es correcta.
+
+---
+
+## Instalación Manual
+
+Si prefieres tener un control total sobre el proceso, puedes seguir estos pasos:
+
+### 1. Entorno y Dependencias
+```bash
+cp .env.example .env
+uv sync --dev
+```
+
+### 2. Base de Datos y Roles
+Asegúrate de que tu instancia de MySQL esté corriendo (ver [Servidor Local](/get-started/local-server)) y ejecuta:
+```bash
+uv run alembic upgrade head
+uv run python scripts/seed_roles.py
+```
+
+### 3. Hooks de Git
+```bash
+uv run pre-commit install
+```
+
+---
+
+## Deep Dive: ¿Por qué usamos `uv`?
+
+En Yastubo priorizamos la velocidad y la reproductibilidad. `uv` es un reemplazo extremadamente rápido para `pip` y `pip-tools`, escrito en Rust. 
+
+**Beneficios clave:**
+*   **Velocidad:** Hasta 100 veces más rápido que pip.
+*   **Lockfile:** El archivo `uv.lock` garantiza que todos los desarrolladores tengan exactamente las mismas versiones de las librerías.
+*   **Gestión de Python:** `uv` puede instalar la versión correcta de Python por ti si no la tienes instalada.
+
+<Aside type="caution">
+  Nunca subas cambios que rompan el `uv.lock`. Si añades una dependencia, asegúrate de ejecutar `uv sync` y commitear el archivo de bloqueo actualizado.
+</Aside>
+
+## Verificación Final
+
+Para confirmar que todo está listo, ejecuta el suite de tests de infraestructura:
+
+```bash
+uv run pytest tests/test_infra.py
+```
+
+Si ves todos los tests en verde, ¡felicidades! Estás listo para emitir tu primera póliza.
+
+---
+
+> [FLOW: El desarrollador ejecuta el script de setup. El script primero verifica la existencia de .env, luego invoca a uv para crear el venv e instalar dependencias. Posteriormente, se conecta a la base de datos para ejecutar migraciones y seeders. Finalmente, realiza un ping a los servicios críticos para validar el entorno.]

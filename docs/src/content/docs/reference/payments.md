@@ -1,243 +1,95 @@
 ---
-title: Payments
-description: Stripe payment intents, subscriptions, manual payments, transactions, and Connect onboarding.
+title: Payments (Gestión Financiera)
+description: Integración con Stripe, pagos recurrentes y gestión de comisiones mediante Connect.
 ---
 
-Base path: `/api/v1/payments`
+El módulo de **Payments** gestiona toda la capa financiera de Yastubo. No solo procesa pagos unitarios y suscripciones, sino que también orquestra la distribución de comisiones a los revendedores (Vendedores) a través de Stripe Connect.
 
----
+## Key Features
 
-## POST `/payments/intent`
+*   **Pagos Unitarios y Suscripciones**: Soporte para cobros de pólizas anuales (un solo pago) o mensuales (recurrente).
+*   **Stripe Connect (Custom/Express)**: Onboarding automático para vendedores, permitiendo depósitos directos de comisiones.
+*   **Gestión de Comisiones**: Cálculo automático de "Application Fees" que la plataforma retiene antes de enviar el saldo al vendedor.
+*   **Webhook Handler**: Sistema robusto de escucha de eventos de Stripe para actualizar el estado de las pólizas y suscripciones en tiempo real.
 
-Create a Stripe **one-time payment intent** for a policy.
-
-**Authentication:** Required — `ADMIN` or `VENDEDOR`
-
-**Request body:**
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `policy_id` | UUID | ✅ | Policy to pay |
-| `payment_method_id` | string | ❌ | Stripe payment method ID (e.g. `pm_...`). If omitted, the client must confirm the payment on the frontend. |
-| `save_payment_method` | boolean | ❌ | Save the payment method for future use (default: `false`) |
-
-```json
-{
-  "policy_id": "550e8400-e29b-41d4-a716-446655440000",
-  "payment_method_id": "pm_1Oxample...",
-  "save_payment_method": true
-}
-```
-
-**Response `200 OK`:** `TransactionResponse` (includes `client_secret` for frontend confirmation).
-
-```json
-{
-  "id": "...",
-  "policy_id": "550e8400-e29b-41d4-a716-446655440000",
-  "stripe_payment_intent_id": "pi_1OxampleXXX",
-  "stripe_invoice_id": null,
-  "amount": "230.00",
-  "currency": "USD",
-  "status": "requires_confirmation",
-  "payment_type": "one_time",
-  "processed_at": null,
-  "client_secret": "pi_1OxampleXXX_secret_YYY"
-}
-```
-
-:::tip
-Use the `client_secret` with Stripe.js on the frontend to complete the payment confirmation.
+:::tip[Stripe Connect]
+Yastubo utiliza una arquitectura de pagos indirectos donde el cliente paga al vendedor, y la plataforma retiene una comisión configurable por espacio de trabajo.
 :::
 
----
+## Deep Dive Técnico
 
-## POST `/payments/subscription`
+### Flujo de Suscripción
+Cuando un cliente opta por un plan mensual:
+1.  **Customer Creation**: El sistema verifica si el usuario ya existe en Stripe; si no, lo crea.
+2.  **Payment Method**: Se vincula el método de pago proporcionado.
+3.  **Subscription Link**: Se asocia el `price_id` del plan de Yastubo con la suscripción en Stripe.
+4.  **Commission Splitting**: Si el vendedor tiene Connect activo, se aplica el `application_fee_percent` definido en el `Workspace`.
 
-Create a recurring Stripe **subscription** for a policy.
+### Gestión de Errores y Retintentos
+Si un cobro recurrente falla:
+*   Stripe notifica mediante `invoice.payment_failed`.
+*   Yastubo cambia el estado de la póliza a `IN_ARREARS` (En mora).
+*   Se activa el flujo de notificaciones para recordar el pago.
+*   Si el pago se regulariza, la póliza vuelve automáticamente a `ACTIVE`.
 
-**Authentication:** Required — `ADMIN` or `VENDEDOR`
+## Ejemplo Práctico: Creación de Suscripción
 
-**Request body:**
+El siguiente código muestra cómo se orquestra una suscripción con división de comisiones:
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `policy_id` | UUID | ✅ | Policy to subscribe |
-| `stripe_payment_method_id` | string | ✅ | Stripe payment method ID (`pm_...`) |
-| `billing_anchor_day` | integer (1–28) | ❌ | Day of month for billing. Defaults to start date day. |
+```python
+async def create_subscription(
+    db: AsyncSession,
+    stripe: StripeClient,
+    data: CreateSubscriptionRequest,
+    issued_by: uuid.UUID,
+) -> Subscription:
+    """
+    Crea una suscripción en Stripe vinculada a una póliza.
+    Gestiona la división de comisiones si hay un revendedor activo.
+    """
+    policy = await emission_service.get_policy(db, data.policy_id)
+    workspace = await get_workspace(db, policy.workspace_id)
 
-```json
-{
-  "policy_id": "550e8400-e29b-41d4-a716-446655440000",
-  "stripe_payment_method_id": "pm_1OxampleXXX",
-  "billing_anchor_day": 15
-}
+    # Configuración de comisiones para Stripe Connect
+    connect_account_id = None
+    app_fee_percent = None
+
+    if workspace.is_reseller and workspace.stripe_connect_id:
+        connect_account_id = workspace.stripe_connect_id
+        app_fee_percent = float(workspace.commission_rate) # Lo que se queda la plataforma
+
+    # 1. Obtener o crear el cliente en Stripe
+    customer_id = await get_or_create_customer(stripe, policy.client)
+
+    # 2. Iniciar la suscripción en Stripe
+    stripe_sub = await stripe.create_subscription(
+        customer_id=customer_id,
+        price_id=policy.plan.stripe_price_id,
+        payment_method_id=data.stripe_payment_method_id,
+        connect_account_id=connect_account_id,
+        application_fee_percent=app_fee_percent,
+    )
+
+    # 3. Persistir la información localmente
+    sub = Subscription(
+        policy_id=policy.id,
+        stripe_subscription_id=stripe_sub["id"],
+        status=stripe_sub["status"].upper()
+    )
+    db.add(sub)
+    await db.commit()
+    return sub
 ```
 
-**Response `200 OK`:** `SubscriptionResponse` object.
+## Diagrama de Proceso
 
-```json
-{
-  "id": "...",
-  "policy_id": "550e8400-e29b-41d4-a716-446655440000",
-  "stripe_subscription_id": "sub_1OxampleXXX",
-  "status": "active",
-  "current_period_start": "2024-02-15T00:00:00Z",
-  "current_period_end": "2024-03-15T00:00:00Z",
-  "cancel_at_period_end": false
-}
-```
+> [FLOW: El cliente selecciona un plan y proporciona su tarjeta. Yastubo crea un Subscription en Stripe. Stripe procesa el primer pago. Si tiene éxito, Stripe envía un webhook 'invoice.paid'. Yastubo recibe el webhook, marca la transacción como exitosa y activa la póliza. Si el pago falla, la póliza se marca en mora].
 
----
+## Endpoints Principales
 
-## POST `/payments/subscription/cancel`
-
-Cancel an active subscription.
-
-**Authentication:** Required — `ADMIN` role only
-
-**Request body:**
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `policy_id` | UUID | ✅ | Policy whose subscription to cancel |
-| `cancel_immediately` | boolean | ❌ | If `true`, cancels immediately; if `false` (default), cancels at the end of the current billing period |
-
-```json
-{
-  "policy_id": "550e8400-e29b-41d4-a716-446655440000",
-  "cancel_immediately": false
-}
-```
-
-**Response `200 OK`:** Updated `SubscriptionResponse` with `cancel_at_period_end: true` (or `status: "cancelled"` if cancelled immediately).
-
----
-
-## POST `/payments/manual`
-
-Register a manual payment (cash, bank transfer, etc.) for a policy.
-
-**Authentication:** Required — `ADMIN` role only
-
-**Request body:**
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `policy_id` | UUID | ✅ | Policy receiving the payment |
-| `amount` | decimal | ✅ | Amount paid |
-| `notes` | string | ❌ | Notes about the manual payment |
-
-```json
-{
-  "policy_id": "550e8400-e29b-41d4-a716-446655440000",
-  "amount": "230.00",
-  "notes": "Cash payment received at office"
-}
-```
-
-**Response `200 OK`:** `TransactionResponse` object with `payment_type: "manual"`.
-
----
-
-## GET `/payments/transactions`
-
-List payment transactions, optionally filtered.
-
-**Authentication:** Required — `ADMIN` or `VENDEDOR`
-
-**Query parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `policy_id` | UUID | Filter by policy |
-| `status` | string | Filter by transaction status (e.g. `"succeeded"`, `"pending"`, `"failed"`) |
-
-**Response `200 OK`:** Array of `TransactionResponse` objects.
-
----
-
-## POST `/payments/connect/onboarding`
-
-Generate a Stripe Connect onboarding link for the current user (to become a connected account).
-
-**Authentication:** Required (any authenticated user)
-
-**Request body:** None
-
-**Response `200 OK`:**
-
-```json
-{
-  "url": "https://connect.stripe.com/setup/s/xxxx",
-  "account_id": "acct_1OxampleXXX"
-}
-```
-
-Redirect the user to `url` to complete the Stripe Connect onboarding.
-
----
-
-## POST `/payments/webhook`
-
-Receive and process Stripe webhook events. This endpoint should be registered in your Stripe dashboard.
-
-**Authentication:** Stripe signature verification via `stripe-signature` header (no JWT required)
-
-**Headers:**
-
-| Header | Required | Description |
-|--------|----------|-------------|
-| `stripe-signature` | ✅ | Stripe webhook signature for payload verification |
-
-**Request body:** Raw Stripe event payload (JSON)
-
-**Response `200 OK`:**
-
-```json
-{ "status": "success" }
-```
-
-Events are processed asynchronously in a background task.
-
-:::caution
-Never expose this endpoint without verifying the `stripe-signature` header. The endpoint returns `400` if the signature is missing or invalid.
-:::
-
----
-
-## Schemas
-
-### TransactionResponse
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | UUID | Transaction identifier |
-| `policy_id` | UUID | Associated policy |
-| `stripe_payment_intent_id` | string \| null | Stripe Payment Intent ID |
-| `stripe_invoice_id` | string \| null | Stripe Invoice ID (for subscriptions) |
-| `amount` | decimal | Payment amount |
-| `currency` | string | Currency code |
-| `status` | string | Transaction status (`pending`, `succeeded`, `failed`, etc.) |
-| `payment_type` | string | `"one_time"`, `"subscription"`, or `"manual"` |
-| `processed_at` | datetime \| null | When the payment was confirmed |
-| `client_secret` | string \| null | Stripe client secret — only present on payment intent creation |
-
-### SubscriptionResponse
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | UUID | Internal subscription identifier |
-| `policy_id` | UUID | Associated policy |
-| `stripe_subscription_id` | string | Stripe subscription ID (`sub_...`) |
-| `status` | string | Stripe subscription status (`active`, `past_due`, `cancelled`, etc.) |
-| `current_period_start` | datetime | Start of the current billing period |
-| `current_period_end` | datetime | End of the current billing period |
-| `cancel_at_period_end` | boolean | Whether the subscription is set to cancel at period end |
-
-### ConnectOnboardingResponse
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `url` | string | Stripe Connect onboarding URL |
-| `account_id` | string | Stripe connected account ID |
+| Método | Ruta | Descripción |
+| :--- | :--- | :--- |
+| `POST` | `/api/v1/payments/one-time` | Procesa un pago único para una póliza. |
+| `POST` | `/api/v1/payments/subscribe` | Inicia una suscripción recurrente mensual. |
+| `POST` | `/api/v1/payments/webhook` | Endpoint para notificaciones de Stripe. |
+| `GET` | `/api/v1/payments/connect/onboarding` | Inicia el flujo de registro de vendedor en Stripe. |

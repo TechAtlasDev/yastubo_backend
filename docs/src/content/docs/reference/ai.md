@@ -1,37 +1,72 @@
 ---
-title: IA y RAG (Asistente Inteligente)
-description: Documentación del módulo de Inteligencia Artificial, RAG y gestión de historial conversacional.
+title: AI (Inteligencia Aplicada)
+description: Modelos generativos, embeddings y motor de RAG para soporte inteligente.
 ---
 
-El módulo de IA de Yastubo utiliza el modelo **Gemini 1.5 Flash** para proporcionar asistencia inteligente a los usuarios y administradores, integrando capacidades de **RAG (Retrieval-Augmented Generation)** y gestión de historial.
+El módulo de **AI** de Yastubo integra capacidades de inteligencia artificial generativa de última generación para potenciar el soporte al cliente y la toma de decisiones basada en datos. Utiliza modelos de **Google Gemini** para ofrecer un asistente contextualizado y preciso.
 
-## Arquitectura del Módulo AI
+## Key Features
 
-### 1. Ingesta de Conocimiento (`KnowledgeDocument`)
-Los documentos de conocimiento se almacenan en la tabla `knowledge_documents` con sus respectivos embeddings generados por `text-embedding-004`.
-*   **Vector Database**: Utilizamos la extensión `pgvector` de PostgreSQL para realizar búsquedas de similitud de coseno.
-*   **RAG**: Antes de cada respuesta, el sistema busca los fragmentos más relevantes para inyectarlos en el prompt del sistema.
+*   **RAG (Retrieval-Augmented Generation)**: Mejora las respuestas de la IA inyectando contexto relevante de documentos internos.
+*   **Gestión de Embeddings**: Conversión de texto en vectores numéricos para búsquedas semánticas de alta precisión.
+*   **Memoria de Conversación**: Seguimiento del historial de chat por sesión para interacciones naturales.
+*   **Motor pgvector**: Almacenamiento y búsqueda eficiente de vectores directamente en la base de datos PostgreSQL.
 
-### 2. Gestión de Historial (`ChatConversation` & `ChatMessage`)
-A diferencia de implementaciones básicas, Yastubo mantiene el contexto de la conversación:
-*   **Persistencia**: Cada mensaje (usuario y asistente) se guarda en la base de datos vinculado a una `session_id`.
-*   **Contexto Multi-turno**: El servicio recupera los últimos **10 mensajes** de la conversación para incluirlos en el prompt enviado a Gemini, permitiendo referencias a mensajes anteriores ("¿puedes explicarme más sobre el segundo punto?").
-*   **Ordenamiento**: Se utiliza un ordenamiento determinista por `created_at` e `id` para garantizar la coherencia del diálogo.
+:::tip[Eficiencia de IA]
+Utilizamos el modelo `gemini-1.5-flash` por su equilibrio perfecto entre velocidad de respuesta, ventana de contexto masiva y bajo costo operativo.
+:::
 
-## Endpoints Principales
+## Deep Dive Técnico
 
-### `POST /ai/chat`
-Envía un mensaje al asistente dentro de una sesión específica.
-*   **Input**: `session_id`, `message`.
-*   **Proceso**:
-    1.  Identifica o crea la `ChatConversation`.
-    2.  Persiste el mensaje del usuario.
-    3.  Busca documentos relevantes (RAG).
-    4.  Recupera historial reciente.
-    5.  Genera respuesta con Gemini.
-    6.  Persiste y retorna la respuesta del asistente.
+### El Proceso RAG (Retrieval-Augmented Generation)
+Para evitar "alucinaciones" y asegurar que la IA responda basándose en los planes y términos legales de Yastubo, el flujo es el siguiente:
 
-## Consideraciones Técnicas
-*   **Embeddings**: 768 dimensiones.
-*   **Modelo**: `gemini-1.5-flash`.
-*   **Aislamiento**: Los documentos de conocimiento están aislados por `workspace_id`.
+1.  **Input**: El usuario envía una pregunta.
+2.  **Embedding**: La pregunta se convierte en un vector usando `text-embedding-004`.
+3.  **Búsqueda Semántica**: Se realiza una búsqueda en PostgreSQL usando el operador de distancia de coseno (`<=>`) sobre la tabla de documentos de conocimiento.
+4.  **Prompt Dinámico**: Se construye un "System Prompt" que incluye los fragmentos de documentos encontrados.
+5.  **Generación**: Gemini genera la respuesta final usando el contexto inyectado.
+
+### Persistencia y Contexto
+El sistema guarda cada mensaje de la conversación (`ChatMessage`) vinculado a una sesión (`ChatConversation`). En cada nueva pregunta, se recuperan los últimos 10 mensajes para mantener el hilo del diálogo.
+
+## Ejemplo Práctico: Asistente con Contexto
+
+El siguiente fragmento muestra cómo se orquestra la llamada a la IA integrando el contexto de la base de datos de conocimiento:
+
+```python
+async def chat_with_context(
+    self, db: AsyncSession, workspace_id: uuid.UUID, session_id: str, message: str
+) -> str:
+    """
+    Gestiona una sesión de chat inteligente aplicando RAG.
+    """
+    # 1. Recuperar documentos relevantes (Búsqueda semántica)
+    docs = await self.get_relevant_documents(db, workspace_id, message)
+    context = "\n".join([f"Fuente: {d.title}\nContenido: {d.content}" for d in docs])
+
+    # 2. Construir el prompt de sistema con el conocimiento inyectado
+    system_prompt = f"""
+    Eres un experto en seguros de Yastubo. Responde solo basándote en el CONTEXTO.
+    CONTEXTO:
+    {context}
+    """
+
+    # 3. Consultar a Gemini con el prompt enriquecido
+    response = await self.model.generate_content_async(
+        f"{system_prompt}\nUsuario: {message}"
+    )
+    return response.text
+```
+
+## Diagrama de Proceso
+
+> [FLOW: El usuario hace una pregunta. El sistema genera el embedding de la pregunta. Se realiza una búsqueda vectorial en la tabla KnowledgeDocument usando pgvector. Se extraen los 5 documentos más parecidos semánticamente. Se envía la pregunta + documentos + historial a Gemini. Gemini responde contextualmente. Se guarda la respuesta en la base de datos].
+
+## Modelos Utilizados
+
+| Tarea | Modelo | Proveedor |
+| :--- | :--- | :--- |
+| **Generación de Texto** | `gemini-1.5-flash` | Google Generative AI |
+| **Embeddings** | `text-embedding-004` | Google Generative AI |
+| **Base de Datos Vectorial** | `pgvector` | Extensión de PostgreSQL |

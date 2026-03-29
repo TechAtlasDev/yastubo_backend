@@ -1,0 +1,42 @@
+---
+title: Changelog
+description: Historial de cambios y versiones de Yastubo Backend.
+---
+
+Este documento registra todos los cambios significativos realizados en Yastubo Backend. Seguimos el estándar de [Semantic Versioning](https://semver.org/) y [Keep a Changelog](https://keepachangelog.com/).
+
+## Core Benefits / Key Features
+
+*   **Trazabilidad**: Historial detallado de todas las mejoras y correcciones.
+*   **Transparencia**: Información clara sobre nuevas funcionalidades para los desarrolladores.
+*   **Gestión de Versiones**: Control de versiones semántico para facilitar despliegues seguros.
+
+## [0.2.0] - 2026-03-29
+### Added
+*   **Módulo de IA**: Integración con modelos generativos para evaluación de riesgos y asistentes de siniestros.
+*   **Yastubo Dev Machine**: Nueva interfaz de consola (TUI) para administración y desarrollo.
+*   **Módulo de Leads**: Motor de captación y seguimiento de potenciales clientes.
+*   **Monitoreo Avanzado**: Endpoints de salud detallados y logging estructurado con `loguru`.
+
+### Changed
+*   **Arquitectura Modular**: Refactorización completa de los módulos de `Emission` y `Payments` para mejorar el aislamiento.
+*   **CI/CD**: Actualización de los pipelines de despliegue con soporte para Docker multi-stage y `uv`.
+
+### Fixed
+*   **Sync con Zoho**: Optimización de las tareas asíncronas para evitar bloqueos en la API principal.
+*   **Cálculo de Primas**: Corrección en la lógica de recargos por edad para planes multiaño.
+
+## [0.1.0] - 2026-01-15
+### Added
+*   **Lanzamiento Inicial**: Estructura base del monolito modular.
+*   **Módulos Core**: Auth, Plans, Emission, Payments, Claims y Audit.
+*   **Integración con Stripe**: Flujo completo de pagos recurrentes y cobros únicos.
+*   **Generador de Documentos**: Motor de plantillas Jinja2 para PDFs de pólizas.
+
+:::note[Historial de Versiones]
+Todas las versiones anteriores a la 0.1.0 se consideran versiones pre-alfa de desarrollo interno.
+:::
+
+## Diagrama de Evolución del Proyecto
+
+> [FLOW: La versión "0.1.0" establece el core (Pólizas + Pagos). La versión "0.2.0" introduce "IA" y mejora la "DX" con la nueva CLI. Las versiones futuras se centrarán en "Escalabilidad Global" y "App Móvil"].

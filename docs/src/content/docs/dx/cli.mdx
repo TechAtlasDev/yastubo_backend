@@ -1,0 +1,69 @@
+---
+title: CLI Reference
+description: Guía de comandos maestros y uso de la Yastubo Dev Machine (TUI).
+---
+
+Yastubo Backend incluye una potente interfaz de línea de comandos (CLI) y una consola de desarrollo interactiva (TUI) diseñada para maximizar la productividad del desarrollador y simplificar las tareas de administración complejas.
+
+## Core Benefits / Key Features
+
+*   **Yastubo Dev Machine**: Una consola visual (TUI) para gestionar el ciclo de vida del desarrollo.
+*   **Automatización con Makefile**: Comandos cortos y memorizables para tareas recurrentes.
+*   **Scaffolding de Módulos**: Generación automática de estructuras de carpetas y archivos siguiendo el estándar del proyecto.
+*   **Laboratorio de Tests**: Selector interactivo de pruebas para depuración rápida.
+
+## La Yastubo Dev Machine (TUI)
+
+La herramienta principal para los desarrolladores es la **Dev Machine**, construida con la librería `Textual`. Proporciona un panel de control visual directamente en tu terminal.
+
+### Cómo lanzarla
+```bash
+make cli
+# o alternativamente
+uv run python scripts/cli/main.py
+```
+
+### Secciones de la Consola
+1.  **🏠 Inicio**: Estado general del backend y servicios (DB, Redis).
+2.  **📂 Módulos**: Visualización y creación de nuevos módulos de dominio.
+3.  **🧪 Laboratorio de Tests**: Ejecución selectiva de suites de pruebas.
+4.  **📚 Centro de Docs**: Acceso rápido a la documentación local.
+5.  **🛠️ Operaciones**: Gestión de migraciones, semillas de datos y logs.
+
+:::tip[Atajos de Teclado]
+Usa los números `1` al `5` para cambiar de pestaña rápidamente y `q` para salir de la consola.
+:::
+
+## Comandos del Makefile
+
+El `Makefile` actúa como la orquesta de herramientas del proyecto, abstrayendo comandos complejos de `uv`, `pytest` y `ruff`.
+
+| Comando | Descripción |
+| :--- | :--- |
+| `make setup` | Instalación de dependencias e inicialización del entorno. |
+| `make build` | **Quality Gate**: Ejecuta linting y tests. Obligatorio antes de un PR. |
+| `make lint` | Ejecuta `ruff` para verificar estándares y tipos de código. |
+| `make test` | Ejecuta la suite completa de pruebas de forma silenciosa. |
+| `make test-interactive` | Lanza un selector interactivo para ejecutar tests específicos. |
+| `make smoke` | Pruebas rápidas de infraestructura (conectividad DB/Redis). |
+| `make hooks` | Instala los hooks de `pre-commit` para validación local. |
+
+## Ejemplo Práctico: Creación de un Módulo
+
+En lugar de crear archivos manualmente, utiliza el generador incluido en la CLI para asegurar que tu módulo cumple con la arquitectura de **Monolito Modular**.
+
+```bash
+# 1. Abre la CLI
+make cli
+# 2. Ve a la pestaña 'Módulos' (Tecla 2)
+# 3. Selecciona 'Nuevo Módulo'
+# 4. Introduce el nombre (ej. 'marketing')
+```
+
+Esto generará automáticamente:
+*   `app/modules/marketing/models.py`, `schemas.py`, `service.py`, `router.py`.
+*   Un archivo de tests base en `tests/modules/marketing/`.
+
+## Diagrama de Interacción de la CLI
+
+> [FLOW: El desarrollador ejecuta un comando de "Makefile". El Makefile invoca a "uv" (Gestor de paquetes) para ejecutar scripts en "Python". Estos scripts interactúan con el "FileSystem" para crear archivos o con "Pytest/Ruff" para validar el código, devolviendo el resultado formateado a la terminal del desarrollador].

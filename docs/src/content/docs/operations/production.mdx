@@ -1,0 +1,70 @@
+---
+title: Configuración de Producción
+description: Guía para desplegar Yastubo Backend en entornos de producción usando Docker y uv.
+---
+
+Yastubo Backend está diseñado siguiendo principios de **infraestructura inmutable** y **separación de responsabilidades**. El sistema utiliza Docker para garantizar que el entorno de desarrollo sea idéntico al de producción, optimizando el rendimiento y la seguridad.
+
+## Core Benefits / Key Features
+
+*   **Imágenes Multi-Stage**: Reducción drástica del tamaño de la imagen final eliminando dependencias de compilación.
+*   **Gestión con uv**: Instalación de dependencias ultra-rápida y reproducible mediante `uv.lock`.
+*   **Aislamiento de Servicios**: Base de datos, caché y workers corren en contenedores independientes.
+*   **Configuración por Entorno**: Gestión centralizada mediante variables de entorno (`.env`).
+
+## Deep Dive Técnico: Dockerfile Optimizado
+
+La imagen de producción utiliza un proceso de construcción en dos etapas (*Multi-stage build*). Esto permite que el entorno de ejecución final no contenga herramientas de compilación pesadas, mejorando la seguridad y la velocidad de despliegue.
+
+### Etapa 1: Builder
+Utilizamos `uv` para sincronizar las dependencias. Al usar `--frozen`, garantizamos que las versiones instaladas coincidan exactamente con el archivo de bloqueo.
+
+### Etapa 2: Runtime
+Solo copiamos el entorno virtual (`.venv`) y el código fuente. La imagen base es `python:3.12-slim-bookworm`, lo que proporciona un balance ideal entre ligereza y compatibilidad.
+
+:::tip[Uso de uv]
+`uv` es significativamente más rápido que `pip` y maneja mejor las dependencias complejas, lo que reduce el tiempo de los pipelines de CI/CD en un 70%.
+:::
+
+## Ejemplo Práctico: Despliegue con Docker Compose
+
+Para un despliegue rápido en un servidor único, utilizamos `docker-compose.yml`. Este archivo define la red interna y las dependencias de salud (*healthchecks*) entre servicios.
+
+```yaml
+# Fragmento de docker-compose.yml para producción
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - yastubo-network
+
+  # ... otros servicios (postgres, redis, worker)
+```
+
+### Comandos de Operación
+
+Desde la raíz del proyecto, puedes gestionar el stack completo usando el `Makefile` incluido:
+
+```bash
+# Construir e iniciar todos los servicios
+make up
+
+# Ver logs en tiempo real
+make logs
+
+# Detener todos los servicios
+make down
+```
+
+## Diagrama de Infraestructura
+
+> [FLOW: El tráfico llega desde el exterior al contenedor "App" (FastAPI) en el puerto 8000. El contenedor "App" se comunica internamente con "Postgres" (Puerto 5432) para persistencia y con "Redis" (Puerto 6379) para caché y colas. El contenedor "Worker" observa la cola en "Redis" y procesa tareas en segundo plano comunicándose también con "Postgres"].

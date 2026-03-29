@@ -1,0 +1,91 @@
+---
+title: Servidor Local e Infraestructura
+description: Cómo levantar los servicios de soporte (Docker, DB, Redis) y la API.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+# Levantando la Infraestructura Local
+
+Para que Yastubo Backend funcione correctamente, necesita varios servicios de soporte. Aunque puedes instalarlos de forma nativa, recomendamos encarecidamente utilizar **Docker Compose** para asegurar que las versiones de la base de datos y Redis coincidan con las de producción.
+
+## Servicios Requeridos
+
+*   **Base de Datos:** PostgreSQL 16+.
+*   **Caché y Colas:** Redis 7+.
+*   **Worker:** Procesador de tareas asíncronas (arq).
+
+---
+
+## Ejecución con Docker Compose
+
+La forma más rápida de tener todo el stack listo es:
+
+```bash
+docker compose up -d
+```
+
+### ¿Qué levanta este comando?
+1.  **`postgres`**: Una instancia de base de datos persistente en el puerto `5432`.
+2.  **`redis`**: Servidor de caché en el puerto `6379`.
+3.  **`app`**: La API de FastAPI lista en `http://localhost:8000`.
+4.  **`worker`**: El procesador de tareas que gestiona el envío de emails y webhooks de Stripe en segundo plano.
+
+---
+
+## Ejecución para Desarrollo (Modo Hot-Reload)
+
+Si estás modificando código, es preferible ejecutar la API y el Worker de forma nativa en tu máquina (después de levantar solo DB y Redis con Docker).
+
+### 1. Levantar solo la Infraestructura
+```bash
+docker compose up postgres redis -d
+```
+
+### 2. Ejecutar la API
+```bash
+uv run uvicorn app.main:app --reload --port 8000
+```
+
+### 3. Ejecutar el Worker (Opcional pero recomendado)
+El worker es necesario para procesos que no deben bloquear la respuesta de la API (ej. comunicación con Zoho).
+```bash
+uv run python -m arq app.workers.worker.WorkerSettings
+```
+
+---
+
+## Deep Dive: El Ciclo de Vida de las Tareas Asíncronas
+
+En Yastubo, no todas las operaciones ocurren en el ciclo de vida de la petición HTTP. Por ejemplo, cuando se emite una póliza, la API responde inmediatamente y delega a un **Worker** la generación del PDF y la sincronización con el CRM.
+
+### Lógica de Reintentos
+Si el CRM de Zoho está caído, el worker utiliza una estrategia de **"Exponential Backoff"** (espera exponencial) para reintentar la tarea automáticamente sin intervención manual.
+
+<Aside type="tip">
+  Puedes monitorear el estado de los servicios ejecutando `make cli` y entrando en la sección de **Dashboard**.
+</Aside>
+
+## Verificación de Salud (Health Checks)
+
+La API expone un endpoint para verificar que todas las conexiones (DB y Redis) están activas:
+
+```bash
+curl http://localhost:8000/api/v1/dashboard/health
+```
+
+**Respuesta esperada:**
+```json
+{
+  "status": "healthy",
+  "database": "connected",
+  "redis": "connected",
+  "version": "1.0.0"
+}
+```
+
+---
+
+## Diagrama de Interacción de Servicios
+
+> [FLOW: La API de FastAPI recibe la petición del cliente. Si la tarea es pesada, la API publica un mensaje en Redis. El Worker, que está escuchando constantemente a Redis, toma el mensaje, lo procesa (ej. llama a Stripe API) y actualiza el estado en la Base de Datos PostgreSQL. Finalmente, el resultado queda disponible para la próxima consulta de la API.]

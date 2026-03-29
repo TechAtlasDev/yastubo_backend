@@ -1,0 +1,64 @@
+---
+title: Sincronización con CRM (CRM Sync)
+description: Flujo de datos bidireccional entre Yastubo Backend y Zoho CRM para gestión comercial.
+---
+
+Yastubo Backend no vive aislado. Para que el equipo comercial tenga visibilidad total, el sistema integra un flujo de sincronización robusto con **Zoho CRM**, asegurando que cada lead, cliente y póliza esté reflejado en la herramienta de ventas.
+
+## Core Benefits
+* **Visibilidad Comercial**: Los agentes de ventas ven el progreso de las pólizas sin entrar al backend técnico.
+* **Reducción de Errores**: La sincronización automática evita la entrada doble de datos.
+* **Mapeo de Estados**: Los cambios en la máquina de estados del backend se reflejan como etapas (`Stages`) en Zoho Deals.
+* **Ejecución No-Bloqueante**: El backend sigue respondiendo mientras la sincronización ocurre en segundo plano.
+
+## Deep Dive Técnico
+
+### 1. El Proceso de Upsert
+Para evitar duplicados y errores de integración, el sistema utiliza la lógica de **Upsert** de Zoho:
+* **Contactos**: Se sincronizan usando el `Email` como llave única.
+* **Deals (Pólizas)**: Se vinculan al contacto y se sincronizan usando el `Policy Number`.
+* **Leads**: Se sincronizan usando el `Phone` (formato E.164) como llave única.
+
+### 2. Mapeo de Entidades
+La arquitectura utiliza mappers específicos (`app/modules/crm/mapper.py`) para transformar los modelos de SQLAlchemy al formato JSON requerido por Zoho:
+* `Policy.status` -> `Deal.Stage`
+* `Client.email` -> `Contact.Email`
+* `Beneficiary` -> `Associated Contact`
+
+:::note
+Si un cliente tiene varios beneficiarios, cada uno se registra como un contacto independiente en Zoho, vinculados por una relación de parentesco.
+:::
+
+## Ejemplo de Implementación
+
+Fragmento de la sincronización de pólizas (`app/modules/crm/service.py`):
+
+```python
+async def sync_policy_to_crm(zoho, policy, client, plan_name: str) -> str | None:
+    try:
+        # 1. Asegurar que el contacto existe en Zoho
+        contact_id = await sync_client_to_crm(zoho, client)
+        if not contact_id:
+            return None
+
+        # 2. Mapear póliza a formato Zoho Deal
+        deal_payload = policy_to_zoho_deal(policy, plan_name)
+        
+        # 3. Upsert del Deal vinculado al contacto
+        deal_id = await zoho.create_or_update_deal(deal_payload, contact_id)
+        
+        logger.info(f"Sincronizado: Póliza {policy.policy_number} en Zoho con ID {deal_id}")
+        return deal_id
+    except Exception as exc:
+        logger.error(f"Error en CRM Sync: {exc}")
+        return None
+```
+
+### Explicación de Pasos Clave:
+1. **`create_or_update_contact`**: Antes de crear una oportunidad (Deal), es obligatorio que el cliente exista en el CRM.
+2. **`duplicate_check_fields`**: Parámetro crítico enviado a la API de Zoho para que el sistema realice la deduplicación del lado del servidor.
+3. **`asyncio.create_task`**: En el controlador original (router), esta función se llama sin esperar (`await`) el resultado inmediato, evitando latencia para el usuario final.
+
+## Diagrama de Proceso
+
+> [FLOW: El nodo "Backend" con contenido "Póliza Emitida" dispara una tarea asíncrona hacia el nodo "ZohoClient". Este solicita un token al nodo "Zoho OAuth" y realiza un "Upsert" en los módulos de "Contacts" y "Deals" de Zoho CRM].

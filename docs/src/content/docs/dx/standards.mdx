@@ -1,0 +1,69 @@
+---
+title: Estándares y Calidad de Código
+description: Guía de estilo, tipado y reglas arquitectónicas para el desarrollo en Yastubo Backend.
+---
+
+En Yastubo Backend, la calidad del código no es opcional. Aplicamos herramientas de análisis estático y reglas arquitectónicas estrictas para asegurar que el sistema sea mantenible, seguro y libre de deudas técnicas acumuladas.
+
+## Core Benefits / Key Features
+
+*   **Ruff**: Un linter y formateador ultrarrápido que consolida cientos de reglas de estilo.
+*   **Tipado Estricto**: Uso extensivo de `Pydantic` y tipos de Python 3.12 para validación en tiempo de ejecución.
+*   **Arquitectura Modular**: Reglas claras de aislamiento entre dominios de negocio.
+*   **Convenciones de Commits**: Uso de `Conventional Commits` para un historial de cambios semántico y legible.
+
+## Herramientas de Calidad
+
+### Ruff (Linter y Formatter)
+Utilizamos `ruff` para mantener un estilo de código coherente. Ruff reemplaza herramientas como Flake8, Isort y Black.
+
+```bash
+# Verificar errores de estilo
+make lint
+
+# Corregir errores automáticamente
+uv run ruff check . --fix
+```
+
+### Tipado con Pydantic
+Cada modelo de entrada y salida de la API debe estar definido mediante un esquema de Pydantic. Esto garantiza que el sistema nunca procese datos con tipos incorrectos o estructuras mal formadas.
+
+## Reglas Arquitectónicas: El Monolito Modular
+
+Para evitar el acoplamiento excesivo, seguimos tres reglas de oro:
+
+1.  **Aislamiento de Módulos**: Un módulo (ej. `payments`) **nunca** debe importar modelos de SQLAlchemy de otro módulo para realizar consultas directas.
+2.  **Comunicación vía Services**: La interacción entre módulos se realiza exclusivamente a través de su capa de **Service**.
+3.  **Prohibición de Cross-Joins**: No se permiten `Joins` de base de datos entre tablas de diferentes módulos. La agregación de datos se resuelve en la capa de aplicación.
+
+:::caution[Violación de Arquitectura]
+Cualquier Pull Request que introduzca una dependencia circular entre módulos o realice consultas directas a tablas ajenas será rechazado automáticamente durante la revisión.
+:::
+
+## Ejemplo Práctico: Definición de Esquema Robusto
+
+A continuación, cómo se define un esquema con validación de tipos y metadatos claros.
+
+```python
+# app/modules/plans/schemas.py
+from pydantic import BaseModel, Field, field_validator
+
+class PlanCreate(BaseModel):
+    """Esquema para la creación de un nuevo plan actuarial."""
+    name: str = Field(..., min_length=3, description="Nombre único del plan")
+    base_price: float = Field(..., gt=0, description="Precio base en EUR")
+    
+    @field_validator("name")
+    @classmethod
+    def name_must_be_uppercase(cls, v: str) -> str:
+        """Lógica técnica: normalización de nombres para búsquedas eficientes."""
+        return v.upper()
+```
+
+## Convenciones de Código (PEP 8+)
+
+*   **Longitud de línea**: Máximo 88 caracteres (configurado en `pyproject.toml`).
+*   **Nombres**: `snake_case` para funciones y variables, `PascalCase` para clases.
+*   **Documentación**: Todos los servicios deben incluir docstrings explicando los parámetros y el valor de retorno.
+
+> [FLOW: El desarrollador escribe código. El "Pre-commit hook" ejecuta "Ruff" localmente. Si hay errores de formato o estilo, el commit se bloquea. Al subir el código, el "CI" vuelve a ejecutar las validaciones de tipos y estilo antes de permitir el merge].

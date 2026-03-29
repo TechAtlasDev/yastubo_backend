@@ -1,16 +1,16 @@
 ---
-title: Yastubo Backend API Docs
-description: Complete API reference for the Yastubo funeral plan management backend.
+title: Yastubo Backend API
+description: Documentación técnica completa para el motor de gestión de planes funerarios de Yastubo.
 template: splash
 hero:
-  tagline: REST API for migrant funeral plan management — powered by FastAPI
+  tagline: REST API para la gestión integral de seguros funerarios para migrantes — Impulsado por FastAPI
   image:
-    file: ../../assets/houston.webp
+    file: ../../assets/logo_yastubo.png
   actions:
-    - text: Getting Started
-      link: /guides/getting-started/
+    - text: Guía de Inicio
+      link: /get-started/installation/
       icon: right-arrow
-    - text: API Reference
+    - text: Referencia de API
       link: /reference/overview/
       icon: open-book
       variant: minimal
@@ -18,54 +18,58 @@ hero:
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
-## What is Yastubo?
+## ¿Qué es Yastubo?
 
-Yastubo Backend is a REST API built with **FastAPI** that manages funeral insurance plans for migrants. It covers the full lifecycle: plan configuration, policy issuance, Stripe-based payments, and a self-service client portal.
+El backend de **Yastubo** es una potente API REST construida con **FastAPI** diseñada para orquestar el ciclo de vida completo de seguros funerarios. Desde el cálculo actuarial de primas hasta la emisión de pólizas, gestión de siniestros e integraciones financieras con Stripe y CRM Zoho.
 
-## Modules
+---
+
+## Módulos Core
 
 <CardGrid stagger>
-	<Card title="Authentication" icon="approve-check-circle">
-		User registration, JWT login, token refresh/logout, and role-based access control (ADMIN / VENDEDOR).
+	<Card title="Gestión de Emisión" icon="pen">
+		Orquestación de leads, registro de clientes y emisión de pólizas mediante una robusta **Máquina de Estados**.
 	</Card>
-	<Card title="Plans" icon="document">
-		Create, update, price-calculate, and version-control funeral insurance plans with country and age-range configurations.
+	<Card title="Motor de Planes" icon="document">
+		Configuración de productos con lógica de recargos por edad, país y periodos de carencia dinámicos.
 	</Card>
-	<Card title="Emission" icon="pen">
-		Register clients, issue policies, manage policy status transitions, and download generated PDFs.
+	<Card title="Pagos y Suscripciones" icon="star">
+		Integración profunda con **Stripe** para pagos recurrentes, suscripciones y gestión de carteras.
 	</Card>
-	<Card title="Payments" icon="star">
-		Stripe one-time payment intents, subscriptions, manual payments, transactions listing, and Connect onboarding.
+	<Card title="Auditoría Total" icon="information">
+		Trazabilidad de cada cambio en el sistema mediante un decorador de auditoría que registra el "antes y después".
 	</Card>
-	<Card title="Audit" icon="information">
-		Paginated audit log for every action performed in the system — admin access only.
+	<Card title="Portal de Cliente" icon="laptop">
+		Auto-servicio para asegurados: gestión de métodos de pago, descarga de documentos y consulta de estado.
 	</Card>
-	<Card title="Portal" icon="laptop">
-		Self-service portal for clients: view policies, manage payment methods, cancel policies, and pay pending invoices.
+	<Card title="Inteligencia Artificial" icon="approve-check-circle">
+		Agentes inteligentes para análisis de riesgo, automatización de respuestas y soporte operativo.
 	</Card>
 </CardGrid>
 
-## Tutorials & Team Workflow
+---
+
+## Recursos para Desarrolladores
 
 <CardGrid>
-	<Card title="Project Setup Tutorial" icon="document">
-		Paso a paso para instalación, configuración y arranque local.
+	<Card title="Instalación y Setup" icon="rocket">
+		Guía paso a paso para levantar el entorno local usando Docker, Redis y el CLI de administración.
 		
-		[Ir al tutorial](/guides/project-setup-tutorial/)
+		[Comenzar ahora](/get-started/installation/)
 	</Card>
-	<Card title="Scripts Tutorial" icon="open-book">
-		Guía práctica de `backend_setup.py`, `build.py`, `test_console.py` y `seed_roles.py`.
-		
-		[Ver scripts](/guides/scripts-tutorial/)
-	</Card>
-	<Card title="Architecture" icon="information">
-		Explicación de la arquitectura modular, límites de dominio e integraciones.
+	<Card title="Arquitectura Modular" icon="setting">
+		Entiende cómo extendemos el sistema mediante el patrón de Capa de Servicio y límites de dominio.
 		
 		[Ver arquitectura](/guides/architecture/)
 	</Card>
-	<Card title="Contributing" icon="laptop">
-		Cómo contribuir con quality gate, hooks y flujo de Pull Requests.
+	<Card title="Herramientas CLI" icon="terminal">
+		Domina los scripts de utilidad para seeding de datos, builds y automatización de tareas.
 		
-		[Guía de contribución](/guides/contributing/)
+		[Ver tutorial de CLI](/dx/cli/)
+	</Card>
+	<Card title="Guía de Contribución" icon="pencil">
+		Estándares de código (Ruff), testing y flujo de trabajo para el desarrollo del ecosistema Yastubo.
+		
+		[Aprender a contribuir](/dx/contributing/)
 	</Card>
 </CardGrid>

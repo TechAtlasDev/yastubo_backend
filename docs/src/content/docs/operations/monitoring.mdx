@@ -1,0 +1,66 @@
+---
+title: Monitoreo y Salud del Sistema
+description: Observabilidad en Yastubo Backend mediante logs estructurados y endpoints de salud.
+---
+
+En un sistema de seguros crítico, la visibilidad sobre los errores y el rendimiento es fundamental. Yastubo Backend utiliza un enfoque de **observabilidad proactiva** para detectar y resolver incidencias antes de que afecten a los clientes.
+
+## Core Benefits / Key Features
+
+*   **Logs Estructurados**: Uso de `loguru` para logs enriquecidos con contexto y niveles de severidad.
+*   **Health Check Endpoint**: Validación automática de la conectividad con base de datos y Redis.
+*   **Manejo Global de Excepciones**: Captura de errores inesperados para evitar fugas de información y facilitar el debug.
+*   **Monitoreo de Infraestructura**: Verificación de conexiones en el arranque de la aplicación.
+
+## Deep Dive Técnico: Logging Estructurado
+
+Utilizamos la librería `loguru` para centralizar todos los mensajes del sistema. Esto permite una trazabilidad clara de las operaciones críticas, como emisiones de pólizas o fallos en integraciones externas (Stripe, Zoho).
+
+### Niveles de Severidad
+*   **DEBUG**: Información detallada para desarrollo.
+*   **INFO**: Eventos significativos del sistema (arranque, shutdown, hits en endpoints).
+*   **WARNING**: Anomalías que no impiden el funcionamiento pero requieren atención.
+*   **ERROR**: Fallos críticos que afectan el flujo de negocio (ej. fallo en cobro de Stripe).
+
+:::tip[Contexto en Logs]
+Se recomienda incluir IDs de entidad (ej. `policy_id`, `claim_id`) en los mensajes de log para facilitar la búsqueda en herramientas de agregación como ELK o Datadog.
+:::
+
+## Ejemplo Práctico: Endpoint de Salud (Health Check)
+
+El sistema expone un endpoint público `/api/v1/health` que permite a los balanceadores de carga o sistemas de monitoreo externos validar que el backend está operativo.
+
+```python
+# app/main.py
+
+@api_v1_router.get("/health")
+async def health_check(db: AsyncSession = Depends(get_db)):
+    """
+    Valida la salud de los servicios críticos.
+    - DB: SELECT 1
+    - Redis: PING
+    """
+    db_status = "ok"
+    try:
+        await db.execute(text("SELECT 1"))
+    except Exception:
+        db_status = "error"
+
+    redis_status = "ok" if await check_redis_connection() else "error"
+
+    return {
+        "status": "ok",
+        "db": db_status,
+        "redis": redis_status,
+        "env": settings.APP_ENV,
+        "version": "0.2.0"
+    }
+```
+
+## Diagrama de Flujo de Observabilidad
+
+> [FLOW: Los eventos en el código generan logs vía "Loguru". Un "Exception Handler" global captura errores inesperados enviándolos al stream de logs. Un sistema de monitoreo externo (ej. UptimeRobot o Kubernetes Liveness Probes) consulta periódicamente "/api/v1/health". Si la respuesta no es 200 OK con DB y Redis "ok", se disparan alertas críticas].
+
+## Monitoreo en el Arranque (Lifespan)
+
+El sistema verifica todas las dependencias críticas antes de empezar a servir tráfico. Si la conexión a la base de datos o a Redis falla en el arranque, la aplicación lanza un error crítico y detiene el proceso para evitar estados inconsistentes.
