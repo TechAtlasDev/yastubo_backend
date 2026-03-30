@@ -106,6 +106,17 @@ CONTEXTO:
 
         return assistant_text
 
+    async def voice_chat(self, text: str) -> str:
+        """Simple AI response for voice calls with specialized instructions."""
+        system_prompt = """Eres el asistente de voz de Yastubo.
+        Tu tono debe ser amable, empático y profesional.
+        Responde de forma concisa (máximo 2 frases) ya que el usuario está escuchando por teléfono.
+        Evita usar markdown o símbolos especiales."""
+
+        prompt = f"{system_prompt}\n\nUsuario dice: {text}\nAsistente de voz:"
+        response = await self.model.generate_content_async(prompt)
+        return response.text
+
 
 _ai_service: Optional[AIService] = None
 

@@ -34,17 +34,23 @@ async def test_retry_payment_endpoint_success(
     with patch(
         "app.modules.payments.service.retry_payment", new_callable=AsyncMock
     ) as mock_retry:
-        transaction.client_secret = "pi_123_secret_xyz"
-        mock_retry.return_value = transaction
+        mock_retry.return_value = {
+            "transaction_id": transaction.id,
+            "attempt_count": 2,
+            "status": "PENDING",
+            "message": "Retry attempt 2 of 2 initiated.",
+            "client_secret": "pi_123_secret_xyz",
+        }
 
         response = await client.post(
             f"/api/v1/payments/transactions/{transaction.id}/retry", headers=headers
         )
 
     assert response.status_code == 200
-    res_data = response.json()
-    assert res_data["id"] == str(transaction.id)
-    assert res_data["client_secret"] == "pi_123_secret_xyz"
+    data = response.json()
+    assert data["transaction_id"] == str(transaction.id)
+    assert data["attempt_count"] == 2
+    assert data["client_secret"] == "pi_123_secret_xyz"
 
 
 @pytest.mark.asyncio
@@ -76,5 +82,5 @@ async def test_retry_payment_already_succeeded_fails(
         f"/api/v1/payments/transactions/{transaction.id}/retry", headers=headers
     )
 
-    assert response.status_code == 400
-    assert "already succeeded" in response.json()["detail"]
+    assert response.status_code == 422
+    assert "Only FAILED transactions" in response.json()["detail"]

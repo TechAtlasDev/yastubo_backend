@@ -8,8 +8,31 @@ El módulo de **AI** de Yastubo integra capacidades de inteligencia artificial g
 ## Key Features
 
 *   **RAG (Retrieval-Augmented Generation)**: Mejora las respuestas de la IA inyectando contexto relevante de documentos internos.
+*   **Voice AI Support**: Interfaz especializada para llamadas telefónicas con respuestas concisas y empáticas.
 *   **Gestión de Embeddings**: Conversión de texto en vectores numéricos para búsquedas semánticas de alta precisión.
 *   **Memoria de Conversación**: Seguimiento del historial de chat por sesión para interacciones naturales.
+
+...
+
+### Voice AI: Optimización para Telefonía
+Para la integración con sistemas de voz (Twilio + ElevenLabs), el módulo de AI expone un método especializado `voice_chat`. 
+
+Diferencias clave con el chat estándar:
+- **Concisión Extrema**: Máximo 2 frases para no saturar al usuario que escucha.
+- **Tono Empático**: Lenguaje natural sin símbolos de markdown o formatos visuales.
+- **Latencia Mínima**: Utiliza `gemini-1.5-flash` para una respuesta casi instantánea.
+
+## Ejemplo Práctico: Respuesta de Voz
+```python
+async def voice_chat(self, text: str) -> str:
+    """Asistente de voz especializado para telefonía."""
+    system_prompt = """Eres el asistente de voz de Yastubo. 
+    Tu tono debe ser amable, empático y profesional.
+    Responde de forma concisa (máximo 2 frases)."""
+    
+    response = await self.model.generate_content_async(f"{system_prompt}\nUsuario: {text}")
+    return response.text
+```
 *   **Motor pgvector**: Almacenamiento y búsqueda eficiente de vectores directamente en la base de datos PostgreSQL.
 
 :::tip[Eficiencia de IA]

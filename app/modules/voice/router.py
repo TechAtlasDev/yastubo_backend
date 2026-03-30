@@ -30,18 +30,43 @@ async def voice_stream(websocket: WebSocket):
 
             elif data["event"] == "media":
                 # Twilio sends media as base64 encoded mulaw 8000Hz
-                data["media"]["payload"]
-                # In a real RAG-Voice scenario, we would:
-                # 1. Accumulate audio chunks
-                # 2. Use VAD (Voice Activity Detection)
-                # 3. Use Whisper/Gemini for STT
-                # 4. Use AI Service for response
-                # 5. Use ElevenLabs for TTS
-                # 6. Send back to Twilio
 
-                # MOCK RESPONSE (For MVP Phase 4 structure)
-                # We'll implement the actual bridge logic here
-                pass
+                # BRIDGE LOGIC (Phase 4):
+
+                # 1. We mock STT for now as we don't have a 8000Hz mulaw parser here
+                # but we'll simulate the AI processing and ElevenLabs TTS
+
+                # AI RESPONSE
+                ai_service = get_ai_service()
+                # For demo purposes, we'll respond to "hola" if we detected sound (mocked)
+                response_text = await ai_service.voice_chat(
+                    "Hola, necesito ayuda con mi póliza."
+                )
+
+                # ELEVENLABS TTS
+                # ElevenLabs returns binary audio. We convert to base64 and send to Twilio.
+                # In a real scenario, this would be streamed.
+                audio_iter = el_client.generate(
+                    text=response_text,
+                    voice="Rachel",  # Empathetic Spanish voice
+                    model="eleven_multilingual_v2",
+                )
+
+                import base64
+
+                audio_bytes = b"".join(audio_iter)
+                encoded_audio = base64.b64encode(audio_bytes).decode("utf-8")
+
+                # Send back to Twilio
+                await websocket.send_json(
+                    {
+                        "event": "media",
+                        "streamSid": stream_sid,
+                        "media": {"payload": encoded_audio},
+                    }
+                )
+
+                logger.info(f"Sent AI voice response: {response_text}")
 
             elif data["event"] == "stop":
                 logger.info(f"Stream stopped: {stream_sid}")
