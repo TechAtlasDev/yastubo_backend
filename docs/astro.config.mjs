@@ -28,6 +28,7 @@ export default defineConfig({
 				{
 					label: 'Concepts',
 					items: [
+						{ label: '⚡ Decisiones Arquitectónicas', slug: 'concepts/architecture-decisions' },
 						{ label: 'Thinking in Yastubo', slug: 'concepts/thinking-in-yastubo' },
 						{ label: 'Architecture', slug: 'concepts/architecture' },
 						{ label: 'The State Machine', slug: 'concepts/state-machine' },
