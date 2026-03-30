@@ -383,6 +383,7 @@ async def retry_payment(
       actualizar su método de pago y lanza excepción.
     """
     from app.modules.notifications.service import get_notifications_service
+
     res = await db.execute(
         select(Transaction)
         .where(Transaction.id == transaction_id)
