@@ -366,6 +366,87 @@ async def get_reseller_dashboard(db: AsyncSession, workspace_id: uuid.UUID) -> d
     }
 
 
+MAX_PAYMENT_ATTEMPTS = 2
+
+
+@audited(action="PAYMENT_RETRY", entity="Transaction")
+async def retry_payment(
+    db: AsyncSession,
+    stripe: StripeClient,
+    transaction_id: uuid.UUID,
+    retried_by: uuid.UUID,
+) -> dict:
+    """
+    Reintenta un cobro fallido. Máximo 2 intentos.
+    - Si attempt_count < MAX_PAYMENT_ATTEMPTS: crea un nuevo PaymentIntent.
+    - Si attempt_count >= MAX_PAYMENT_ATTEMPTS: notifica al cliente para
+      actualizar su método de pago y lanza excepción.
+    """
+    from app.modules.notifications.service import get_notifications_service
+
+    res = await db.execute(
+        select(Transaction)
+        .where(Transaction.id == transaction_id)
+        .options(selectinload(Transaction.policy))
+    )
+    transaction = res.scalar_one_or_none()
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    if transaction.status != "FAILED":
+        raise HTTPException(
+            status_code=422,
+            detail=f"Only FAILED transactions can be retried. Current status: {transaction.status}",
+        )
+
+    policy = await emission_service.get_policy(db, transaction.policy_id)
+    client = policy.client
+
+    # Limit reached: notify and block
+    if transaction.attempt_count >= MAX_PAYMENT_ATTEMPTS:
+        notifications = get_notifications_service()
+        await notifications.on_payment_failed(policy, client, transaction.attempt_count)
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Maximum retry attempts ({MAX_PAYMENT_ATTEMPTS}) reached. "
+                "A payment update notification has been sent to the client."
+            ),
+        )
+
+    # Proceed with retry
+    customer_id = await get_or_create_customer(stripe, client)
+    amount_cents = int(float(transaction.amount) * 100)
+
+    pi = await stripe.create_payment_intent(
+        amount_cents=amount_cents,
+        currency=transaction.currency.lower(),
+        customer_id=customer_id,
+        payment_method_id=None,
+        metadata={
+            "policy_id": str(policy.id),
+            "policy_number": policy.policy_number,
+            "retry_of": str(transaction.id),
+            "attempt": str(transaction.attempt_count + 1),
+        },
+    )
+
+    transaction.attempt_count += 1
+    transaction.status = "PENDING"
+    transaction.stripe_payment_intent_id = pi["id"]
+    transaction.last_error = None
+    await db.commit()
+    await db.refresh(transaction)
+
+    return {
+        "transaction_id": transaction.id,
+        "attempt_count": transaction.attempt_count,
+        "status": transaction.status,
+        "message": f"Retry attempt {transaction.attempt_count} of {MAX_PAYMENT_ATTEMPTS} initiated.",
+        "client_secret": pi.get("client_secret"),
+    }
+
+
 async def list_transactions(
     db: AsyncSession,
     policy_id: Optional[uuid.UUID] = None,
