@@ -64,3 +64,12 @@ class ResellerDashboardResponse(BaseModel):
     total_commissions_earned: Decimal
     pending_commissions: Decimal
     currency: str = "USD"
+
+
+class RetryPaymentResponse(BaseModel):
+    transaction_id: uuid.UUID
+    attempt_count: int
+    status: str
+    message: str
+    client_secret: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)

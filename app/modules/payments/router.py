@@ -22,6 +22,7 @@ from app.modules.payments.schemas import (
     SubscriptionResponse,
     ConnectOnboardingResponse,
     ResellerDashboardResponse,
+    RetryPaymentResponse,
 )
 from app.modules.payments import service, webhook_handler
 from app.modules.payments.stripe_client import get_stripe_client, StripeClient
@@ -85,6 +86,21 @@ async def create_connect_onboarding(
     current_user: User = Depends(get_current_user),
 ):
     return await service.create_connect_onboarding(db, stripe_c, current_user)
+
+
+@router.post("/transactions/{transaction_id}/retry", response_model=RetryPaymentResponse)
+async def retry_payment(
+    transaction_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    stripe_c: StripeClient = Depends(get_stripe_client),
+    current_user: User = Depends(require_role("ADMIN", "VENDEDOR")),
+):
+    """
+    Reintenta un cobro fallido. Máximo 2 intentos.
+    Al alcanzar el límite, notifica automáticamente al cliente por email
+    y WhatsApp para que actualice su método de pago.
+    """
+    return await service.retry_payment(db, stripe_c, transaction_id, current_user.id)
 
 
 @router.get("/reseller/dashboard", response_model=ResellerDashboardResponse)

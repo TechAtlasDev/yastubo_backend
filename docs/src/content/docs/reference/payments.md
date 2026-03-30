@@ -11,6 +11,7 @@ El módulo de **Payments** gestiona toda la capa financiera de Yastubo. No solo 
 *   **Stripe Connect (Custom/Express)**: Onboarding automático para vendedores, permitiendo depósitos directos de comisiones.
 *   **Gestión de Comisiones**: Cálculo automático de "Application Fees" que la plataforma retiene antes de enviar el saldo al vendedor.
 *   **Webhook Handler**: Sistema robusto de escucha de eventos de Stripe para actualizar el estado de las pólizas y suscripciones en tiempo real.
+*   **Reintentos de Cobro Inteligentes**: Motor de reintentos con límite de 2 intentos y notificación automática al cliente vía email + WhatsApp al alcanzar el límite.
 
 :::tip[Stripe Connect]
 Yastubo utiliza una arquitectura de pagos indirectos donde el cliente paga al vendedor, y la plataforma retiene una comisión configurable por espacio de trabajo.
@@ -25,12 +26,40 @@ Cuando un cliente opta por un plan mensual:
 3.  **Subscription Link**: Se asocia el `price_id` del plan de Yastubo con la suscripción en Stripe.
 4.  **Commission Splitting**: Si el vendedor tiene Connect activo, se aplica el `application_fee_percent` definido en el `Workspace`.
 
-### Gestión de Errores y Retintentos
-Si un cobro recurrente falla:
+### Gestión de Errores y Reintentos
+
+Si un cobro recurrente falla vía webhook de Stripe:
 *   Stripe notifica mediante `invoice.payment_failed`.
 *   Yastubo cambia el estado de la póliza a `IN_ARREARS` (En mora).
 *   Se activa el flujo de notificaciones para recordar el pago.
 *   Si el pago se regulariza, la póliza vuelve automáticamente a `ACTIVE`.
+
+El sistema también soporta **reintentos manuales** desde el panel de administración:
+
+#### Motor de Reintentos (`MAX_PAYMENT_ATTEMPTS = 2`)
+
+| Intento | Comportamiento |
+| :--- | :--- |
+| 1er reintento | Crea un nuevo `PaymentIntent` en Stripe. La transacción vuelve a `PENDING`. |
+| 2do reintento | Último intento permitido. Mismo flujo que el primero. |
+| Límite alcanzado | El sistema **bloquea el reintento** y envía notificación automática al cliente por **email y WhatsApp** para que actualice su método de pago. |
+
+```python
+# app/modules/payments/service.py
+
+MAX_PAYMENT_ATTEMPTS = 2
+
+async def retry_payment(db, stripe, transaction_id, retried_by):
+    # Si se alcanzó el límite: notificar y bloquear
+    if transaction.attempt_count >= MAX_PAYMENT_ATTEMPTS:
+        await notifications.on_payment_failed(policy, client, transaction.attempt_count)
+        raise HTTPException(422, "Maximum retry attempts reached. Client notified.")
+
+    # Crear nuevo PaymentIntent y reintentar
+    pi = await stripe.create_payment_intent(...)
+    transaction.attempt_count += 1
+    transaction.status = "PENDING"
+```
 
 ## Ejemplo Práctico: Creación de Suscripción
 
@@ -87,9 +116,45 @@ async def create_subscription(
 
 ## Endpoints Principales
 
-| Método | Ruta | Descripción |
-| :--- | :--- | :--- |
-| `POST` | `/api/v1/payments/one-time` | Procesa un pago único para una póliza. |
-| `POST` | `/api/v1/payments/subscribe` | Inicia una suscripción recurrente mensual. |
-| `POST` | `/api/v1/payments/webhook` | Endpoint para notificaciones de Stripe. |
-| `GET` | `/api/v1/payments/connect/onboarding` | Inicia el flujo de registro de vendedor en Stripe. |
+| Método | Ruta | Rol requerido | Descripción |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/payments/intent` | ADMIN, VENDEDOR | Crea un PaymentIntent (pago único). |
+| `POST` | `/api/v1/payments/subscription` | ADMIN, VENDEDOR | Inicia una suscripción recurrente mensual. |
+| `POST` | `/api/v1/payments/subscription/cancel` | ADMIN | Cancela una suscripción activa. |
+| `POST` | `/api/v1/payments/manual` | ADMIN | Registra un pago manual (fuera de Stripe). |
+| `GET` | `/api/v1/payments/transactions` | ADMIN, VENDEDOR | Lista transacciones, filtrable por póliza y estado. |
+| `POST` | `/api/v1/payments/transactions/{id}/retry` | ADMIN, VENDEDOR | Reintenta un cobro fallido (máx. 2 intentos). |
+| `POST` | `/api/v1/payments/connect/onboarding` | Autenticado | Inicia el flujo de registro de vendedor en Stripe Connect. |
+| `GET` | `/api/v1/payments/reseller/dashboard` | ADMIN, VENDEDOR | Dashboard de comisiones del revendedor. |
+| `POST` | `/api/v1/payments/webhook` | — | Endpoint para notificaciones de Stripe (firma verificada). |
+
+### Ejemplo: Reintentar un cobro fallido
+
+```http
+POST /api/v1/payments/transactions/{transaction_id}/retry
+Authorization: Bearer <admin_token>
+```
+
+**Respuesta exitosa (intento 1 o 2):**
+
+```json
+{
+  "transaction_id": "uuid",
+  "attempt_count": 2,
+  "status": "PENDING",
+  "message": "Retry attempt 2 of 2 initiated.",
+  "client_secret": "pi_xxx_secret_yyy"
+}
+```
+
+**Respuesta al alcanzar el límite (HTTP 422):**
+
+```json
+{
+  "detail": "Maximum retry attempts (2) reached. A payment update notification has been sent to the client."
+}
+```
+
+:::tip[Notificación automática]
+Al alcanzar el límite de reintentos, el sistema dispara automáticamente `on_payment_failed` que envía email de recordatorio **y** mensaje de WhatsApp al cliente solicitando actualización del método de pago.
+:::
