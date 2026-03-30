@@ -7,11 +7,11 @@ Este documento registra las decisiones de arquitectura más relevantes del proye
 
 ---
 
-## ADR-01: Monolito Modular
+## ADR-01: ¿Por qué no microservicios?
 
 **Contexto**
 
-Yastubo es un producto en etapa de crecimiento temprano con un dominio de negocio que evoluciona rápidamente. Los módulos del sistema tienen alta cohesión: la emisión de pólizas depende del motor actuarial de planes, y los pagos dependen del estado de las pólizas. Esta interdependencia es intrínseca al negocio de seguros.
+Yastubo es un producto en etapa de crecimiento con un dominio de negocio que evoluciona rápidamente. Los módulos del sistema tienen alta cohesión: la emisión de pólizas depende del motor actuarial de planes, y los pagos dependen del estado de las pólizas. Esta interdependencia es intrínseca al negocio de seguros.
 
 **Decisión**
 
