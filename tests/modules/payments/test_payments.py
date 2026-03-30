@@ -245,3 +245,147 @@ async def test_connect_onboarding_returns_url(client: AsyncClient, roles, db_ses
     assert response.status_code == 200
     assert "url" in response.json()
     assert "stripe.com" in response.json()["url"]
+
+
+# ── Retry Payment Tests ──────────────────────────────────────────────────────
+
+
+@pytest.fixture
+async def failed_transaction(db_session, pending_policy):
+    """Creates a FAILED transaction with attempt_count=1 for retry tests."""
+    from app.modules.payments.models import Transaction
+    import uuid
+
+    tx = Transaction(
+        policy_id=uuid.UUID(pending_policy["id"]),
+        stripe_payment_intent_id="pi_failed_001",
+        amount=50.00,
+        currency="USD",
+        status="FAILED",
+        payment_type="ONE_TIME",
+        attempt_count=1,
+        last_error="Your card was declined.",
+    )
+    db_session.add(tx)
+    await db_session.commit()
+    await db_session.refresh(tx)
+    return tx
+
+
+@pytest.mark.asyncio
+async def test_retry_payment_succeeds_on_first_retry(
+    client: AsyncClient, admin_user, failed_transaction
+):
+    """First retry: creates new PaymentIntent, increments attempt_count to 2."""
+    token = create_access_token(
+        {"sub": str(admin_user.id), "roles": ["ADMIN"], "type": "access"}
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = await client.post(
+        f"/api/v1/payments/transactions/{failed_transaction.id}/retry",
+        headers=headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["attempt_count"] == 2
+    assert data["status"] == "PENDING"
+    assert "client_secret" in data
+    assert "2 of 2" in data["message"]
+
+
+@pytest.mark.asyncio
+async def test_retry_payment_blocks_at_max_attempts(
+    client: AsyncClient, admin_user, db_session, pending_policy
+):
+    """At attempt_count >= 2: returns 422 and triggers notification."""
+    from app.modules.payments.models import Transaction
+    import uuid
+
+    tx = Transaction(
+        policy_id=uuid.UUID(pending_policy["id"]),
+        stripe_payment_intent_id="pi_failed_maxed",
+        amount=50.00,
+        currency="USD",
+        status="FAILED",
+        payment_type="ONE_TIME",
+        attempt_count=2,
+        last_error="Card declined again.",
+    )
+    db_session.add(tx)
+    await db_session.commit()
+    await db_session.refresh(tx)
+
+    token = create_access_token(
+        {"sub": str(admin_user.id), "roles": ["ADMIN"], "type": "access"}
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = await client.post(
+        f"/api/v1/payments/transactions/{tx.id}/retry",
+        headers=headers,
+    )
+    assert response.status_code == 422
+    assert "Maximum retry attempts" in response.json()["detail"]
+    assert "notification" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_retry_payment_rejects_non_failed_transaction(
+    client: AsyncClient, admin_user, db_session, pending_policy
+):
+    """Only FAILED transactions can be retried."""
+    from app.modules.payments.models import Transaction
+    import uuid
+
+    tx = Transaction(
+        policy_id=uuid.UUID(pending_policy["id"]),
+        stripe_payment_intent_id="pi_pending_001",
+        amount=50.00,
+        currency="USD",
+        status="PENDING",
+        payment_type="ONE_TIME",
+        attempt_count=1,
+    )
+    db_session.add(tx)
+    await db_session.commit()
+    await db_session.refresh(tx)
+
+    token = create_access_token(
+        {"sub": str(admin_user.id), "roles": ["ADMIN"], "type": "access"}
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = await client.post(
+        f"/api/v1/payments/transactions/{tx.id}/retry",
+        headers=headers,
+    )
+    assert response.status_code == 422
+    assert "FAILED" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_retry_payment_returns_404_for_unknown_transaction(
+    client: AsyncClient, admin_user
+):
+    """Unknown transaction ID returns 404."""
+    token = create_access_token(
+        {"sub": str(admin_user.id), "roles": ["ADMIN"], "type": "access"}
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+    fake_id = uuid.uuid4()
+
+    response = await client.post(
+        f"/api/v1/payments/transactions/{fake_id}/retry",
+        headers=headers,
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_retry_payment_requires_auth(client: AsyncClient, failed_transaction):
+    """Unauthenticated request returns 401."""
+    response = await client.post(
+        f"/api/v1/payments/transactions/{failed_transaction.id}/retry"
+    )
+    assert response.status_code == 401
