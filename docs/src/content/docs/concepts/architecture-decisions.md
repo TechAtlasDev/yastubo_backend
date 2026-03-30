@@ -1,177 +1,157 @@
 ---
 title: Decisiones Arquitectónicas (ADR)
-description: Por qué tomamos cada decisión técnica clave, y qué alternativas consideramos antes de descartarlas.
+description: Registro de las decisiones técnicas clave del proyecto, con el contexto y razonamiento detrás de cada una.
 ---
 
-Este documento explica las decisiones de arquitectura más importantes del proyecto. Cada elección tiene un "por qué" técnico y de negocio. El objetivo es ser transparentes: **no elegimos el camino fácil, elegimos el camino correcto para esta etapa del producto.**
+Este documento registra las decisiones de arquitectura más relevantes del proyecto. Para cada una se describe el contexto, las alternativas evaluadas y el razonamiento técnico que llevó a la elección final.
 
 ---
 
-## ADR-01: Monolito Modular en lugar de Microservicios
+## ADR-01: Monolito Modular
 
-### Decisión
-Yastubo Backend es un **Monolito Modular** (también llamado *Majestic Monolith* o *Modular Monolith*). No es una arquitectura de microservicios.
+**Contexto**
 
-### Por qué esta pregunta importa
-Es la pregunta más frecuente al evaluar un backend moderno. La respuesta corta es: **microservicios no son sinónimo de mejor arquitectura**. Son una solución a problemas de escala que Yastubo aún no tiene, y que introducen una carga operativa que destruiría la velocidad de un equipo pequeño en etapa de producto.
+Yastubo es un producto en etapa de crecimiento temprano con un dominio de negocio que evoluciona rápidamente. Los módulos del sistema tienen alta cohesión: la emisión de pólizas depende del motor actuarial de planes, y los pagos dependen del estado de las pólizas. Esta interdependencia es intrínseca al negocio de seguros.
 
-### El argumento técnico
+**Decisión**
 
-Los microservicios resuelven tres problemas específicos:
-1. **Escala independiente**: cuando un servicio recibe 100x más tráfico que el resto.
-2. **Equipos grandes en paralelo**: cuando 10+ equipos necesitan desplegar sin coordinarse.
-3. **Aislamiento de fallos**: cuando un módulo debe poder caer sin afectar al sistema.
+Arquitectura de **Monolito Modular** con límites de dominio estrictos.
 
-Yastubo en esta etapa **no tiene ninguno de esos tres problemas**. Lo que sí tiene es:
-- Un equipo pequeño que necesita moverse rápido.
-- Módulos con **alta cohesión** (emisión depende de planes, pagos depende de emisión).
-- Un dominio de negocio nuevo que cambia frecuentemente.
+**Razonamiento**
 
-Fragmentar en microservicios prematuramente introduce:
-- Latencia de red entre servicios (donde hoy hay una llamada de función en memoria).
-- Distributed tracing, service discovery, API gateway — infraestructura que no aporta valor al negocio hoy.
-- Transacciones distribuidas donde hoy existe una sola transacción ACID.
-- Un `docker-compose.yml` con 8+ servicios que ningún desarrollador nuevo puede levantar en menos de una hora.
+Los microservicios resuelven problemas concretos de escala: despliegue independiente de componentes con patrones de carga muy distintos, y coordinación de equipos grandes que trabajan en paralelo. En la etapa actual, aplicar esa arquitectura introduciría costos operativos que no generan valor proporcional:
 
-:::tip[Referencia: Martin Fowler]
-*"Don't start with a microservices architecture. Start with a monolith, keep it well-structured, and break it into services only when you have a clear scaling problem."*
-— Martin Fowler, martinfowler.com/bliki/MonolithFirst.html
-:::
+- Latencia de red en cada llamada entre servicios (hoy son llamadas de función en memoria dentro de una transacción ACID).
+- Infraestructura adicional: service discovery, API gateway, distributed tracing.
+- Complejidad de coordinación en transacciones que hoy son atómicas.
 
-### Por qué nuestro monolito no es "el monolito malo"
-
-El monolito que se critica — la "bola de lodo" — es aquel donde todo está mezclado sin límites claros. El nuestro es diferente:
+El patrón elegido captura los beneficios de organización de los microservicios — límites de dominio claros, separación de responsabilidades — sin la carga operativa prematura.
 
 ```
 app/modules/
-  auth/          ← límite de dominio: identidad
-  plans/         ← límite de dominio: lógica actuarial
-  emission/      ← límite de dominio: pólizas
-  payments/      ← límite de dominio: fintech
-  claims/        ← límite de dominio: siniestros
-  ai/            ← límite de dominio: inteligencia
+  auth/       # identidad y acceso
+  plans/      # motor actuarial
+  emission/   # pólizas y beneficiarios
+  payments/   # Stripe y finanzas
+  claims/     # siniestros
+  ai/         # inteligencia y RAG
 ```
 
-Cada módulo tiene su propio `models.py`, `schemas.py`, `service.py` y `router.py`. **Los módulos no se acceden entre sí directamente a nivel de base de datos — se comunican a través de sus interfaces de servicio**. Esto es exactamente lo que permite migrar a microservicios en el futuro si la escala lo requiere: los límites ya están definidos.
+Cada módulo es autónomo: modelos, esquemas, servicios y router propios. Los módulos se comunican exclusivamente a través de sus interfaces de servicio, nunca accediendo directamente a las tablas del otro. Esto preserva la opción de extraer servicios individuales cuando la escala lo justifique — los límites ya están definidos.
 
-### La prueba real: el competidor que eligió microservicios
+:::tip[Referencia]
+*"Don't start with a microservices architecture. Start with a monolith, keep it well-structured, and break it into services only when you have a clear scaling problem."*
+— Martin Fowler, [MonolithFirst](https://martinfowler.com/bliki/MonolithFirst.html)
+:::
 
-Para este reto, un competidor eligió arquitectura de microservicios desde el día uno. Resultado: completó el 38% del sistema a tiempo de entrega. Los módulos de planes, emisión y pagos — el núcleo del negocio — quedaron pendientes. **Un sistema de microservicios incompleto no puede emitir una sola póliza. Un monolito modular completo sí.**
+**Evolución prevista**
 
-La arquitectura correcta es la que permite entregar valor. La complejidad debe justificarse con escala, no con ambición arquitectónica.
+Cuando el volumen lo justifique, la extracción de servicios es directa:
+
+```
+app/modules/payments/  →  payments-service/
+app/modules/ai/        →  ai-service/
+```
+
+Cada módulo ya tiene sus propios modelos, esquemas y tests. El `Dockerfile` del proyecto soporta esta extracción sin cambios de estructura.
 
 ---
 
-## ADR-02: PostgreSQL en lugar de MySQL
+## ADR-02: PostgreSQL como base de datos principal
 
-### Decisión
-Usamos **PostgreSQL 16** como base de datos principal, no MySQL como sugería el brief original.
+**Contexto**
 
-### Razón técnica
+El sistema requiere dos capacidades que van más allá del almacenamiento relacional estándar: búsqueda semántica vectorial para el módulo de IA, y almacenamiento de snapshots de planes en formato flexible (los términos de una póliza no deben cambiar aunque el plan evolucione).
 
-PostgreSQL tiene dos ventajas críticas que MySQL no puede igualar en este dominio:
+**Decisión**
 
-**1. pgvector — IA semántica nativa**
+**PostgreSQL 16** con la extensión `pgvector`.
 
-El módulo de IA utiliza búsqueda semántica RAG (*Retrieval-Augmented Generation*) sobre documentos de conocimiento. Esto requiere almacenar y buscar vectores de embeddings de alta dimensión (768+ dimensiones). La extensión `pgvector` en PostgreSQL permite hacer esto con una sola query SQL:
+**Razonamiento**
+
+La extensión `pgvector` permite almacenar embeddings de alta dimensión y ejecutar búsqueda por similitud coseno directamente en SQL, sin infraestructura adicional:
 
 ```sql
--- Búsqueda de los 5 documentos más relevantes para una consulta
 SELECT * FROM knowledge_documents
-ORDER BY embedding <=> $1  -- cosine distance nativo
+ORDER BY embedding <=> $query_embedding
 LIMIT 5;
 ```
 
-MySQL no tiene equivalente a `pgvector`. Implementar búsqueda semántica sobre MySQL requeriría una base de datos vectorial separada (Pinecone, Weaviate, etc.) — más infraestructura, más latencia, más costo.
+Esta capacidad es la base del módulo de IA con RAG. Implementarla sobre otro motor requeriría una base de datos vectorial separada (Pinecone, Weaviate), añadiendo latencia de red y una dependencia externa.
 
-**2. Soporte nativo de tipos avanzados**
-
-PostgreSQL maneja `UUID`, `JSONB`, `ARRAY` y tipos personalizados de forma nativa. Nuestro modelo de datos los usa extensamente (UUIDs como PKs, snapshots de planes en JSONB, embeddings como vectores).
-
-### Compatibilidad con el brief
-El brief sugería MySQL pero lo presentó como recomendación, no restricción ("Conexión correcta a base de datos MySQL"). PostgreSQL es 100% compatible con SQLAlchemy y el driver `asyncpg`. La migración a MySQL, si fuera requerida, tomaría horas — los modelos no cambiarían.
+PostgreSQL también ofrece soporte nativo de `UUID`, `JSONB` y tipos de array que el modelo de datos usa extensamente — snapshots de planes en JSONB, embeddings como vectores, UUIDs como claves primarias.
 
 ---
 
-## ADR-03: FastAPI + Python Async en lugar de Django o Flask
+## ADR-03: FastAPI con SQLAlchemy async
 
-### Decisión
-Usamos **FastAPI** con SQLAlchemy async, no Django REST Framework ni Flask.
+**Contexto**
 
-### Por qué FastAPI
+El sistema tiene dos patrones de I/O simultáneos: peticiones HTTP convencionales de la API REST, y conexiones WebSocket de larga duración para el módulo de Voice AI (stream bidireccional con Twilio).
+
+**Decisión**
+
+**FastAPI** + **SQLAlchemy 2.0 async** + **asyncpg**.
+
+**Razonamiento**
+
+FastAPI genera especificaciones OpenAPI 3.0 automáticamente a partir de las anotaciones de tipo de Python. Esto garantiza que la documentación Swagger esté siempre sincronizada con la implementación real — sin esfuerzo de mantenimiento adicional.
+
+El modelo de concurrencia async/await de FastAPI permite manejar conexiones WebSocket de larga duración junto con peticiones HTTP sin bloquear el event loop. Esto es esencial para el módulo de Voice AI: un stream de audio con Twilio puede durar minutos, durante los cuales el servidor debe seguir atendiendo otras peticiones.
 
 | Característica | FastAPI | Django REST | Flask |
 |---|:---:|:---:|:---:|
-| OpenAPI/Swagger automático | ✅ nativo | ⚠️ manual | ❌ |
-| Async/await nativo | ✅ | ⚠️ limitado | ❌ |
-| Validación con tipos Python | ✅ Pydantic v2 | ⚠️ serializers | ❌ |
-| Performance (requests/s) | Alto | Medio | Medio |
-| WebSocket (Voice AI) | ✅ nativo | ⚠️ channels | ❌ |
-
-FastAPI genera **documentación Swagger interactiva automáticamente** desde los tipos de Python. Esto no es una ventaja de presentación — es una ventaja de contrato: el frontend y los integradores tienen especificaciones precisas sin esfuerzo adicional del desarrollador.
-
-El soporte async nativo es crítico para el módulo de Voice AI: mantener cientos de conexiones WebSocket concurrentes con Twilio requiere I/O no-bloqueante. Django con `channels` puede hacerlo, pero requiere configuración adicional. En FastAPI es comportamiento por defecto.
+| OpenAPI automático desde tipos | ✅ | ⚠️ extra | ❌ |
+| Async/await nativo | ✅ | ⚠️ channels | ❌ |
+| WebSocket sin configuración extra | ✅ | ❌ | ❌ |
+| Validación con Pydantic v2 | ✅ | ❌ | ❌ |
 
 ---
 
-## ADR-04: ARQ en lugar de Celery para tareas asíncronas
+## ADR-04: ARQ para tareas asíncronas y cron jobs
 
-### Decisión
-Usamos **ARQ** como sistema de colas y tareas programadas, no Celery.
+**Contexto**
 
-### Por qué ARQ
+El sistema ejecuta tareas programadas: recordatorios de pago a las 9am diarias, reintentos automáticos de cobros fallidos cada 6 horas, y detección de checkouts abandonados. Estas tareas deben integrarse con el mismo stack async del resto del sistema.
 
-Celery es el estándar histórico de Python para tareas asíncronas, pero fue diseñado antes de que `async/await` existiera en Python. Su integración con código async moderno requiere hacks y wrappers.
+**Decisión**
 
-ARQ fue diseñado desde cero para Python async:
+**ARQ** como sistema de colas y tareas programadas, con Redis como broker.
+
+**Razonamiento**
+
+ARQ fue diseñado desde cero para Python async. Sus workers son corrutinas nativas, lo que permite reutilizar el mismo código de servicios async que usa la API sin adaptadores ni wrappers.
+
+Usa el mismo Redis que ya gestiona las sesiones JWT, eliminando la necesidad de un broker de mensajes adicional (RabbitMQ, SQS). La configuración completa del worker es declarativa:
 
 ```python
-# ARQ — nativo async, simple, Redis-backed
 class WorkerSettings:
     cron_jobs = [
-        cron(send_payment_reminders, hour=9, minute=0),   # 9am diario
-        cron(retry_failed_payments, hour={6, 12, 18, 0}), # cada 6h
+        cron(send_payment_reminders, hour=9, minute=0),
+        cron(retry_failed_payments, hour={6, 12, 18, 0}),
     ]
-    redis_settings = RedisSettings(...)
 ```
-
-El mismo Redis que usamos para sesiones JWT sirve como broker de ARQ. Sin RabbitMQ, sin broker adicional, sin configuración extra. **Menos infraestructura = menos puntos de fallo**.
 
 ---
 
-## ADR-05: uv en lugar de pip / Poetry para gestión de dependencias
+## ADR-05: uv como gestor de dependencias
 
-### Decisión
-Usamos **uv** como gestor de dependencias y entornos virtuales, no `pip` ni `poetry`.
+**Contexto**
 
-### Por qué uv
+La velocidad de instalación de dependencias afecta directamente el tiempo de construcción de imágenes Docker en CI/CD y el tiempo de onboarding de nuevos desarrolladores.
 
-`uv` es un reemplazo de pip escrito en Rust, desarrollado por Astral (los mismos de Ruff). Es entre **10x y 100x más rápido** que pip para resolver e instalar dependencias. En un pipeline de CI/CD o en la construcción de una imagen Docker, esto se traduce en:
+**Decisión**
 
-- `pip install`: ~60-90 segundos
-- `uv sync`: ~3-8 segundos
+**uv** como gestor de paquetes y entornos virtuales.
 
-El `uv.lock` garantiza builds reproducibles (equivalente a `poetry.lock` o `package-lock.json`). La diferencia con Poetry es que uv sigue el estándar `pyproject.toml` de PEP 517/518 sin agregar su propio formato propietario.
+**Razonamiento**
 
----
+`uv` es un reemplazo de pip implementado en Rust por el equipo de Astral. Resuelve e instala dependencias entre 10x y 100x más rápido que pip, con resolución determinista garantizada por `uv.lock`.
 
-## ADR-06: Por qué el sistema está listo para escalar a microservicios
+Sigue el estándar `pyproject.toml` (PEP 517/518) sin introducir formatos propietarios, lo que mantiene la portabilidad del proyecto hacia cualquier herramienta compatible con el estándar.
 
-Esta sección es importante: el monolito actual **no es el destino final**, es la base correcta para llegar al destino.
-
-Los límites de dominio ya están definidos como módulos independientes. Cuando Yastubo llegue a escala que justifique la separación, la migración es mecánica:
-
+```bash
+# Tiempo típico de instalación desde cero
+pip install -r requirements.txt  →  ~75 segundos
+uv sync                          →  ~5 segundos
 ```
-Hoy (monolito modular):          Futuro (microservicios):
-app/modules/payments/     →      payments-service/
-app/modules/emission/     →      emission-service/
-app/modules/ai/           →      ai-service/
-```
-
-Cada módulo ya:
-- Tiene sus propios modelos y esquemas
-- Se comunica con otros módulos solo a través de interfaces de servicio
-- Tiene su propia suite de tests independiente
-- Puede desplegarse con su propio `Dockerfile`
-
-**El monolito modular no es un callejón sin salida — es el primer paso del camino correcto.**
