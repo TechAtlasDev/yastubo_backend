@@ -1,25 +1,25 @@
 ---
-title: "Quickstart: Tu Primera Póliza"
+title: "Quickstart: Emisión de Póliza"
 description: Emite una póliza de seguros funerarios en menos de 5 minutos.
 ---
 
 import { Steps, Aside } from '@astrojs/starlight/components';
 
-# Quickstart: Tu primera póliza en 5 minutos
 
-En esta guía, aprenderás a interactuar con la API de Yastubo para completar el flujo principal de negocio: desde la autenticación hasta la emisión de una póliza activa.
+En esta guía, aprenderá a interactuar con la API de Yastubo para completar el flujo principal de negocio: desde la autenticación hasta la emisión de una póliza activa.
 
 ## Requisitos Previos
 
-1.  Servidor local corriendo en `http://localhost:8000`.
-2.  Haber ejecutado `scripts/backend_setup.py` (esto crea el usuario administrador por defecto).
-3.  Un cliente REST (cURL, Postman, Insomnia) o usar la Swagger UI en `/docs`.
+1.  Servidor local ejecutándose en `http://localhost:8000`.
+2.  Haber ejecutado `scripts/backend_setup.py`.
+3.  **Recomendado:** Tener la **Yastubo Dev Machine** (`make cli`) abierta en otra terminal para ver el estado de salud del sistema.
+4.  Un cliente REST (cURL, Postman) o usar la **Swagger UI** en `/docs`.
 
 ---
 
 ## Paso 1: Autenticación
 
-Primero, necesitamos obtener un Token de Acceso (JWT). Por defecto, el sistema viene con un usuario `admin@yastubo.com` (password: `admin1234`).
+Obtenga un **Token de Acceso (JWT)**. Por defecto, el sistema incluye el usuario `admin@yastubo.com` (contraseña: `admin1234`).
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/login \
@@ -27,17 +27,17 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
      -d '{"email": "admin@yastubo.com", "password": "admin1234"}'
 ```
 
-**Respuesta:** Guarda el `access_token` para los siguientes pasos.
+**Resultado:** Copie el valor de `access_token` para los siguientes pasos.
 
 ---
 
-## Paso 2: Crear un Cliente
+## Paso 2: Registro de Cliente (Suscriptor)
 
-Antes de emitir una póliza, necesitamos registrar a la persona que será el titular (Suscriptor).
+Antes de emitir una póliza, registre al titular del seguro.
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/emission/clients \
-     -H "Authorization: Bearer TU_TOKEN" \
+     -H "Authorization: Bearer TU_TOKEN_JWT" \
      -H "Content-Type: application/json" \
      -d '{
        "first_name": "Juan",
@@ -54,65 +54,60 @@ curl -X POST http://localhost:8000/api/v1/emission/clients \
 
 ---
 
-## Paso 3: Elegir un Plan y Emitir la Póliza
+## Paso 3: Emisión en Borrador (DRAFT)
 
-Obtén la lista de planes disponibles y usa el ID del plan deseado junto con el `client_id` obtenido en el paso anterior.
+Seleccione un plan y vincúlelo al `client_id` generado.
 
 ```bash
-# 1. Listar planes para obtener un PLAN_ID
+# Consultar Planes Disponibles
 curl http://localhost:8000/api/v1/plans/
 
-# 2. Emitir Póliza (Estado Inicial: DRAFT)
+# Crear Póliza
 curl -X POST http://localhost:8000/api/v1/emission/policies \
-     -H "Authorization: Bearer TU_TOKEN" \
+     -H "Authorization: Bearer TU_TOKEN_JWT" \
      -H "Content-Type: application/json" \
      -d '{
-       "client_id": "ID_DEL_CLIENTE",
-       "plan_id": "ID_DEL_PLAN"
+       "client_id": "CLIENT_ID_GENERADO",
+       "plan_id": "PLAN_ID_SELECCIONADO"
      }'
 ```
 
 ---
 
-## Paso 4: Transición a Activa (Simulación de Pago)
+## Paso 4: Activación y Generación de PDF
 
-Una póliza recién creada está en estado `DRAFT`. Para activarla, normalmente se procesa un pago a través de Stripe. En este Quickstart, forzaremos la transición de estado.
+Para activar la póliza, se simulará la confirmación del pago.
 
 ```bash
+# Activar Póliza
 curl -X POST http://localhost:8000/api/v1/emission/policies/ID_DE_LA_POLIZA/transition \
-     -H "Authorization: Bearer TU_TOKEN" \
+     -H "Authorization: Bearer TU_TOKEN_JWT" \
      -H "Content-Type: application/json" \
      -d '{"target_status": "ACTIVE"}'
-```
 
----
-
-## Verificación: Generar Certificado PDF
-
-Una vez activa, puedes descargar el certificado legal de la póliza.
-
-```bash
+# Generar Certificado Legal (PDF)
 curl http://localhost:8000/api/v1/emission/policies/ID_DE_LA_POLIZA/pdf \
-     -H "Authorization: Bearer TU_TOKEN" \
+     -H "Authorization: Bearer TU_TOKEN_JWT" \
      --output certificado_yastubo.pdf
 ```
 
-## Deep Dive: El Ciclo de Vida de la Póliza
-
-El motor de emisión de Yastubo utiliza una **Máquina de Estados Inmutable**. Esto significa que no puedes saltarte pasos sin la validación adecuada (ej. no puedes pasar de `DRAFT` a `ACTIVE` sin un método de pago válido en el flujo real).
-
-### Lógica de Transición
-Las transiciones están protegidas por lógica de negocio que verifica:
-1.  **Edad del Beneficiario:** ¿Cumple con los límites del plan?
-2.  **Estado de Pago:** ¿Se ha confirmado el webhook de Stripe?
-3.  **Audit Trail:** Se genera una entrada en la tabla de auditoría con el motivo del cambio.
-
-<Aside type="tip">
-  En producción, el cambio a `ACTIVE` ocurre automáticamente cuando recibimos el evento `checkout.session.completed` de Stripe.
-</Aside>
-
 ---
 
-## Diagrama de Flujo del Quickstart
+## Análisis Técnico: Ciclo de Vida de la Póliza
 
-> [FLOW: El Usuario se autentica y obtiene un JWT. Envía los datos del Cliente al Módulo de Emisión. Con el Client ID, solicita la creación de una Póliza vinculada a un Plan. El sistema calcula la prima y deja la póliza en DRAFT. Tras el pago (o transición manual), la póliza pasa a ACTIVE y se desbloquea la generación del PDF legal.]
+Yastubo Backend utiliza una **Máquina de Estados de Ejecución Duradera**. Esto garantiza que una póliza no pueda alcanzar el estado `ACTIVE` sin validaciones de negocio previas, incluyendo el cálculo de prima actuarial y la confirmación de pago.
+
+### Trazabilidad con Auditoría Automática
+Cada comando ejecutado en este flujo genera una entrada en la tabla de auditoría. Puede verificarlo consultando el endpoint de auditoría:
+
+```bash
+curl http://localhost:8000/api/v1/audit/logs -H "Authorization: Bearer TU_TOKEN_JWT"
+```
+
+<Aside type="tip">
+  En producción, la transición de `DRAFT` a `ACTIVE` ocurre automáticamente al procesar el webhook de **Stripe** tras el pago exitoso.
+</Aside>
+
+## Resumen del Flujo de Emisión
+
+> [FLOW: Autenticación de usuario -> Creación de Cliente -> Emisión de Póliza en estado DRAFT vinculada a un Plan -> Simulación de Pago -> Transición de Póliza a ACTIVE -> Generación de Certificado PDF.]

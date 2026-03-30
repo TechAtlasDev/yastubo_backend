@@ -3,8 +3,6 @@ title: Integración de Webhooks
 description: Cómo manejar eventos asíncronos externos (Stripe) de manera segura y robusta.
 ---
 
-# Integración de Webhooks (Stripe)
-
 Los webhooks permiten a Yastubo reaccionar a eventos que ocurren fuera de su sistema, como pagos exitosos, fallos de cobro o cancelaciones de suscripciones en Stripe. El sistema utiliza una arquitectura asíncrona e idempotente para asegurar que cada evento se procese exactamente una vez.
 
 ## Core Benefits / Key Features

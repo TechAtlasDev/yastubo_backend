@@ -3,8 +3,6 @@ title: Creación de un Nuevo Módulo
 description: Guía paso a paso para extender el backend de Yastubo con nuevas funcionalidades siguiendo la arquitectura modular.
 ---
 
-# Creación de un Nuevo Módulo
-
 Yastubo Backend está diseñado bajo una arquitectura modular estricta. Cada funcionalidad de negocio (ej. Seguros, IA, Pagos) reside en su propio espacio dentro de `app/modules`. Esta guía explica cómo crear un nuevo módulo desde cero siguiendo los estándares del proyecto.
 
 ## Core Benefits / Key Features

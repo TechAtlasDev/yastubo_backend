@@ -3,8 +3,6 @@ title: Generación de PDF y Passbook
 description: Guía de personalización de documentos legales y tarjetas digitales para los clientes de Yastubo.
 ---
 
-# Generación de PDF y Apple Passbook
-
 Yastubo automatiza la creación de documentos contractuales y tarjetas de identificación digital (Wallet) para ofrecer una experiencia premium a sus asegurados. Esta guía explica el funcionamiento del motor de documentos y cómo personalizar sus plantillas.
 
 ## Core Benefits / Key Features

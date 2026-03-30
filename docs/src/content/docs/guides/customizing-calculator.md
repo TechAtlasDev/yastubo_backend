@@ -3,8 +3,6 @@ title: Personalización del Calculador
 description: Cómo ajustar la lógica de precios y reglas actuariales en el motor de cotización de Yastubo.
 ---
 
-# Personalización del Calculador
-
 El motor de cálculo de Yastubo (`plans/calculator.py`) es el núcleo financiero de la plataforma. Permite definir reglas de precios flexibles basadas en edad, ubicación geográfica y tipos de cobertura, asegurando que cada póliza sea rentable y competitiva.
 
 ## Core Benefits / Key Features

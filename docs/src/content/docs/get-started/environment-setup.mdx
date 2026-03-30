@@ -1,79 +1,78 @@
 ---
 title: Configuración del Entorno
-description: Guía detallada de secretos y variables de entorno (.env).
+description: Guía detallada de secretos y variables de entorno (.env) para Yastubo.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-# Configuración del Entorno
+Yastubo Backend utiliza variables de entorno para gestionar conexiones seguras, secretos criptográficos y habilitar integraciones de terceros. Este enfoque garantiza que el sistema sea agnóstico al entorno (Desarrollo, Staging o Producción).
 
-Yastubo Backend utiliza variables de entorno para gestionar secretos, conexiones a bases de datos y configuraciones de servicios de terceros. Este enfoque permite que el mismo código se ejecute de forma segura en entornos de desarrollo, staging y producción.
+## Gestión del archivo .env
 
-## El archivo `.env`
-
-Al ejecutar el script de instalación automática, se crea un archivo `.env` en la raíz del proyecto basado en `.env.example`. Debes editar este archivo para incluir tus credenciales reales.
+El script de instalación automática genera un archivo .env basado en .env.example. Debe configurar las siguientes variables para la funcionalidad completa del sistema.
 
 ---
 
-## Variables Críticas
+## Variables de Configuración Crítica
 
-### 1. Seguridad y Aplicación
-*   **`SECRET_KEY`**: Clave maestra para firmar los tokens JWT. En producción, debe ser una cadena aleatoria larga y compleja.
-*   **`APP_ENV`**: Define el comportamiento del sistema. Puede ser `development`, `staging` o `production`.
+### 1. Seguridad
+*   **SECRET_KEY**: Cadena utilizada para firmar los tokens JWT. Debe ser una clave criptográfica fuerte.
+*   **APP_ENV**: Define el modo de ejecución (development, staging, production).
 
-### 2. Persistencia (Bases de Datos)
-*   **`DATABASE_URL`**: URL de conexión asíncrona (ej. `postgresql+asyncpg://...`).
-*   **`REDIS_URL`**: Conexión para caché y gestión de colas de tareas.
+### 2. Infraestructura de Datos
+*   **DATABASE_URL**: URL de conexión asíncrona para PostgreSQL.
+    *   Ejemplo: `postgresql+asyncpg://user:password@localhost:5432/yastubo`
+*   **REDIS_URL**: Conexión para el motor de tareas asíncronas y caché.
+    *   Ejemplo: `redis://localhost:6379`
 
-### 3. Fintech (Stripe)
-*   **`STRIPE_SECRET_KEY`**: Tu clave secreta de la consola de Stripe.
-*   **`STRIPE_WEBHOOK_SECRET`**: Necesaria para validar que las notificaciones de pago provienen realmente de Stripe.
-*   **`STRIPE_CONNECT_CLIENT_ID`**: ID de cliente para la integración multi-tenant con resellers.
+### 3. Integraciones Externas (Feature Flags)
+Yastubo permite habilitar módulos dinámicamente. El sistema desactivará las llamadas externas si los secretos no están configurados.
 
----
-
-## Integraciones Externas (Feature Flags)
-
-Yastubo permite habilitar o deshabilitar módulos completos mediante "flags". Esto es útil para desarrollo local si no tienes todas las API Keys.
-
-| Variable | Descripción |
-| :--- | :--- |
-| `NOTIFICATIONS_ENABLED` | Habilita el envío de correos vía SendGrid. |
-| `WHATSAPP_ENABLED` | Habilita las notificaciones automáticas vía Twilio. |
-| `CRM_ENABLED` | Activa la sincronización bidireccional con Zoho CRM. |
+| Variable | Módulo | Descripción |
+| :--- | :--- | :--- |
+| `STRIPE_SECRET_KEY` | Payments | Gestión de cobros vía Stripe. |
+| `GOOGLE_API_KEY` | AI (Gemini) | Agentes de IA para soporte y análisis. |
+| `CRM_ENABLED` | CRM (Zoho) | Sincronización con Zoho CRM. |
+| `WHATSAPP_ENABLED` | Notificaciones | Envío de alertas vía Twilio. |
 
 ---
 
-## Deep Dive: Gestión de Secretos en Producción
+## Análisis Técnico: Validación de Configuración
 
-Para entornos productivos, recomendamos **no utilizar archivos .env** directamente en el servidor. En su lugar, utiliza un gestor de secretos como:
-*   AWS Secrets Manager
-*   HashiCorp Vault
-*   Variables de CI/CD (GitHub Secrets) inyectadas en el contenedor Docker.
+En Yastubo, la configuración se somete a una **Validación Estricta** mediante Pydantic. 
+
+### Diseño Fail-Fast
+Si al iniciar el servidor falta una variable obligatoria o el formato de los datos es incorrecto, el sistema interrumpirá el arranque. Esto evita comportamientos erráticos en entornos de producción.
+
+```python
+# app/core/config.py
+class Settings(BaseSettings):
+    DATABASE_URL: str  # Pydantic valida que sea una cadena obligatoria
+    REDIS_URL: str = "redis://localhost:6379"
+```
 
 <Aside type="caution">
-  **Nunca** subas tu archivo `.env` al control de versiones (Git). El archivo `.gitignore` ya está configurado para evitarlo, pero es responsabilidad del equipo mantener esta seguridad.
+  **Seguridad de Datos:** El archivo .env contiene secretos críticos. Asegúrese de que no se incluya en el control de versiones (el archivo .gitignore ya está preconfigurado para esto).
 </Aside>
 
-## Ejemplo de Configuración Completa
+## Ejemplo de Configuración en Desarrollo
 
 ```bash
-# Ejemplo de configuración para desarrollo local
-APP_NAME="Yastubo Dev"
+# Entorno
 APP_ENV="development"
 DEBUG=True
 
-# Base de Datos (Docker default)
-DATABASE_URL="mysql+aiomysql://root:root@localhost:3306/yastubo"
+# Persistencia
+DATABASE_URL="postgresql+asyncpg://user:password@localhost:5432/yastubo"
 REDIS_URL="redis://localhost:6379"
 
-# Stripe (Test Mode)
-STRIPE_SECRET_KEY="sk_test_51P..."
+# Stripe Test Mode
+STRIPE_SECRET_KEY="sk_test_..."
 STRIPE_WEBHOOK_SECRET="whsec_..."
 ```
 
 ---
 
-## Diagrama de Flujo de Carga de Configuración
+## Proceso de Carga de Configuración
 
-> [FLOW: Al arrancar la aplicación, el módulo 'app.core.config' utiliza Pydantic Settings para buscar el archivo .env. Primero intenta leer las variables del sistema (OS Environment), si no existen, recurre al archivo .env. Valida los tipos de datos y, si falta alguna variable crítica (como DATABASE_URL), la aplicación falla inmediatamente con un error descriptivo (fail-fast).]
+> [FLOW: Al inicio, Pydantic Settings busca variables en el entorno del Sistema Operativo. Si no existen, lee el archivo .env. Valida los esquemas de datos en app/core/config.py. Si la validación es exitosa, se inyecta el objeto Settings; de lo contrario, se genera un ValidationError.]

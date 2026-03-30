@@ -5,40 +5,38 @@ description: El motor de gestión de planes funerarios para migrantes de alto re
 
 import { Aside } from '@astrojs/starlight/components';
 
-# Introducción: ¿Qué es Yastubo Backend?
+**Yastubo Backend** es un motor monolítico modular de alto rendimiento diseñado específicamente para la gestión integral de planes funerarios enfocados en la población migrante. Es una plataforma de **"Durable Execution"** (Ejecución Duradera) que orquestra flujos complejos de pagos, emisiones de pólizas y sincronización con sistemas externos como Zoho CRM y Stripe.
 
-**Yastubo Backend** es un motor monolítico modular de alto rendimiento diseñado específicamente para la gestión integral de planes funerarios enfocados en la población migrante. No es solo una API; es una plataforma de **"Durable Execution"** (Ejecución Duradera) que orquestra flujos complejos de pagos, emisiones de pólizas y sincronización con sistemas externos como Zoho CRM y Stripe.
-
-El sistema ha sido construido bajo una arquitectura de **"Audit-First Design"**, lo que garantiza que cada cambio de estado, cada cálculo actuarial y cada interacción con terceros quede registrado de forma inmutable, permitiendo una trazabilidad total en un sector donde la confianza y la precisión legal son críticas.
+El sistema ha sido construido bajo una arquitectura de **"Audit-First Design"**, lo que garantiza que cada cambio de estado, cada cálculo actuarial y cada interacción con terceros quede registrado de forma inmutable, permitiendo una trazabilidad total.
 
 ## Beneficios Core
 
 *   **Arquitectura Monolítica Modular:** Combina la facilidad de despliegue de un monolito con la separación de responsabilidades de los microservicios.
 *   **Audit-First Design:** Motor de auditoría integrado mediante decoradores para trazabilidad automática.
-*   **Ecosistema Fintech Pro:** Integración profunda con Stripe Connect para gestión de recaudación y comisiones.
+*   **Ecosistema Fintech:** Integración con Stripe Connect para gestión de recaudación y comisiones.
 *   **Inteligencia Artificial Aplicada:** Agentes de IA con RAG para soporte y análisis de riesgos.
 *   **Resiliencia de Estado:** Máquinas de estado rigurosas para el ciclo de vida de pólizas y siniestros.
 
-## Deep Dive Técnico: La Filosofía del Sistema
+## Análisis Técnico: Filosofía del Sistema
 
 A diferencia de los sistemas tradicionales de gestión de seguros, Yastubo Backend se basa en tres pilares técnicos fundamentales:
 
 ### 1. Ejecución Duradera y Estados
-Cada póliza en el sistema es una entidad viva gobernada por una máquina de estados. Un cambio de `DRAFT` (Borrador) a `ACTIVE` (Activo) no es solo un flag en la base de datos; dispara una serie de eventos asíncronos que incluyen la creación de suscripciones en Stripe, la generación de certificados PDF y la sincronización con Zoho CRM.
+Cada póliza es una entidad viva gobernada por una máquina de estados. Un cambio de `DRAFT` a `ACTIVE` dispara eventos asíncronos que incluyen la creación de suscripciones en Stripe, generación de certificados PDF y sincronización con Zoho CRM.
 
 ### 2. Aislamiento de Dominios
-Aunque el backend es un único servicio, cada módulo (`auth`, `emission`, `payments`, `claims`, etc.) opera con sus propios modelos y lógica, comunicándose a través de una capa compartida (`shared`) para evitar el acoplamiento excesivo.
+Cada módulo (`auth`, `emission`, `payments`, `claims`, etc.) opera con sus propios modelos y lógica, comunicándose a través de una capa compartida (`shared`).
 
 ### 3. Motor de Auditoría Integrado
-Utilizamos el decorador `@audited` para capturar automáticamente el contexto de la petición, el usuario que realiza la acción y los cambios en los datos, sin ensuciar la lógica de negocio.
+El decorador `@audited` captura automáticamente el contexto de la petición, el usuario y los cambios en los datos.
 
 <Aside type="tip">
-  Esta arquitectura permite que el sistema escale en complejidad sin convertirse en una "bola de lodo", facilitando la incorporación de nuevos módulos como el de Voz por IA o el Analizador de Siniestros.
+  Esta arquitectura permite escalar en complejidad facilitando la incorporación de nuevos módulos como el Analizador de Siniestros o asistentes de IA.
 </Aside>
 
-## Ejemplo de Implementación: El Motor de Emisión
+## Ejemplo de Implementación: Motor de Emisión
 
-Aquí vemos cómo se define la lógica central de una póliza, asegurando que los datos sigan la estructura de dominio:
+Lógica central de una póliza para asegurar que los datos sigan la estructura de dominio:
 
 ```python
 # app/modules/emission/models.py
@@ -47,26 +45,23 @@ from app.shared.base_model import Base
 class Policy(Base):
     """
     Representa el contrato de seguro funerario.
-    La póliza es la entidad central que conecta al suscriptor
-    con sus beneficiarios y su estado de pago.
     """
     __tablename__ = "policies"
 
     policy_number = Column(String(50), unique=True, index=True)
     status = Column(Enum(PolicyStatus), default=PolicyStatus.DRAFT)
-    premium_amount = Column(Numeric(10, 2))  # El cálculo actuarial final
+    premium_amount = Column(Numeric(10, 2))
     
-    # Relaciones aisladas
     subscriber_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     plan_id = Column(UUID(as_uuid=True), ForeignKey("plans.id"))
 ```
 
-## Diagrama de Arquitectura de Alto Nivel
+## Arquitectura de Alto Nivel
 
-> [FLOW: El cliente envía una petición vía REST API que atraviesa el Middleware de Seguridad y Auditoría. La petición es enrutada al Módulo correspondiente (ej. Emission), el cual interactúa con la Base de Datos (MySQL) para persistencia y Redis para caché. Finalmente, se disparan tareas asíncronas hacia servicios externos como Stripe, Zoho CRM y Gemini AI.]
+> [FLOW: El cliente envía una petición vía REST API que atraviesa el Middleware de Seguridad y Auditoría. La petición es enrutada al Módulo correspondiente (ej. Emission), el cual interactúa con la Base de Datos (PostgreSQL) para persistencia y Redis para caché. Finalmente, se disparan tareas asíncronas hacia servicios externos como Stripe, Zoho CRM y Gemini AI.]
 
 ---
 
 :::note
-Para comenzar a construir con Yastubo, te recomendamos seguir la sección de **Instalación** para preparar tu entorno local.
+Para comenzar a construir con Yastubo, consulte la sección de **Instalación** para preparar su entorno local.
 :::

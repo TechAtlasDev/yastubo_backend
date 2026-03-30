@@ -1,0 +1,70 @@
+---
+title: "Yastubo Dev Machine (CLI)"
+description: "Panel de control interactivo para desarrolladores de Yastubo."
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+La **Yastubo Dev Machine** es una interfaz de terminal interactiva (TUI) diseñada para centralizar todas las tareas de desarrollo, monitoreo y operaciones en una sola herramienta. Abstrae la ejecución de comandos de Docker, Pytest o Alembic mediante una interfaz unificada.
+
+## Cómo iniciar la CLI
+
+Para lanzar el panel de control, ejecute el siguiente comando desde la raíz del proyecto:
+
+```bash
+make cli
+```
+*(También puede usar `make tui` si lo prefiere)*.
+
+---
+
+## Módulos y Capacidades
+
+La CLI se organiza en pestañas temáticas accesibles mediante atajos de teclado o el puntero:
+
+### 1. Inicio (Dashboard)
+Es el centro de control principal. Muestra en tiempo real:
+*   **Salud del Entorno:** Versión de Python, Sistema Operativo y estado de uv.
+*   **Validación de Secretos:** Verifica si el archivo .env tiene las variables críticas (DATABASE_URL, SECRET_KEY, etc.) configuradas.
+*   **Métricas del Proyecto:** Conteo de módulos activos y archivos de prueba.
+
+### 2. Gestión de Módulos
+Visualiza la jerarquía de la arquitectura modular de Yastubo. Permite inspeccionar rápidamente los módulos cargados y su estructura interna.
+
+### 3. Laboratorio de Tests
+Ejecuta la suite completa de pruebas o permite seleccionar pruebas específicas. Incluye visualización de resultados y logs de error integrados.
+
+### 4. Panel de Operaciones (Ops)
+Gestiona la ejecución de comandos de infraestructura y mantenimiento:
+*   **make setup**: Inicialización completa del proyecto.
+*   **make build**: Ejecución del quality gate (lint y tests).
+*   **make smoke**: Pruebas de infraestructura (Base de Datos y Redis).
+*   **uv sync**: Sincronización de dependencias del proyecto.
+
+---
+
+## Atajos de Teclado
+
+| Tecla | Acción |
+| :--- | :--- |
+| `1` - `5` | Cambiar entre pestañas (Inicio, Módulos, Tests, Docs, Ops) |
+| `d` | Cambiar entre tema Claro y Oscuro |
+| `q` | Salir de la CLI |
+
+---
+
+## Análisis Técnico: Utilidad de la CLI
+
+En sistemas de Ejecución Duradera como Yastubo, la gestión de tareas asíncronas y cambios de estado requiere una supervisión constante. La CLI facilita este proceso mediante:
+
+1.  **Visibilidad Inmediata:** Diagnóstico automático de conexiones al iniciar la herramienta.
+2.  **Consistencia Operativa:** Estandarización de comandos para todo el equipo de desarrollo.
+3.  **Logs Centralizados:** Captura y formateo de la salida de comandos en la pestaña de Operaciones.
+
+<Aside type="tip">
+  Se recomienda mantener una terminal activa con la CLI durante el desarrollo para detectar de forma temprana interrupciones en los servicios o faltas en la configuración.
+</Aside>
+
+## Flujo de Trabajo con la CLI
+
+> [FLOW: El desarrollador lanza la CLI con 'make cli'. Consulta el Dashboard para validar su entorno. Si falta una dependencia, accede a 'Operaciones' y ejecuta 'uv sync'. Antes de realizar un commit, ejecuta 'make build' para validar el Quality Gate.]
