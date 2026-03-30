@@ -153,6 +153,9 @@ class StripeClient:
     ) -> dict:
         return stripe.Webhook.construct_event(payload, sig_header, secret)
 
+    async def retrieve_payment_intent(self, pi_id: str) -> dict:
+        return await asyncio.to_thread(stripe.PaymentIntent.retrieve, pi_id)
+
 
 _stripe_instance: Optional[StripeClient] = None
 

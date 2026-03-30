@@ -48,6 +48,50 @@ async def send_payment_reminders(ctx):
         await db.commit()
 
 
+async def send_expiration_reminders(ctx):
+    """Daily task to remind clients whose policy is about to expire (in 3 days)."""
+    from datetime import date, timedelta
+
+    target_date = date.today() + timedelta(days=3)
+
+    async with SessionLocal() as db:
+        notifications = get_notifications_service()
+        # Get active policies expiring in exactly 3 days
+        result = await db.execute(
+            select(Policy)
+            .where(
+                Policy.status == PolicyStatus.ACTIVE,
+                Policy.end_date == target_date,
+            )
+            .options(selectinload(Policy.client))
+        )
+        policies = result.scalars().all()
+
+        for policy in policies:
+            # Check if they have an active subscription (if so, it auto-renews, no need for manual reminder)
+            sub_res = await db.execute(
+                select(Subscription).where(
+                    Subscription.policy_id == policy.id, Subscription.status == "ACTIVE"
+                )
+            )
+            subscription = sub_res.scalar_one_or_none()
+
+            if not subscription:
+                await notifications.on_payment_reminder(policy, policy.client)
+                await audit_service.log(
+                    db=db,
+                    action="EXPIRATION_REMINDER_SENT",
+                    entity="Policy",
+                    entity_id=policy.id,
+                    extra={
+                        "policy_number": policy.policy_number,
+                        "expires_at": str(policy.end_date),
+                    },
+                )
+
+        await db.commit()
+
+
 async def retry_failed_payments(ctx):
     """Task to retry failed transactions with attempt_count < 2."""
     stripe_client = ctx.get("stripe_client") or StripeClient(settings.STRIPE_SECRET_KEY)

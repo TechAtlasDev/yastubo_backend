@@ -61,6 +61,11 @@ async def retry_payment(db, stripe, transaction_id, retried_by):
     transaction.status = "PENDING"
 ```
 
+### Recordatorios de Pago y Vencimiento
+Para pólizas que no utilizan suscripciones recurrentes, el sistema ejecuta tareas diarias para:
+1.  **Recordatorios de Mora**: Avisar a clientes con pólizas en `IN_ARREARS`.
+2.  **Aviso de Vencimiento**: Notificar 3 días antes de que la vigencia de la póliza termine (`end_date`).
+
 ## Ejemplo Práctico: Creación de Suscripción
 
 El siguiente código muestra cómo se orquestra una suscripción con división de comisiones:

@@ -29,6 +29,9 @@ description: Registro de cambios y mejoras arquitectónicas del backend de Yastu
 
 ### Añadido
 - **Módulo AI (Historial & RAG)**: Persistencia de conversaciones (`ChatConversation`) y mensajes (`ChatMessage`) con contexto multi-turno (últimos 10 mensajes) para Gemini.
+- **Reintento Manual de Pago**: Nuevo endpoint `POST /api/v1/payments/transactions/{id}/retry` para reintentar cobros fallidos (útil tras actualización de tarjeta).
+- **Recordatorios de Vencimiento**: Tarea programada `send_expiration_reminders` en el worker para notificar automáticamente 3 días antes de que una póliza expire.
+- **Lógica de Reintentos de Pago**: Refinado el flujo en el webhook de Stripe para ejecutar hasta 2 intentos automáticos antes de marcar la póliza en mora e iniciar el flujo de recuperación vía Email/WhatsApp.
 - **Sincronización Zoho Leads**: Los prospectos creados/actualizados se sincronizan automáticamente con Zoho CRM de forma asíncrona.
 - **Ajuste de Suscripción Stripe**: Implementación real de `update_subscription_item_price` en `StripeClient`, activada automáticamente al marcar un beneficiario como fallecido.
 - **Normalización E.164**: Validación y normalización automática de teléfonos en el módulo de Leads usando Pydantic.
