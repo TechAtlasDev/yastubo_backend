@@ -3,6 +3,28 @@ title: Historial de Lanzamientos (Releases)
 description: Registro de cambios y mejoras arquitectónicas del backend de Yastubo.
 ---
 
+## [0.4.0] - 2026-03-30
+
+### Añadido
+- **Motor de Reintentos de Cobro**: Nuevo endpoint `POST /api/v1/payments/transactions/{id}/retry` con límite configurable de `MAX_PAYMENT_ATTEMPTS = 2`. Al primer y segundo intento crea un nuevo `PaymentIntent` en Stripe. Al alcanzar el límite, bloquea el reintento y dispara `on_payment_failed()` que notifica al cliente automáticamente por **email y WhatsApp** para que actualice su método de pago.
+- **Schema `RetryPaymentResponse`**: Contrato de respuesta con `transaction_id`, `attempt_count`, `status`, `message` y `client_secret`.
+- **Tests de Reintentos (5 casos)**: Cobertura completa del nuevo endpoint:
+  - Primer reintento exitoso (`attempt_count` 1 → 2, status `PENDING`)
+  - Bloqueo al alcanzar el límite (HTTP 422 + notificación al cliente)
+  - Rechazo de transacciones no-`FAILED`
+  - 404 para ID inexistente
+  - 401 sin autenticación
+- **Guía de Despliegue en VPS** (`docs/guides/deployment`): Guía paso a paso para Ubuntu 22.04 con Docker Compose. Incluye preparación del servidor, configuración de `.env`, ejecución de migraciones, health check, Nginx como reverse proxy con soporte WebSocket (Voice AI), configuración de webhooks Stripe y tabla de solución de problemas.
+
+### Solucionado
+- **`docker-compose.yml`**: La dependencia `depends_on` del servicio `app` referenciaba `mysql` (servicio inexistente) en lugar de `postgres`. El stack no podía levantarse. Corregido.
+- **`.env.example`**: Archivo incompleto — se añaden `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` (requeridas por docker-compose), `APPLE_PASS_CERT_PATH` y `APPLE_PASS_KEY_PATH`. Cada variable ahora incluye comentario explicativo y URL de referencia para facilitar el onboarding.
+
+### Mejoras
+- **Documentación de Payments**: Tabla completa de endpoints con roles requeridos, tabla de comportamiento de reintentos por intento y ejemplos de respuesta HTTP con tip de notificación automática.
+
+---
+
 ## [0.3.0] - 2026-03-29
 
 ### Añadido
