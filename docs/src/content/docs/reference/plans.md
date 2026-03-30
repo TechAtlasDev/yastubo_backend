@@ -81,7 +81,7 @@ def calculate_price(
 
 ## Diagrama de Proceso
 
-> [FLOW: El usuario solicita una cotización proporcionando plan_id, edad y país. El sistema valida que el plan esté activo y disponible en el país solicitado. Se busca el rango de edad correspondiente. Se aplica la fórmula actuarial. Se devuelve el desglose completo del precio al cliente].
+![Plans Flow](https://res.cloudinary.com/de1xmnmeq/image/upload/v1774844830/f44b2000-df26-4a03-bcc4-74bb488fd7f7.png)
 
 ## Endpoints Principales
 

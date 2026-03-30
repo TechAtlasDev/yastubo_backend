@@ -84,7 +84,7 @@ async def chat_with_context(
 
 ## Diagrama de Proceso
 
-> [FLOW: El usuario hace una pregunta. El sistema genera el embedding de la pregunta. Se realiza una búsqueda vectorial en la tabla KnowledgeDocument usando pgvector. Se extraen los 5 documentos más parecidos semánticamente. Se envía la pregunta + documentos + historial a Gemini. Gemini responde contextualmente. Se guarda la respuesta en la base de datos].
+![IA Flow](https://res.cloudinary.com/de1xmnmeq/image/upload/v1774845136/cbcbd8ba-989c-4bdc-9f1f-10fb8169e5b7.png)
 
 ## Modelos Utilizados
 

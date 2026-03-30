@@ -77,7 +77,7 @@ async def register_user(db: AsyncSession, data: UserRegister) -> User:
 
 ## Diagrama de Proceso
 
-> [FLOW: El usuario envía credenciales al endpoint /login. El sistema valida el hash de la contraseña en la base de datos PostgreSQL. Si es válido, genera un Access Token y un Refresh Token. El Refresh Token se persiste en Redis con un TTL específico. Finalmente, se devuelven ambos tokens al cliente].
+![Auth Flow](https://res.cloudinary.com/de1xmnmeq/image/upload/v1774844673/2e98efda-847e-49fc-be8e-5ab03463676a.png)
 
 ## Endpoints Principales
 

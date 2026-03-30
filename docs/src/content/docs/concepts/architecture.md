@@ -47,4 +47,4 @@ api_v1_router.include_router(payments_router)
 
 ## Proceso de una Petición (Request Flow)
 
-> [FLOW: El cliente envía un "Request" al Router del módulo pertinente; el Router valida el esquema con "Pydantic" y llama al "Service". El Service ejecuta la lógica (pudiendo usar la Máquina de Estados o Servicios de otros módulos) y persiste datos vía "SQLAlchemy" antes de retornar una respuesta al cliente].
+![Architecture Flow](https://res.cloudinary.com/de1xmnmeq/image/upload/v1774844057/8398378e-c6bf-41af-a3b5-e76f745b52c7.png)

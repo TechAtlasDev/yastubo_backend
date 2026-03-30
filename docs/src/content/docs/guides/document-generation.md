@@ -92,4 +92,4 @@ pass_info = {
 
 ## Diagrama de Flujo de Documentos
 
-> [FLOW: El pago de la póliza es confirmado -> El servicio de emisión invoca a generate_contract_pdf -> WeasyPrint genera el PDF desde contract.html -> El PDF se guarda en el servidor -> Se invoca a generate_policy_pass para la tarjeta digital -> Ambos documentos se envían por email al cliente mediante el NotificationsService].
+![Document Generation Flow](https://res.cloudinary.com/de1xmnmeq/image/upload/v1774844570/ec004793-0b1f-4730-abbb-21411b1a7dbf.png)

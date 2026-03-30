@@ -60,4 +60,4 @@ async def get_current_workspace_id(
 
 ## Flujo de Autenticación y Autorización
 
-> [FLOW: El usuario envía "Credenciales" al endpoint de Login; el sistema valida y retorna un "Access Token" (JWT). En peticiones subsiguientes, el usuario envía el Token y el "X-Workspace-Id". La API valida la firma del token, extrae el "User ID", verifica sus "Roles" y su pertenencia al "Workspace" antes de permitir la ejecución del servicio].
+![Security & RBAC Flow](https://res.cloudinary.com/de1xmnmeq/image/upload/v1774844195/49243f09-61aa-4dac-9fcb-41bd7536ee75.png)

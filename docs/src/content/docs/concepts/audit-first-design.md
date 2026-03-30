@@ -67,4 +67,4 @@ Cada entrada en el log de auditoría captura una instantánea del evento:
 
 ## Flujo de Auditoría Automática
 
-> [FLOW: Un "Usuario" invoca un "Servicio" decorado con @audited; el decorador captura el contexto y llama a la función de negocio. Si la función tiene éxito (persiste datos en "DB"), el decorador dispara el "Audit Service" para registrar el evento de forma asíncrona, asegurando que la auditoría no penalice el tiempo de respuesta del usuario].
+![Audit-First Design Flow](https://res.cloudinary.com/de1xmnmeq/image/upload/v1774844287/7e37a080-f34f-44e0-9a24-794ce5856901.png)

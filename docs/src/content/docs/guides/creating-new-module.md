@@ -75,4 +75,4 @@ No olvides generar la migración de base de datos después de añadir nuevos mod
 
 ## Diagrama de Proceso de Extensión
 
-> [FLOW: El desarrollador crea una carpeta en app/modules -> Define el modelo en models.py -> Crea los esquemas de validación -> Implementa la lógica en service.py -> Expone los endpoints en router.py -> Registra el router en app/main.py -> Ejecuta la migración de base de datos].
+![Creating New Module Flow](https://res.cloudinary.com/de1xmnmeq/image/upload/v1774844421/6a2c33d9-082b-4f24-a6a8-4a1a08e488b7.png)

@@ -55,4 +55,4 @@ async def activate_policy(db: AsyncSession, policy_id: uuid.UUID):
 
 ## Ciclo de Vida de una Póliza
 
-> [FLOW: La póliza inicia en "DRAFT", se mueve a "PENDING_PAYMENT" cuando el usuario accede al Checkout de Stripe. Al confirmar el pago vía Webhook, transiciona a "ACTIVE". Si un pago recurrente falla, pasa a "IN_ARREARS". Si se reporta un fallecimiento, entra en "CASE_REPORTED" hasta que la asistencia es completada y llega a "CASE_CLOSED"].
+![State Machine Flow](https://res.cloudinary.com/de1xmnmeq/image/upload/v1774844119/251b5468-f7af-4171-9170-d55782e50f17.png)

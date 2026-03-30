@@ -69,7 +69,7 @@ async def update_claim_status(
 
 ## Diagrama de Proceso
 
-> [FLOW: Un beneficiario reporta el siniestro. El sistema crea el Claim en estado REPORTED y publica un evento en Redis. El administrador revisa y añade gastos de servicio funerario. Tras la validación, el administrador cambia el estado a APPROVED. El worker de Arq recibe la tarea, detiene los cobros de Stripe y notifica a los involucrados].
+![Claims Flow](https://res.cloudinary.com/de1xmnmeq/image/upload/v1774844975/891f891a-2c66-4db3-a138-cf34fd948c00.png)
 
 ## Endpoints Principales
 

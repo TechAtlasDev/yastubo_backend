@@ -66,7 +66,7 @@ def transition(current: PolicyStatus, target: PolicyStatus) -> PolicyStatus:
 
 ## Diagrama de Proceso
 
-> [FLOW: Se crea una póliza en estado DRAFT. Al completar los datos, pasa a PENDING_PAYMENT. El webhook de Stripe confirma el pago. El sistema cambia el estado a ACTIVE e inicia la generación del PDF. La póliza se marca como emitida y se envía por email/WhatsApp al cliente].
+![Emission Flow](https://res.cloudinary.com/de1xmnmeq/image/upload/v1774844873/c10cc036-bcd1-482e-9100-4e87538105cb.png)
 
 ## Endpoints Principales
 

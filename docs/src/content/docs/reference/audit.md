@@ -59,7 +59,7 @@ async def create_plan(
 
 ## Diagrama de Proceso
 
-> [FLOW: Un servicio es invocado con el decorador @audited. El decorador captura los parámetros de entrada (user_id, db). La función de negocio se ejecuta y retorna un objeto. El decorador extrae el ID del objeto resultante. Finalmente, se inserta un registro en la tabla audit_logs con toda la información consolidada].
+![Audit Flow](https://res.cloudinary.com/de1xmnmeq/image/upload/v1774845030/80f0f4d3-31bb-4d95-9c52-ecf5f158ef74.png)
 
 ## Estructura del Log (Modelo)
 

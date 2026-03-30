@@ -83,4 +83,4 @@ Utilizamos siempre `quantize(Decimal("0.01"))` para asegurar que los cálculos m
 
 ## Diagrama de Flujo de Cotización
 
-> [FLOW: Entrada de datos (Edad, País, Plan, Cantidad) -> El sistema verifica si hay un override por país en la DB -> Busca el rango de edad del usuario en la tabla de configuraciones -> Calcula el recargo porcentual -> Suma el recargo al precio base -> Multiplica por la cantidad -> Retorna un JSON con el desglose completo del cálculo].
+![Customizing Calculator Flow](https://res.cloudinary.com/de1xmnmeq/image/upload/v1774844477/722b9e43-ea2e-483d-a49e-ab6ad403fe67.png)

@@ -67,7 +67,7 @@ class NotificationsService:
 
 ## Diagrama de Proceso
 
-> [FLOW: El módulo de Emission completa una póliza. Se invoca NotificationsService.on_policy_issued. El servicio llama simultáneamente al EmailService y WhatsAppService. Se genera el correo con el adjunto y el mensaje de chat. El cliente recibe ambos en cuestión de segundos].
+![Notifications Flow](https://res.cloudinary.com/de1xmnmeq/image/upload/v1774845094/123fc06c-007b-4ef7-a418-3b14b5838730.png)
 
 ## Canales Disponibles
 

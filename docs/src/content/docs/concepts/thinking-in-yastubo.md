@@ -42,4 +42,4 @@ class LeadCreate(BaseModel):
 
 ## Diagrama de Filosofía de Servicio
 
-> [FLOW: El proceso inicia en el "Lead" capturado con metadatos UTM, fluye hacia la "Emisión" de la póliza vinculando múltiples "Beneficiarios". Si ocurre un "Siniestro", la transición de estado dispara tanto el "Servicio de Asistencia" como el "Ajuste de Precio en Stripe", cerrando el ciclo con la actualización en "Zoho CRM"].
+![Thinking in Yastubo Flow](https://res.cloudinary.com/de1xmnmeq/image/upload/v1774843830/5ceacab7-c5b0-4ff8-a876-3e61171814e7.png)

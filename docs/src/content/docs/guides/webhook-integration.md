@@ -65,4 +65,4 @@ Aunque el ejemplo de código muestra el procesamiento del objeto `event`, en pro
 
 ## Diagrama de Ciclo de Vida de Webhook
 
-> [FLOW: Stripe envía un evento POST -> FastAPI recibe la petición y valida la firma con el secreto del webhook -> handle_stripe_event busca el ID del evento en la DB -> Si es nuevo, identifica el tipo de evento -> Ejecuta la lógica de negocio (ej. activar póliza) -> Registra el evento en StripeEvent para evitar duplicados -> Retorna 200 OK a Stripe].
+![Webhook Integration Flow](https://res.cloudinary.com/de1xmnmeq/image/upload/v1774844516/055773c8-4ba1-4d37-a8b1-033689e7a1cb.png)

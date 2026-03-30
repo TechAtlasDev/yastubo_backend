@@ -117,7 +117,7 @@ async def create_subscription(
 
 ## Diagrama de Proceso
 
-> [FLOW: El cliente selecciona un plan y proporciona su tarjeta. Yastubo crea un Subscription en Stripe. Stripe procesa el primer pago. Si tiene éxito, Stripe envía un webhook 'invoice.paid'. Yastubo recibe el webhook, marca la transacción como exitosa y activa la póliza. Si el pago falla, la póliza se marca en mora].
+![Payments Flow](https://res.cloudinary.com/de1xmnmeq/image/upload/v1774844932/52ed2a9c-0519-4167-a241-83de0c94e0af.png)
 
 ## Endpoints Principales
 
