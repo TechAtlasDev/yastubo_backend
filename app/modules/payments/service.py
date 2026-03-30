@@ -328,11 +328,10 @@ async def get_reseller_dashboard(db: AsyncSession, workspace_id: uuid.UUID) -> d
 
     # Fetch pending balance from Stripe Connect account
     pending_commissions = 0.0
-    stripe_acc_res = await db.execute(
-        select(StripeAccount).where(StripeAccount.workspace_id == workspace_id)
-    )
-    stripe_acc = stripe_acc_res.scalar_one_or_none()
-    if stripe_acc:
+    # Use workspace.stripe_connect_id if available
+    stripe_account_id = workspace.stripe_connect_id
+
+    if stripe_account_id:
         try:
             import stripe as stripe_lib
             from app.core.config import settings as _settings
@@ -342,7 +341,7 @@ async def get_reseller_dashboard(db: AsyncSession, workspace_id: uuid.UUID) -> d
 
             balance = await _asyncio.to_thread(
                 stripe_lib.Balance.retrieve,
-                stripe_account=stripe_acc.stripe_account_id,
+                stripe_account=stripe_account_id,
             )
             pending = balance.get("pending", [])
             pending_commissions = sum(
