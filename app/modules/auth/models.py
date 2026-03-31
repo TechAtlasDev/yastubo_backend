@@ -1,10 +1,7 @@
 import uuid
 from datetime import datetime, date
-from typing import List, Optional, TYPE_CHECKING
 import enum
-
-if TYPE_CHECKING:
-    from app.modules.organizations.models import Company, BusinessUnit
+from typing import List, Optional, TYPE_CHECKING
 
 from sqlalchemy import (
     String,
@@ -17,7 +14,6 @@ from sqlalchemy import (
     Text,
     Date,
     Enum,
-    Numeric,
     BigInteger,
     UniqueConstraint,
     JSON,
@@ -26,6 +22,12 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.shared.base_model import BaseModel, GUID
 from app.core.database import Base
+
+# Ensure related models are registered in the metadata
+import app.modules.organizations.models  # noqa: F401
+
+if TYPE_CHECKING:
+    from app.modules.organizations.models import Company, BusinessUnit
 
 # Many-to-Many Role <-> Permission
 role_permissions = Table(
@@ -148,29 +150,19 @@ class CustomerProfile(Base):
     doc_number: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     birth_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     gender: Mapped[Optional[GenderEnum]] = mapped_column(
-        Enum(GenderEnum, name="customer_gender_enum"), nullable=True
+        Enum(GenderEnum), nullable=True
     )
+    preferred_language: Mapped[Optional[PreferredLanguageEnum]] = mapped_column(
+        Enum(PreferredLanguageEnum), nullable=True, default=PreferredLanguageEnum.es
+    )
+    contact_via: Mapped[Optional[ContactViaEnum]] = mapped_column(
+        Enum(ContactViaEnum), nullable=True, default=ContactViaEnum.email
+    )
+    residence_address_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     home_address_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-    preferred_language: Mapped[PreferredLanguageEnum] = mapped_column(
-        Enum(PreferredLanguageEnum, name="customer_lang_enum"),
-        default=PreferredLanguageEnum.es,
-        nullable=False,
-    )
-    contact_via: Mapped[ContactViaEnum] = mapped_column(
-        Enum(ContactViaEnum, name="customer_contact_enum"),
-        default=ContactViaEnum.email,
-        nullable=False,
-    )
-    emergency_name: Mapped[Optional[str]] = mapped_column(String(160), nullable=True)
-    emergency_phone_e164: Mapped[Optional[str]] = mapped_column(
-        String(20), nullable=True
-    )
-    emergency_relation: Mapped[Optional[str]] = mapped_column(String(60), nullable=True)
-    billing_name: Mapped[Optional[str]] = mapped_column(String(160), nullable=True)
-    tax_id: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
-    billing_address_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-    tags: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # or Text
-    notes_internal: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_public: Mapped[bool] = mapped_column(Boolean, default=False)
+    bio: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    notes_admin: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.now, server_default=func.now()
@@ -188,16 +180,9 @@ class StaffProfile(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         GUID(), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
-    work_phone: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
-    commission_regular_first_year_pct: Mapped[Optional[float]] = mapped_column(
-        Numeric(5, 2), nullable=True
-    )
-    commission_regular_renewal_pct: Mapped[Optional[float]] = mapped_column(
-        Numeric(5, 2), nullable=True
-    )
-    commission_capitados_pct: Mapped[Optional[float]] = mapped_column(
-        Numeric(5, 2), nullable=True
-    )
+    job_title: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    department: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    internal_phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     notes_admin: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

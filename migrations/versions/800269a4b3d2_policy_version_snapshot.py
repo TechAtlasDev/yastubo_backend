@@ -28,7 +28,8 @@ def upgrade() -> None:
         op.f("ix_commission_distributions_company_id"),
         table_name="commission_distributions",
     )
-    op.drop_index(op.f("ix_user_workspaces_workspace_id"), table_name="company_user")
+    # op.drop_index(op.f("ix_user_workspaces_workspace_id"), table_name="company_user")
+    op.execute("DROP INDEX IF EXISTS ix_user_workspaces_workspace_id")
     op.alter_column(
         "customer_profiles",
         "home_address_json",

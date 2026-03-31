@@ -8,13 +8,16 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 WORKDIR /app
 
 # Copy dependency files
-COPY pyproject.toml .
+COPY pyproject.toml uv.lock ./
 
 # Install dependencies
 RUN uv sync --frozen --no-dev
 
 # Stage 2: Runtime
 FROM python:3.12-slim-bookworm AS runtime
+
+# Install uv in runtime too if we want to use 'uv run'
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /app
 

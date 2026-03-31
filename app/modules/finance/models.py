@@ -13,6 +13,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.shared.base_model import BaseModel, GUID
 from app.core.database import Base
 
+# Ensure related models are registered in the metadata
+import app.modules.organizations.models  # noqa: F401
+import app.modules.auth.models  # noqa: F401
+
 if TYPE_CHECKING:
     from app.modules.organizations.models import Company, BusinessUnit
     from app.modules.auth.models import User

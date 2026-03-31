@@ -1,5 +1,6 @@
 import asyncio
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from app.core.database import SessionLocal
 from app.modules.auth.models import Role, Permission
 
@@ -39,7 +40,11 @@ async def seed():
 
         # Create roles
         for role_name, perms in ROLES_PERMISSIONS.items():
-            result = await session.execute(select(Role).where(Role.name == role_name))
+            result = await session.execute(
+                select(Role)
+                .where(Role.name == role_name)
+                .options(selectinload(Role.permissions))
+            )
             role = result.scalar_one_or_none()
             if not role:
                 role = Role(name=role_name)
