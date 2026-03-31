@@ -19,6 +19,7 @@ from app.shared.base_model import BaseModel, GUID
 
 if TYPE_CHECKING:
     from app.modules.payments.models import Transaction
+    from app.modules.plans.models import Plan, PlanVersion
 
 
 class Client(BaseModel):
@@ -118,6 +119,8 @@ class Policy(BaseModel):
     )
 
     client: Mapped["Client"] = relationship("Client", back_populates="policies")
+    plan: Mapped["Plan"] = relationship("Plan")
+    plan_version: Mapped["PlanVersion"] = relationship("PlanVersion")
     beneficiaries: Mapped[List["Beneficiary"]] = relationship(
         "Beneficiary", back_populates="policy", cascade="all, delete-orphan"
     )

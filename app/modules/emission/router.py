@@ -1,7 +1,7 @@
 import uuid
 from typing import List, Optional
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, File, Form
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import Response
 from app.modules.emission.passbook_service import get_passbook_service, PassbookService
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,6 +9,7 @@ from app.core.database import get_db
 from app.modules.auth.dependencies import require_role
 from app.modules.auth.models import User
 from app.modules.emission import schemas, service
+from app.modules.emission.pdf_service import PDFService
 
 router = APIRouter(prefix="/emission", tags=["Emission"])
 
@@ -101,14 +102,12 @@ async def download_policy_pdf(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role("ADMIN", "VENDEDOR")),
 ):
-    policy = await service.get_policy(db, policy_id)
-    if not policy.pdf_path:
-        raise HTTPException(status_code=404, detail="PDF not generated for this policy")
+    pdf_bytes = await PDFService.generate_policy_certificate(db, policy_id)
 
-    return FileResponse(
-        path=policy.pdf_path,
-        filename=f"{policy.policy_number}.pdf",
+    return Response(
+        content=pdf_bytes,
         media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=policy_{policy_id}.pdf"},
     )
 
 
