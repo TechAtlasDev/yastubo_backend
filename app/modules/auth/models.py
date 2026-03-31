@@ -1,10 +1,28 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, date
 from typing import List, Optional, TYPE_CHECKING
+import enum
 
 if TYPE_CHECKING:
     from app.modules.organizations.models import Company, BusinessUnit
-from sqlalchemy import String, ForeignKey, Boolean, DateTime, Table, Column, func
+
+from sqlalchemy import (
+    String,
+    ForeignKey,
+    Boolean,
+    DateTime,
+    Table,
+    Column,
+    func,
+    Text,
+    Date,
+    Enum,
+    Numeric,
+    BigInteger,
+    UniqueConstraint,
+    JSON,
+    Integer,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.shared.base_model import BaseModel, GUID
 from app.core.database import Base
@@ -27,8 +45,16 @@ role_permissions = Table(
 
 class Permission(BaseModel):
     __tablename__ = "permissions"
+    __table_args__ = (
+        UniqueConstraint(
+            "name", "guard_name", name="permissions_name_guard_name_unique"
+        ),
+    )
 
-    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(191), nullable=False)
+    guard_name: Mapped[str] = mapped_column(String(191), nullable=False, default="web")
+    description: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
     roles: Mapped[List["Role"]] = relationship(
         secondary=role_permissions, back_populates="permissions"
     )
@@ -36,8 +62,17 @@ class Permission(BaseModel):
 
 class Role(BaseModel):
     __tablename__ = "roles"
+    __table_args__ = (
+        UniqueConstraint("name", "guard_name", name="roles_name_guard_name_unique"),
+    )
 
-    name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(191), nullable=False)
+    guard_name: Mapped[str] = mapped_column(String(191), nullable=False, default="web")
+    scope: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, index=True)
+    level: Mapped[int] = mapped_column(default=0, nullable=False)
+    label: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Keeping description for backwards compatibility
     description: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     permissions: Mapped[List["Permission"]] = relationship(
@@ -67,6 +102,114 @@ class UserRole(Base):
     )
 
 
+class PasswordHistory(Base):
+    __tablename__ = "password_histories"
+
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    password_hash: Mapped[str] = mapped_column(String(191), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now, server_default=func.now()
+    )
+
+
+class GenderEnum(str, enum.Enum):
+    male = "male"
+    female = "female"
+    other = "other"
+
+
+class PreferredLanguageEnum(str, enum.Enum):
+    es = "es"
+    en = "en"
+
+
+class ContactViaEnum(str, enum.Enum):
+    email = "email"
+    whatsapp = "whatsapp"
+    sms = "sms"
+
+
+class CustomerProfile(Base):
+    __tablename__ = "customer_profiles"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    mobile_e164: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    alt_email: Mapped[Optional[str]] = mapped_column(String(190), nullable=True)
+    doc_type: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    doc_number: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    birth_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    gender: Mapped[Optional[GenderEnum]] = mapped_column(
+        Enum(GenderEnum, name="customer_gender_enum"), nullable=True
+    )
+    home_address_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    preferred_language: Mapped[PreferredLanguageEnum] = mapped_column(
+        Enum(PreferredLanguageEnum, name="customer_lang_enum"),
+        default=PreferredLanguageEnum.es,
+        nullable=False,
+    )
+    contact_via: Mapped[ContactViaEnum] = mapped_column(
+        Enum(ContactViaEnum, name="customer_contact_enum"),
+        default=ContactViaEnum.email,
+        nullable=False,
+    )
+    emergency_name: Mapped[Optional[str]] = mapped_column(String(160), nullable=True)
+    emergency_phone_e164: Mapped[Optional[str]] = mapped_column(
+        String(20), nullable=True
+    )
+    emergency_relation: Mapped[Optional[str]] = mapped_column(String(60), nullable=True)
+    billing_name: Mapped[Optional[str]] = mapped_column(String(160), nullable=True)
+    tax_id: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
+    billing_address_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    tags: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # or Text
+    notes_internal: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now, server_default=func.now(), onupdate=func.now()
+    )
+
+    user: Mapped["User"] = relationship("User", back_populates="customer_profile")
+
+
+class StaffProfile(Base):
+    __tablename__ = "staff_profiles"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    work_phone: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    commission_regular_first_year_pct: Mapped[Optional[float]] = mapped_column(
+        Numeric(5, 2), nullable=True
+    )
+    commission_regular_renewal_pct: Mapped[Optional[float]] = mapped_column(
+        Numeric(5, 2), nullable=True
+    )
+    commission_capitados_pct: Mapped[Optional[float]] = mapped_column(
+        Numeric(5, 2), nullable=True
+    )
+    notes_admin: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now, server_default=func.now(), onupdate=func.now()
+    )
+
+    user: Mapped["User"] = relationship("User", back_populates="staff_profile")
+
+
 class User(BaseModel):
     __tablename__ = "users"
 
@@ -94,4 +237,22 @@ class User(BaseModel):
 
     business_units: Mapped[List["BusinessUnit"]] = relationship(
         secondary="memberships_business_unit", back_populates="users"
+    )
+
+    customer_profile: Mapped[Optional["CustomerProfile"]] = relationship(
+        "CustomerProfile",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+    staff_profile: Mapped[Optional["StaffProfile"]] = relationship(
+        "StaffProfile",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+    password_histories: Mapped[List["PasswordHistory"]] = relationship(
+        "PasswordHistory",
+        cascade="all, delete-orphan",
+        order_by="desc(PasswordHistory.created_at)",
     )

@@ -90,3 +90,16 @@ def require_role(*roles: str) -> Callable:
         return user
 
     return role_checker
+
+
+def require_scope(scope: str) -> Callable:
+    def scope_checker(user: User = Depends(get_current_user)):
+        # User has the scope if at least one of their roles has that scope
+        if not any(role.scope == scope for role in user.roles):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"You must have {scope} scope to access this.",
+            )
+        return user
+
+    return scope_checker

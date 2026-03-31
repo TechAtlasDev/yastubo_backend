@@ -55,3 +55,8 @@ class RefreshRequest(BaseModel):
 class RoleAssign(BaseModel):
     user_id: uuid.UUID
     role_name: str
+
+
+class PasswordChange(BaseModel):
+    old_password: str
+    new_password: str = Field(..., min_length=8)

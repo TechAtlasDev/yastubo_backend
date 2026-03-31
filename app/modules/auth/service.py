@@ -8,8 +8,20 @@ from fastapi import HTTPException, status
 from redis.asyncio import Redis
 
 from app.core.config import settings
-from app.modules.auth.models import User, Role, UserRole
-from app.modules.auth.schemas import UserRegister, UserLogin, TokenResponse, RoleAssign
+from app.modules.auth.models import (
+    User,
+    Role,
+    UserRole,
+    PasswordHistory,
+    CustomerProfile,
+)
+from app.modules.auth.schemas import (
+    UserRegister,
+    UserLogin,
+    TokenResponse,
+    RoleAssign,
+    PasswordChange,
+)
 from app.modules.auth.security import (
     get_password_hash,
     verify_password,
@@ -24,7 +36,13 @@ async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
     result = await db.execute(
         select(User)
         .where(User.email == email)
-        .options(selectinload(User.roles), selectinload(User.companies))
+        .options(
+            selectinload(User.roles),
+            selectinload(User.companies),
+            selectinload(User.customer_profile),
+            selectinload(User.staff_profile),
+            selectinload(User.password_histories),
+        )
     )
     return result.scalar_one_or_none()
 
@@ -33,7 +51,13 @@ async def get_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> Optional[User]
     result = await db.execute(
         select(User)
         .where(User.id == user_id)
-        .options(selectinload(User.roles), selectinload(User.companies))
+        .options(
+            selectinload(User.roles),
+            selectinload(User.companies),
+            selectinload(User.customer_profile),
+            selectinload(User.staff_profile),
+            selectinload(User.password_histories),
+        )
     )
     return result.scalar_one_or_none()
 
@@ -65,9 +89,18 @@ async def register_user(db: AsyncSession, data: UserRegister) -> User:
     if cliente_role:
         user_role = UserRole(user_id=user.id, role_id=cliente_role.id)
         db.add(user_role)
+        if cliente_role.scope == "customer":
+            profile = CustomerProfile(user_id=user.id)
+            db.add(profile)
+
+    # Add password to history
+    ph = PasswordHistory(user_id=user.id, password_hash=hashed_password)
+    db.add(ph)
 
     await db.commit()
-    await db.refresh(user, ["roles"])
+    await db.refresh(
+        user, ["roles", "customer_profile", "staff_profile", "password_histories"]
+    )
     return user
 
 
@@ -176,3 +209,30 @@ async def assign_role(
         await db.refresh(user, ["roles"])
 
     return user
+
+
+@audited(action="PASSWORD_CHANGED", entity="User")
+async def change_password(db: AsyncSession, user: User, data: PasswordChange):
+    if not verify_password(data.old_password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid old password"
+        )
+
+    # check history - last 5
+    for ph in user.password_histories[:5]:
+        if verify_password(data.new_password, ph.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot reuse a recent password",
+            )
+
+    # update using new
+    hashed_password = get_password_hash(data.new_password)
+    user.hashed_password = hashed_password
+
+    ph = PasswordHistory(user_id=user.id, password_hash=hashed_password)
+    user.password_histories.append(ph)
+    db.add(ph)
+
+    await db.commit()
+    return {"message": "Password changed successfully"}

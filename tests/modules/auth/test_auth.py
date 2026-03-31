@@ -180,3 +180,57 @@ async def test_assign_role_by_non_admin_returns_403(
         "/api/v1/auth/roles/assign", json=payload, headers=headers
     )
     assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_register_creates_customer_profile(
+    client: AsyncClient, roles, db_session
+):
+    from sqlalchemy import select
+    from app.modules.auth.models import CustomerProfile
+
+    payload = {
+        "email": "customer_prof@example.com",
+        "password": "password123",
+        "full_name": "Customer With Profile",
+        "phone": "123456789",
+    }
+    response = await client.post("/api/v1/auth/register", json=payload)
+    assert response.status_code == 201
+    user_id = response.json()["id"]
+
+    res = await db_session.execute(
+        select(CustomerProfile).where(CustomerProfile.user_id == user_id)
+    )
+    profile = res.scalar_one_or_none()
+    assert profile is not None
+
+
+@pytest.mark.asyncio
+async def test_change_password_no_reuse(client: AsyncClient, client_user):
+    token = create_access_token(
+        {
+            "sub": str(client_user.id),
+            "email": client_user.email,
+            "roles": ["CLIENTE"],
+            "type": "access",
+        }
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # First change password to something new
+    payload = {"old_password": "password123", "new_password": "newpassword123"}
+    resp = await client.put("/api/v1/auth/password", json=payload, headers=headers)
+    assert resp.status_code == 200
+
+    # Try changing back to the exact same new password
+    payload2 = {"old_password": "newpassword123", "new_password": "newpassword123"}
+    resp2 = await client.put("/api/v1/auth/password", json=payload2, headers=headers)
+    assert resp2.status_code == 400
+    assert "Cannot reuse" in resp2.json()["detail"]
+
+    # Try changing back to the original password
+    payload3 = {"old_password": "newpassword123", "new_password": "password123"}
+    resp3 = await client.put("/api/v1/auth/password", json=payload3, headers=headers)
+    assert resp3.status_code == 400
+    assert "Cannot reuse" in resp3.json()["detail"]

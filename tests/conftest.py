@@ -112,19 +112,23 @@ async def client(db_session, redis_client) -> AsyncGenerator[AsyncClient, None]:
 # Shared Auth Fixtures
 @pytest.fixture
 async def roles(db_session):
-    role_names = ["ADMIN", "VENDEDOR", "CLIENTE"]
+    role_defs = [
+        {"name": "ADMIN", "scope": "staff"},
+        {"name": "VENDEDOR", "scope": "staff"},
+        {"name": "CLIENTE", "scope": "customer"},
+    ]
     roles_dict = {}
-    for name in role_names:
-        # Check if exists
-        from sqlalchemy import select
+    from sqlalchemy import select
 
-        res = await db_session.execute(select(Role).where(Role.name == name))
+    for rdef in role_defs:
+        # Check if exists
+        res = await db_session.execute(select(Role).where(Role.name == rdef["name"]))
         role = res.scalar_one_or_none()
         if not role:
-            role = Role(name=name)
+            role = Role(name=rdef["name"], scope=rdef["scope"], guard_name="web")
             db_session.add(role)
             await db_session.flush()
-        roles_dict[name] = role
+        roles_dict[rdef["name"]] = role
     return roles_dict
 
 
@@ -164,6 +168,11 @@ async def admin_user(db_session, roles, default_company):
 
         user_role = UserRole(user_id=user.id, role_id=roles["ADMIN"].id)
         db_session.add(user_role)
+        from app.modules.auth.models import PasswordHistory
+
+        db_session.add(
+            PasswordHistory(user_id=user.id, password_hash=user.hashed_password)
+        )
 
     # Always ensure company link
     ws_res = await db_session.execute(
@@ -202,6 +211,11 @@ async def client_user(db_session, roles, default_company):
 
         user_role = UserRole(user_id=user.id, role_id=roles["CLIENTE"].id)
         db_session.add(user_role)
+        from app.modules.auth.models import PasswordHistory
+
+        db_session.add(
+            PasswordHistory(user_id=user.id, password_hash=user.hashed_password)
+        )
 
     # Always ensure company link
     ws_res = await db_session.execute(

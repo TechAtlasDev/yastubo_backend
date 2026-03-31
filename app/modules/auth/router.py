@@ -11,6 +11,7 @@ from app.modules.auth.schemas import (
     UserResponse,
     RefreshRequest,
     RoleAssign,
+    PasswordChange,
 )
 from app.modules.auth import service
 from app.modules.auth.dependencies import get_current_user, require_role
@@ -66,3 +67,12 @@ async def assign_role(
 @router.get("/me", response_model=UserResponse)
 async def get_me(user: User = Depends(get_current_user)):
     return UserResponse.from_orm_with_roles(user)
+
+
+@router.put("/password")
+async def change_password(
+    data: PasswordChange,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await service.change_password(db, user, data)
