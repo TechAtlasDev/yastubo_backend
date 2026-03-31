@@ -9,7 +9,7 @@ from app.shared.base_model import BaseModel, GUID
 
 if TYPE_CHECKING:
     from app.modules.emission.models import Policy, Beneficiary
-    from app.modules.workspaces.models import Workspace
+    from app.modules.organizations.models import Company
 
 
 class Claim(BaseModel):
@@ -63,8 +63,8 @@ class CommissionDistribution(BaseModel):
     claim_id: Mapped[uuid.UUID] = mapped_column(
         GUID(), ForeignKey("claims.id", ondelete="CASCADE"), nullable=False
     )
-    workspace_id: Mapped[uuid.UUID] = mapped_column(
-        GUID(), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False
     )
     amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), default="USD")
@@ -73,4 +73,4 @@ class CommissionDistribution(BaseModel):
     claim: Mapped["Claim"] = relationship(
         "Claim", back_populates="commission_distributions"
     )
-    workspace: Mapped["Workspace"] = relationship("Workspace")
+    company: Mapped["Company"] = relationship("Company")

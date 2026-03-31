@@ -6,7 +6,7 @@ description: Uso de Google Gemini 1.5 y RAG para asistencia inteligente en el do
 Yastubo no solo es un motor transaccional, es un sistema inteligente. Mediante el uso de **Google Gemini 1.5 Flash** y una arquitectura de **RAG (Retrieval-Augmented Generation)**, la plataforma asiste a los usuarios en la toma de decisiones y el análisis de riesgos.
 
 ## Core Benefits
-* **RAG Contextual**: La IA no alucina; responde basándose en documentos de conocimiento específicos del workspace.
+* **RAG Contextual**: La IA no alucina; responde basándose en documentos de conocimiento específicos del company.
 * **Memoria de Conversación**: Seguimiento del historial para diálogos coherentes.
 * **Procesamiento Vectorial**: Uso de `pgvector` en PostgreSQL para búsquedas semánticas ultra-rápidas.
 * **Multimodalidad**: Preparado para analizar documentos, PDFs y chats en un solo flujo.
@@ -32,10 +32,10 @@ Lógica central del chat con contexto (`app/modules/ai/service.py`):
 
 ```python
 async def chat_with_context(
-    self, db: AsyncSession, workspace_id: uuid.UUID, session_id: str, message: str
+    self, db: AsyncSession, company_id: uuid.UUID, session_id: str, message: str
 ) -> str:
     # 1. Recuperar contexto vectorial (RAG)
-    docs = await self.get_relevant_documents(db, workspace_id, message)
+    docs = await self.get_relevant_documents(db, company_id, message)
     context_text = "\n".join([d.content for d in docs])
 
     # 2. Recuperar historial reciente
@@ -62,7 +62,7 @@ async def chat_with_context(
 ### Explicación de Pasos Clave:
 1. **`get_relevant_documents`**: Utiliza el operador de distancia de coseno de `pgvector` para encontrar la información más cercana semánticamente.
 2. **`generate_content_async`**: Al ser asíncrono, no bloquea el servidor FastAPI mientras espera la respuesta de la API de Google.
-3. **`KnowledgeDocument`**: Cada documento en la base de conocimientos está vinculado a un `workspace_id`, garantizando el aislamiento de datos entre diferentes socios.
+3. **`KnowledgeDocument`**: Cada documento en la base de conocimientos está vinculado a un `company_id`, garantizando el aislamiento de datos entre diferentes socios.
 
 ## Diagrama de Proceso
 

@@ -15,7 +15,7 @@ from app.core.redis import get_redis
 from app.modules.auth.models import User, Role, UserRole
 from app.modules.auth.security import get_password_hash, create_access_token
 from app.modules.plans.models import Coverage
-from app.modules.workspaces.models import Workspace, UserWorkspace
+from app.modules.organizations.models import Company, CompanyUser
 
 # Register UUID adapter and converter for SQLite
 sqlite3.register_adapter(uuid.UUID, lambda u: u.hex)
@@ -129,22 +129,22 @@ async def roles(db_session):
 
 
 @pytest.fixture
-async def default_workspace(db_session):
+async def default_company(db_session):
     from sqlalchemy import select
 
     res = await db_session.execute(
-        select(Workspace).where(Workspace.slug == "yastubo-default")
+        select(Company).where(Company.short_code == "yastubo-default")
     )
-    workspace = res.scalar_one_or_none()
-    if not workspace:
-        workspace = Workspace(name="Yastubo Default", slug="yastubo-default")
-        db_session.add(workspace)
+    company = res.scalar_one_or_none()
+    if not company:
+        company = Company(name="Yastubo Default", short_code="yastubo-default")
+        db_session.add(company)
         await db_session.commit()
-    return workspace
+    return company
 
 
 @pytest.fixture
-async def admin_user(db_session, roles, default_workspace):
+async def admin_user(db_session, roles, default_company):
     from sqlalchemy import select
 
     res = await db_session.execute(
@@ -165,26 +165,24 @@ async def admin_user(db_session, roles, default_workspace):
         user_role = UserRole(user_id=user.id, role_id=roles["ADMIN"].id)
         db_session.add(user_role)
 
-    # Always ensure workspace link
+    # Always ensure company link
     ws_res = await db_session.execute(
-        select(UserWorkspace).where(
-            UserWorkspace.user_id == user.id,
-            UserWorkspace.workspace_id == default_workspace.id,
+        select(CompanyUser).where(
+            CompanyUser.user_id == user.id,
+            CompanyUser.company_id == default_company.id,
         )
     )
     if not ws_res.scalar_one_or_none():
-        user_ws = UserWorkspace(
-            user_id=user.id, workspace_id=default_workspace.id, is_owner=True
-        )
+        user_ws = CompanyUser(user_id=user.id, company_id=default_company.id)
         db_session.add(user_ws)
 
     await db_session.commit()
-    await db_session.refresh(user, ["roles", "workspaces"])
+    await db_session.refresh(user, ["roles", "companies"])
     return user
 
 
 @pytest.fixture
-async def client_user(db_session, roles, default_workspace):
+async def client_user(db_session, roles, default_company):
     from sqlalchemy import select
 
     res = await db_session.execute(
@@ -205,21 +203,19 @@ async def client_user(db_session, roles, default_workspace):
         user_role = UserRole(user_id=user.id, role_id=roles["CLIENTE"].id)
         db_session.add(user_role)
 
-    # Always ensure workspace link
+    # Always ensure company link
     ws_res = await db_session.execute(
-        select(UserWorkspace).where(
-            UserWorkspace.user_id == user.id,
-            UserWorkspace.workspace_id == default_workspace.id,
+        select(CompanyUser).where(
+            CompanyUser.user_id == user.id,
+            CompanyUser.company_id == default_company.id,
         )
     )
     if not ws_res.scalar_one_or_none():
-        user_ws = UserWorkspace(
-            user_id=user.id, workspace_id=default_workspace.id, is_owner=False
-        )
+        user_ws = CompanyUser(user_id=user.id, company_id=default_company.id)
         db_session.add(user_ws)
 
     await db_session.commit()
-    await db_session.refresh(user, ["roles", "workspaces"])
+    await db_session.refresh(user, ["roles", "companies"])
     return user
 
 

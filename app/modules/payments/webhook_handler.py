@@ -108,7 +108,7 @@ async def handle_stripe_event(event: dict, db: AsyncSession) -> None:
                     transaction.policy.issued_by,
                 )
                 audit = AuditLog(
-                    workspace_id=transaction.workspace_id,
+                    company_id=transaction.company_id,
                     action="PAYMENT_FAILED_MAX_RETRIES",
                     entity="Transaction",
                     user_id=None,
@@ -117,7 +117,7 @@ async def handle_stripe_event(event: dict, db: AsyncSession) -> None:
                 db.add(audit)
 
             audit = AuditLog(
-                workspace_id=transaction.workspace_id,
+                company_id=transaction.company_id,
                 action="PAYMENT_FAILED",
                 entity="Transaction",
                 user_id=None,
@@ -174,7 +174,7 @@ async def handle_stripe_event(event: dict, db: AsyncSession) -> None:
                 subscription.policy.issued_by,
             )
             audit = AuditLog(
-                workspace_id=subscription.workspace_id,
+                company_id=subscription.company_id,
                 action="SUBSCRIPTION_CANCELLED",
                 entity="Policy",
                 user_id=None,
@@ -208,7 +208,7 @@ async def handle_stripe_event(event: dict, db: AsyncSession) -> None:
                 )
                 db.add(transaction)
                 audit = AuditLog(
-                    workspace_id=subscription.workspace_id,
+                    company_id=subscription.company_id,
                     action="SUBSCRIPTION_PAYMENT_SUCCEEDED",
                     entity="Transaction",
                     user_id=None,

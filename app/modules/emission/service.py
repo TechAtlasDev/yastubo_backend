@@ -38,7 +38,7 @@ async def register_client(
     db: AsyncSession,
     data: ClientCreate,
     created_by: uuid.UUID,
-    workspace_id: Optional[uuid.UUID] = None,
+    company_id: Optional[uuid.UUID] = None,
 ) -> Client:
     # Check if email exists
     existing = await db.execute(select(Client).where(Client.email == data.email))
@@ -48,24 +48,22 @@ async def register_client(
             detail="Client with this email already exists",
         )
 
-    if workspace_id is None:
-        # Resolve workspace from user
-        from app.modules.workspaces.models import UserWorkspace
+    if company_id is None:
+        # Resolve company from user
+        from app.modules.organizations.models import CompanyUser
 
         res = await db.execute(
-            select(UserWorkspace.workspace_id)
-            .where(UserWorkspace.user_id == created_by)
+            select(CompanyUser.company_id)
+            .where(CompanyUser.user_id == created_by)
             .limit(1)
         )
-        workspace_id = res.scalar_one_or_none()
-        if not workspace_id:
+        company_id = res.scalar_one_or_none()
+        if not company_id:
             raise HTTPException(
-                status_code=400, detail="User has no associated workspace."
+                status_code=400, detail="User has no associated company."
             )
 
-    client = Client(
-        **data.model_dump(), created_by=created_by, workspace_id=workspace_id
-    )
+    client = Client(**data.model_dump(), created_by=created_by, company_id=company_id)
     db.add(client)
 
     await db.commit()
@@ -106,7 +104,7 @@ async def issue_policy(
     lead = await leads_service.create_or_update_lead(
         db,
         LeadCreate(
-            workspace_id=client.workspace_id,
+            company_id=client.company_id,
             phone_e164=client.phone,
             first_name=client.first_name,
             last_name=client.last_name,
@@ -206,7 +204,7 @@ async def issue_policy(
             country_of_residence=b_data.country_of_residence,
             location_type=b_data.location_type,
             individual_price=float(calc_result["final_price"]),
-            # Beneficiary doesn't have workspace_id, it's linked to Policy
+            # Beneficiary doesn't have company_id, it's linked to Policy
         )
         beneficiaries_to_create.append(beneficiary)
 
@@ -248,20 +246,20 @@ async def issue_policy(
 
     # 7. Create Policy (DRAFT)
     end_date = data.start_date + timedelta(days=365)  # 1 year by default
-    ws_id = client.workspace_id
+    ws_id = client.company_id
     if not ws_id:
-        from app.modules.workspaces.models import Workspace
+        from app.modules.organizations.models import Company
 
-        res_ws = await db.execute(select(Workspace.id).limit(1))
+        res_ws = await db.execute(select(Company.id).limit(1))
         ws_id = res_ws.scalar_one_or_none()
         if not ws_id:
             raise HTTPException(
                 status_code=500,
-                detail="Serious integrity error: No workspace found in system.",
+                detail="Serious integrity error: No company found in system.",
             )
 
     policy = Policy(
-        workspace_id=ws_id,
+        company_id=ws_id,
         policy_number=policy_number,
         client_id=client.id,
         lead_id=lead.id,  # Link lead for Phase 2

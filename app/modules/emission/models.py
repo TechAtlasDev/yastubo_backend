@@ -24,8 +24,8 @@ if TYPE_CHECKING:
 class Client(BaseModel):
     __tablename__ = "clients"
 
-    workspace_id: Mapped[uuid.UUID] = mapped_column(
-        GUID(), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False
     )
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -76,8 +76,8 @@ class Client(BaseModel):
 class Policy(BaseModel):
     __tablename__ = "policies"
 
-    workspace_id: Mapped[uuid.UUID] = mapped_column(
-        GUID(), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False
     )
     policy_number: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     client_id: Mapped[uuid.UUID] = mapped_column(

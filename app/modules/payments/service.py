@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
 from app.modules.payments.models import Transaction, Subscription, StripeAccount
-from app.modules.workspaces.models import Workspace
+from app.modules.organizations.models import Company
 from app.modules.payments.schemas import (
     CreatePaymentIntentRequest,
     CreateSubscriptionRequest,
@@ -63,15 +63,15 @@ async def create_one_time_payment(
         },
     )
 
-    ws_id = policy.workspace_id
+    ws_id = policy.company_id
     if not ws_id:
-        res_ws = await db.execute(select(Workspace.id).limit(1))
+        res_ws = await db.execute(select(Company.id).limit(1))
         ws_id = res_ws.scalar_one_or_none() or uuid.UUID(
             "00000000-0000-0000-0000-000000000000"
         )  # Should not happen
 
     transaction = Transaction(
-        workspace_id=ws_id,
+        company_id=ws_id,
         policy_id=policy.id,
         stripe_payment_intent_id=pi["id"],
         amount=float(policy.final_price),
@@ -123,19 +123,17 @@ async def create_subscription(
 ) -> Subscription:
     policy = await emission_service.get_policy(db, data.policy_id)
 
-    # Get Workspace for commissions
-    res_ws = await db.execute(
-        select(Workspace).where(Workspace.id == policy.workspace_id)
-    )
-    workspace = res_ws.scalar_one()
+    # Get Company for commissions
+    res_ws = await db.execute(select(Company).where(Company.id == policy.company_id))
+    company = res_ws.scalar_one()
 
     connect_account_id = None
     app_fee_percent = None
 
-    if workspace.is_reseller and workspace.stripe_connect_id:
-        connect_account_id = workspace.stripe_connect_id
-        if workspace.commission_rate > 0:
-            app_fee_percent = float(workspace.commission_rate)
+    if company.is_reseller and company.stripe_connect_id:
+        connect_account_id = company.stripe_connect_id
+        if company.commission_rate > 0:
+            app_fee_percent = float(company.commission_rate)
 
     # Check if existing active subscription
     existing = await db.execute(
@@ -165,19 +163,19 @@ async def create_subscription(
         payment_method_id=data.stripe_payment_method_id,
         metadata={
             "policy_id": str(policy.id),
-            "workspace_id": str(policy.workspace_id),
+            "company_id": str(policy.company_id),
         },
         connect_account_id=connect_account_id,
         application_fee_percent=app_fee_percent,
     )
 
-    ws_id = policy.workspace_id
+    ws_id = policy.company_id
     if not ws_id:
-        res_ws = await db.execute(select(Workspace.id).limit(1))
+        res_ws = await db.execute(select(Company.id).limit(1))
         ws_id = res_ws.scalar_one_or_none()
 
     sub = Subscription(
-        workspace_id=ws_id,
+        company_id=ws_id,
         policy_id=policy.id,
         stripe_subscription_id=stripe_sub["id"],
         stripe_customer_id=customer_id,
@@ -199,7 +197,7 @@ async def create_subscription(
         pi_id = stripe_sub["latest_invoice"]["payment_intent"]["id"]
 
     transaction = Transaction(
-        workspace_id=ws_id,
+        company_id=ws_id,
         policy_id=policy.id,
         stripe_payment_intent_id=pi_id,
         stripe_invoice_id=stripe_sub.get("latest_invoice", {}).get("id"),
@@ -250,7 +248,7 @@ async def register_manual_payment(
     policy = await emission_service.get_policy(db, data.policy_id)
 
     transaction = Transaction(
-        workspace_id=policy.workspace_id,
+        company_id=policy.company_id,
         policy_id=policy.id,
         amount=float(data.amount),
         currency=policy.currency,
@@ -302,34 +300,34 @@ async def create_connect_onboarding(
     return {"url": link["url"], "account_id": acc.stripe_account_id}
 
 
-async def get_reseller_dashboard(db: AsyncSession, workspace_id: uuid.UUID) -> dict:
+async def get_reseller_dashboard(db: AsyncSession, company_id: uuid.UUID) -> dict:
     from sqlalchemy import func
 
     # Total sales (Succeeded transactions)
     query_sales = select(
         func.count(Transaction.id).label("count"),
         func.sum(Transaction.amount).label("total_amount"),
-    ).where(Transaction.workspace_id == workspace_id, Transaction.status == "SUCCEEDED")
+    ).where(Transaction.company_id == company_id, Transaction.status == "SUCCEEDED")
     res_sales = await db.execute(query_sales)
     sales_stats = res_sales.one()
 
-    # Get Workspace to know commission rate
-    res_ws = await db.execute(select(Workspace).where(Workspace.id == workspace_id))
-    workspace = res_ws.scalar_one()
+    # Get Company to know commission rate
+    res_ws = await db.execute(select(Company).where(Company.id == company_id))
+    company = res_ws.scalar_one()
 
-    # Calculate earned commissions (based on sales amount and workspace rate)
+    # Calculate earned commissions (based on sales amount and company rate)
     total_amount = sales_stats.total_amount or 0.0
     # If commission_rate is what platform keeps, then reseller gets (100 - rate)%
     # Based on our previous assumption in create_payment_intent:
     # Reseller is the destination, Platform takes Application Fee (commission_rate).
     # So Reseller gets: total_amount - application_fee.
-    platform_rate = float(workspace.commission_rate) / 100.0
+    platform_rate = float(company.commission_rate) / 100.0
     earned = float(total_amount) * (1.0 - platform_rate)
 
     # Fetch pending balance from Stripe Connect account
     pending_commissions = 0.0
-    # Use workspace.stripe_connect_id if available
-    stripe_account_id = workspace.stripe_connect_id
+    # Use company.stripe_connect_id if available
+    stripe_account_id = company.stripe_connect_id
 
     if stripe_account_id:
         try:

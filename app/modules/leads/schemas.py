@@ -30,7 +30,7 @@ class LeadBase(BaseModel):
 
 
 class LeadCreate(LeadBase):
-    workspace_id: Optional[uuid.UUID] = None
+    company_id: Optional[uuid.UUID] = None
     # Attribution fields
     source_channel: Optional[str] = None
     campaign_name: Optional[str] = None

@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.modules.workspaces.models import Workspace
+    from app.modules.organizations.models import Company, BusinessUnit
 from sqlalchemy import String, ForeignKey, Boolean, DateTime, Table, Column, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.shared.base_model import BaseModel, GUID
@@ -88,6 +88,10 @@ class User(BaseModel):
         overlaps="roles,users",
     )
 
-    workspaces: Mapped[List["Workspace"]] = relationship(
-        secondary="user_workspaces", back_populates="users"
+    companies: Mapped[List["Company"]] = relationship(
+        secondary="company_user", back_populates="users"
+    )
+
+    business_units: Mapped[List["BusinessUnit"]] = relationship(
+        secondary="memberships_business_unit", back_populates="users"
     )

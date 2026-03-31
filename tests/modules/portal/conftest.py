@@ -7,14 +7,14 @@ from app.modules.auth.models import User, Role, UserRole
 from app.modules.auth.security import get_password_hash, create_access_token
 from app.modules.emission.models import Client, Policy
 from app.modules.emission.state_machine import PolicyStatus
-from app.modules.workspaces.models import Workspace, UserWorkspace
+from app.modules.organizations.models import Company, CompanyUser
 
 
 @pytest_asyncio.fixture
 async def client_user_with_profile(db_session: AsyncSession):
-    # 0. Ensure Workspace exists
-    workspace = Workspace(name="Test Workspace", slug=f"ws_{uuid.uuid4().hex[:6]}")
-    db_session.add(workspace)
+    # 0. Ensure Company exists
+    company = Company(name="Test Company", short_code=f"ws_{uuid.uuid4().hex[:6]}")
+    db_session.add(company)
     await db_session.flush()
 
     # 1. Create User
@@ -39,8 +39,8 @@ async def client_user_with_profile(db_session: AsyncSession):
     user_role = UserRole(user_id=user.id, role_id=role.id)
     db_session.add(user_role)
 
-    # Link to workspace
-    user_ws = UserWorkspace(user_id=user.id, workspace_id=workspace.id, is_owner=True)
+    # Link to company
+    user_ws = CompanyUser(user_id=user.id, company_id=company.id)
     db_session.add(user_ws)
 
     # 3. Create Client profile
@@ -56,7 +56,7 @@ async def client_user_with_profile(db_session: AsyncSession):
         document_type="PASSPORT",
         document_number="P1234567",
         created_by=user.id,
-        workspace_id=workspace.id,
+        company_id=company.id,
     )
     db_session.add(client_profile)
     await db_session.commit()
@@ -94,7 +94,7 @@ async def active_policy_for_client(db_session: AsyncSession, client_user_with_pr
         start_date=date.today(),
         end_date=date.today() + timedelta(days=365),
         issued_by=user.id,
-        workspace_id=client.workspace_id,
+        company_id=client.company_id,
     )
     db_session.add(policy)
     await db_session.commit()

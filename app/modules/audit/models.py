@@ -8,9 +8,9 @@ from app.shared.base_model import BaseModel, GUID
 class AuditLog(BaseModel):
     __tablename__ = "audit_logs"
 
-    workspace_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         GUID(),
-        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        ForeignKey("companies.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
     )

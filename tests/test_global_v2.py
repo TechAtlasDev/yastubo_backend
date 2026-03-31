@@ -3,7 +3,7 @@ import uuid
 from httpx import AsyncClient
 from app.modules.auth.security import create_access_token
 from app.modules.auth.models import User
-from app.modules.workspaces.models import Workspace, UserWorkspace
+from app.modules.organizations.models import Company, CompanyUser
 from unittest.mock import patch, AsyncMock
 
 
@@ -25,35 +25,35 @@ async def reseller_user(db_session, roles):
     user_role = UserRole(user_id=user.id, role_id=roles["VENDEDOR"].id)
     db_session.add(user_role)
 
-    # Create Workspace for this reseller
-    workspace = Workspace(
+    # Create Company for this reseller
+    company = Company(
         name="Reseller Agency",
-        slug="reseller-agency",
+        short_code="reseller-agency",
         is_reseller=True,
         stripe_connect_id="acct_mock_123",
         commission_rate=10.0,  # Platform takes 10%
     )
-    db_session.add(workspace)
+    db_session.add(company)
     await db_session.flush()
 
-    # Link User to Workspace
-    user_ws = UserWorkspace(user_id=user.id, workspace_id=workspace.id, is_owner=True)
+    # Link User to Company
+    user_ws = CompanyUser(user_id=user.id, company_id=company.id)
     db_session.add(user_ws)
 
     await db_session.commit()
-    await db_session.refresh(user, ["roles", "workspaces"])
-    return user, workspace
+    await db_session.refresh(user, ["roles", "companies"])
+    return user, company
 
 
 @pytest.mark.asyncio
 async def test_multi_tenancy_and_reseller_flow(
     client: AsyncClient, reseller_user, db_session
 ):
-    user, workspace = reseller_user
+    user, company = reseller_user
     token = create_access_token(
         {"sub": str(user.id), "roles": ["VENDEDOR"], "type": "access"}
     )
-    headers = {"Authorization": f"Bearer {token}", "X-Workspace-Id": str(workspace.id)}
+    headers = {"Authorization": f"Bearer {token}", "X-Company-Id": str(company.id)}
 
     # 1. Test Reseller Dashboard (Phase 2)
     response = await client.get("/api/v1/payments/reseller/dashboard", headers=headers)
@@ -81,12 +81,12 @@ async def test_multi_tenancy_and_reseller_flow(
         mock_chat.assert_called_once()
 
     # 3. Test Passbook Generation (Phase 5) - Mocked
-    # We need a policy for this. Let's create one quickly in this workspace.
+    # We need a policy for this. Let's create one quickly in this company.
     from app.modules.emission.models import Policy, Client as DBClient
     from datetime import date
 
     test_client = DBClient(
-        workspace_id=workspace.id,
+        company_id=company.id,
         first_name="Test",
         last_name="Client",
         email="test@client.com",
@@ -101,7 +101,7 @@ async def test_multi_tenancy_and_reseller_flow(
     await db_session.flush()
 
     policy = Policy(
-        workspace_id=workspace.id,
+        company_id=company.id,
         policy_number="POL-TEST-001",
         client_id=test_client.id,
         plan_id=uuid.uuid4(),  # Mock plan ID
@@ -133,18 +133,18 @@ async def test_multi_tenancy_and_reseller_flow(
 
 @pytest.mark.asyncio
 async def test_multi_tenancy_security(client: AsyncClient, admin_user, reseller_user):
-    # User from Workspace A should not access Data from Workspace B
-    _, workspace = reseller_user  # Workspace A
+    # User from Company A should not access Data from Company B
+    _, company = reseller_user  # Company A
 
-    # Admin User (not in Workspace A by default in this test)
+    # Admin User (not in Company A by default in this test)
     token = create_access_token(
         {"sub": str(admin_user.id), "roles": ["ADMIN"], "type": "access"}
     )
 
-    # Try to access Reseller A dashboard with Admin token but without being in that workspace
-    headers = {"Authorization": f"Bearer {token}", "X-Workspace-Id": str(workspace.id)}
+    # Try to access Reseller A dashboard with Admin token but without being in that company
+    headers = {"Authorization": f"Bearer {token}", "X-Company-Id": str(company.id)}
 
     response = await client.get("/api/v1/payments/reseller/dashboard", headers=headers)
-    # Should be 403 Forbidden because admin_user is not linked to workspace A
+    # Should be 403 Forbidden because admin_user is not linked to company A
     assert response.status_code == 403
-    assert "You do not have access to this workspace" in response.json()["detail"]
+    assert "You do not have access to this company" in response.json()["detail"]

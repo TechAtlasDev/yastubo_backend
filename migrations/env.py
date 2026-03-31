@@ -16,7 +16,7 @@ import app.modules.payments.models  # noqa: F401
 import app.modules.leads.models  # noqa: F401
 import app.modules.ai.models  # noqa: F401
 import app.modules.audit.models  # noqa: F401
-import app.modules.workspaces.models  # noqa: F401
+import app.modules.organizations.models  # noqa: F401
 import app.modules.claims.models  # noqa: F401
 import app.modules.geography.models  # noqa: F401
 

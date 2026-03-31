@@ -63,7 +63,7 @@ description: Registro de cambios y mejoras arquitectónicas del backend de Yastu
 - **StripeClient**: Implementación de métodos faltantes `get_payment_method` y `get_customer_id_by_email`.
 - **Detección de Duplicados**: `get_or_create_customer` ahora realiza lookup por email antes de crear en Stripe.
 - **Email Templates**: Corrección de rutas de carga de plantillas en `notifications/email_service.py`.
-- **Seguridad Dashboard**: Validación de existencia de workspace para evitar `IndexError`.
+- **Seguridad Dashboard**: Validación de existencia de company para evitar `IndexError`.
 - **Configuración**: Registro de `N8N_WEBHOOK_URL` y certificados Apple en el modelo centralizado de `Settings`.
 - **Worker**: Conexión de la tarea de "Checkouts Abandonados" al worker de ARQ.
 

@@ -20,7 +20,7 @@ class AIService:
         return result["embedding"]
 
     async def get_relevant_documents(
-        self, db: AsyncSession, workspace_id: uuid.UUID, query: str, limit: int = 5
+        self, db: AsyncSession, company_id: uuid.UUID, query: str, limit: int = 5
     ) -> List[KnowledgeDocument]:
         # Generate embedding for the query
         query_embedding = await self.generate_embedding(query)
@@ -30,7 +30,7 @@ class AIService:
         # SQLAlchemy pgvector provides .cosine_distance()
         stmt = (
             select(KnowledgeDocument)
-            .where(KnowledgeDocument.workspace_id == workspace_id)
+            .where(KnowledgeDocument.company_id == company_id)
             .order_by(KnowledgeDocument.embedding.cosine_distance(query_embedding))
             .limit(limit)
         )
@@ -39,7 +39,7 @@ class AIService:
         return list(result.scalars().all())
 
     async def chat_with_context(
-        self, db: AsyncSession, workspace_id: uuid.UUID, session_id: str, message: str
+        self, db: AsyncSession, company_id: uuid.UUID, session_id: str, message: str
     ) -> str:
         # 1. Find or create the conversation for this session
         conv_res = await db.execute(
@@ -48,7 +48,7 @@ class AIService:
         conversation = conv_res.scalar_one_or_none()
         if not conversation:
             conversation = ChatConversation(
-                workspace_id=workspace_id, session_id=session_id
+                company_id=company_id, session_id=session_id
             )
             db.add(conversation)
             await db.flush()
@@ -73,7 +73,7 @@ class AIService:
         )
 
         # 4. Get relevant docs (RAG)
-        docs = await self.get_relevant_documents(db, workspace_id, message)
+        docs = await self.get_relevant_documents(db, company_id, message)
         context = "\n".join([f"Source: {d.title}\nContent: {d.content}" for d in docs])
 
         # 5. Build prompt with history and RAG context

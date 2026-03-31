@@ -58,4 +58,4 @@ Puedes disparar el flujo de siniestros directamente desde la API o mediante el C
 Después de aprobar siniestros y registrar gastos, consulta el Dashboard:
 - `GET /api/v1/dashboard/metrics`
 - Verifica que el **Loss Ratio** se actualice dinámicamente:
-  `Loss Ratio = (Gastos Totales de Siniestros / Ingresos Totales del Workspace) * 100`
+  `Loss Ratio = (Gastos Totales de Siniestros / Ingresos Totales del Company) * 100`

@@ -8,12 +8,12 @@ from app.modules.auth.security import create_access_token
 async def test_retry_payment_endpoint_success(
     client: AsyncClient, admin_user, db_session, issued_policy
 ):
-    workspace_id = admin_user.workspaces[0].id
+    company_id = admin_user.companies[0].id
     # 1. Setup a failed transaction
     from app.modules.payments.models import Transaction
 
     transaction = Transaction(
-        workspace_id=workspace_id,
+        company_id=company_id,
         policy_id=issued_policy["id"],
         stripe_payment_intent_id="pi_failed_123",
         amount=float(issued_policy["final_price"]),
@@ -57,12 +57,12 @@ async def test_retry_payment_endpoint_success(
 async def test_retry_payment_already_succeeded_fails(
     client: AsyncClient, admin_user, db_session, issued_policy
 ):
-    workspace_id = admin_user.workspaces[0].id
+    company_id = admin_user.companies[0].id
     # 1. Setup a succeeded transaction
     from app.modules.payments.models import Transaction
 
     transaction = Transaction(
-        workspace_id=workspace_id,
+        company_id=company_id,
         policy_id=issued_policy["id"],
         stripe_payment_intent_id="pi_success_123",
         amount=float(issued_policy["final_price"]),

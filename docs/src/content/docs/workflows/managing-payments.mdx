@@ -20,7 +20,7 @@ El sistema decide el tipo de pago basándose en la configuración del plan:
 
 ### 2. Stripe Connect y Comisiones
 Para los socios comerciales (vendedores/revendedores), Yastubo utiliza **Stripe Connect (Standard/Express)**. 
-Cuando se crea una suscripción a través de un revendedor, se aplica una `application_fee_percent` (tasa de comisión) definida en el `Workspace` del socio.
+Cuando se crea una suscripción a través de un revendedor, se aplica una `application_fee_percent` (tasa de comisión) definida en el `Company` del socio.
 
 :::tip
 Las comisiones se deducen automáticamente en el momento del cobro, enviando el saldo neto al `StripeAccount` del revendedor.
@@ -38,13 +38,13 @@ Fragmento de la lógica de creación de suscripciones (`app/modules/payments/ser
 async def create_subscription(
     db: AsyncSession, stripe: StripeClient, data: CreateSubscriptionRequest
 ) -> Subscription:
-    # 1. Obtener la póliza y el espacio de trabajo (Workspace)
+    # 1. Obtener la póliza y el espacio de trabajo (Company)
     policy = await emission_service.get_policy(db, data.policy_id)
-    workspace = await get_workspace(db, policy.workspace_id)
+    company = await get_company(db, policy.company_id)
 
     # 2. Configurar Connect Account si es un revendedor
-    connect_account_id = workspace.stripe_connect_id if workspace.is_reseller else None
-    app_fee = float(workspace.commission_rate) if workspace.commission_rate > 0 else None
+    connect_account_id = company.stripe_connect_id if company.is_reseller else None
+    app_fee = float(company.commission_rate) if company.commission_rate > 0 else None
 
     # 3. Crear suscripción en Stripe
     stripe_sub = await stripe.create_subscription(

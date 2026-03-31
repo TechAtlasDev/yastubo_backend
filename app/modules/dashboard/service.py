@@ -12,33 +12,31 @@ from app.modules.dashboard.schemas import DashboardKPIMetrics
 
 
 async def get_dashboard_metrics(
-    db: AsyncSession, workspace_id: uuid.UUID
+    db: AsyncSession, company_id: uuid.UUID
 ) -> DashboardKPIMetrics:
     # 1. Total Revenue
     revenue_stmt = select(func.sum(Transaction.amount)).where(
-        and_(
-            Transaction.workspace_id == workspace_id, Transaction.status == "SUCCEEDED"
-        )
+        and_(Transaction.company_id == company_id, Transaction.status == "SUCCEEDED")
     )
     revenue_res = await db.execute(revenue_stmt)
     total_revenue = Decimal(str(revenue_res.scalar() or 0))
 
     # 2. MRR (Monthly Recurring Revenue)
     mrr_stmt = select(func.sum(Subscription.monthly_price)).where(
-        and_(Subscription.workspace_id == workspace_id, Subscription.status == "ACTIVE")
+        and_(Subscription.company_id == company_id, Subscription.status == "ACTIVE")
     )
     mrr_res = await db.execute(mrr_stmt)
     mrr = Decimal(str(mrr_res.scalar() or 0))
 
     # 3. Policy counts
     active_policies_stmt = select(func.count(Policy.id)).where(
-        and_(Policy.workspace_id == workspace_id, Policy.status == "ACTIVE")
+        and_(Policy.company_id == company_id, Policy.status == "ACTIVE")
     )
     active_res = await db.execute(active_policies_stmt)
     active_policies = active_res.scalar() or 0
 
     pending_policies_stmt = select(func.count(Policy.id)).where(
-        and_(Policy.workspace_id == workspace_id, Policy.status == "PENDING_PAYMENT")
+        and_(Policy.company_id == company_id, Policy.status == "PENDING_PAYMENT")
     )
     pending_res = await db.execute(pending_policies_stmt)
     pending_policies = pending_res.scalar() or 0
@@ -47,7 +45,7 @@ async def get_dashboard_metrics(
     last_30_days = datetime.now() - timedelta(days=30)
     cancelled_stmt = select(func.count(Policy.id)).where(
         and_(
-            Policy.workspace_id == workspace_id,
+            Policy.company_id == company_id,
             Policy.status == "CANCELLED",
             Policy.cancelled_at >= last_30_days,
         )
@@ -60,7 +58,7 @@ async def get_dashboard_metrics(
 
     # 5. LTV Average
     clients_stmt = select(func.count(func.distinct(Policy.client_id))).where(
-        Policy.workspace_id == workspace_id
+        Policy.company_id == company_id
     )
     clients_res = await db.execute(clients_stmt)
     total_clients = clients_res.scalar() or 0
@@ -71,7 +69,7 @@ async def get_dashboard_metrics(
         select(func.sum(ClaimExpense.amount))
         .join(Claim)
         .join(Policy, Claim.policy_id == Policy.id)
-        .where(Policy.workspace_id == workspace_id)
+        .where(Policy.company_id == company_id)
     )
     claims_res = await db.execute(claims_stmt)
     total_claims_amount = Decimal(str(claims_res.scalar() or 0))
@@ -85,7 +83,7 @@ async def get_dashboard_metrics(
         .join(Policy)
         .where(
             and_(
-                Policy.workspace_id == workspace_id,
+                Policy.company_id == company_id,
                 Beneficiary.coverage_status == "ACTIVE",
             )
         )
@@ -96,7 +94,7 @@ async def get_dashboard_metrics(
     # 8. CAC Average — computed as total_revenue / total converted leads
     # Returns 0.00 when ad spend data is unavailable; connect ad spend source to improve.
     converted_leads_stmt = select(func.count(Lead.id)).where(
-        and_(Lead.workspace_id == workspace_id, Lead.purchase_completed == True)  # noqa: E712
+        and_(Lead.company_id == company_id, Lead.purchase_completed == True)  # noqa: E712
     )
     converted_res = await db.execute(converted_leads_stmt)
     converted_leads = converted_res.scalar() or 0
@@ -107,7 +105,7 @@ async def get_dashboard_metrics(
     # 9. Conversions by channel
     channels_stmt = (
         select(Lead.source_channel, func.count(Lead.id))
-        .where(and_(Lead.workspace_id == workspace_id, Lead.purchase_completed))
+        .where(and_(Lead.company_id == company_id, Lead.purchase_completed))
         .group_by(Lead.source_channel)
     )
     channels_res = await db.execute(channels_stmt)
@@ -116,7 +114,7 @@ async def get_dashboard_metrics(
     # 10. Top Plans
     top_plans_stmt = (
         select(Policy.plan_version_snapshot["name"], func.count(Policy.id))
-        .where(Policy.workspace_id == workspace_id)
+        .where(Policy.company_id == company_id)
         .group_by(Policy.plan_version_snapshot["name"])
         .order_by(func.count(Policy.id).desc())
         .limit(5)
@@ -133,7 +131,7 @@ async def get_dashboard_metrics(
         )
         .where(
             and_(
-                Transaction.workspace_id == workspace_id,
+                Transaction.company_id == company_id,
                 Transaction.status == "SUCCEEDED",
                 Transaction.processed_at >= datetime.now() - timedelta(days=365),
             )

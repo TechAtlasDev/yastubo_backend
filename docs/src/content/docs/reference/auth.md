@@ -3,7 +3,7 @@ title: Auth (Identidad y Acceso)
 description: Gestión de usuarios, sesiones JWT y Control de Acceso Basado en Roles (RBAC).
 ---
 
-El módulo de **Auth** es el guardián de la seguridad en Yastubo. No solo gestiona quién puede entrar al sistema, sino qué acciones puede realizar según su rol y pertenencia a un espacio de trabajo (Workspace).
+El módulo de **Auth** es el guardián de la seguridad en Yastubo. No solo gestiona quién puede entrar al sistema, sino qué acciones puede realizar según su rol y pertenencia a un espacio de trabajo (Company).
 
 ## Key Features
 

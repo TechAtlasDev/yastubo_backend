@@ -90,8 +90,8 @@ class CountryConfig(BaseModel):
 class Plan(BaseModel):
     __tablename__ = "plans"
 
-    workspace_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        GUID(), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True
+    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        GUID(), ForeignKey("companies.id", ondelete="CASCADE"), nullable=True
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

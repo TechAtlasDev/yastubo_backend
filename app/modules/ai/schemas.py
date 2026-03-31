@@ -12,7 +12,7 @@ class KnowledgeDocumentCreate(BaseModel):
 
 class KnowledgeDocumentResponse(BaseModel):
     id: uuid.UUID
-    workspace_id: uuid.UUID
+    company_id: uuid.UUID
     title: str
     content: str
     source_url: Optional[str]

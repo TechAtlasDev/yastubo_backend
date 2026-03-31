@@ -9,9 +9,9 @@ from app.shared.base_model import BaseModel, GUID
 class KnowledgeDocument(BaseModel):
     __tablename__ = "knowledge_documents"
 
-    workspace_id: Mapped[uuid.UUID] = mapped_column(
+    company_id: Mapped[uuid.UUID] = mapped_column(
         GUID(),
-        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        ForeignKey("companies.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -28,9 +28,9 @@ class KnowledgeDocument(BaseModel):
 class ChatConversation(BaseModel):
     __tablename__ = "chat_conversations"
 
-    workspace_id: Mapped[uuid.UUID] = mapped_column(
+    company_id: Mapped[uuid.UUID] = mapped_column(
         GUID(),
-        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        ForeignKey("companies.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )

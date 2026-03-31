@@ -35,17 +35,17 @@ async def create_or_update_lead(db: AsyncSession, data: LeadCreate) -> Lead:
     else:
         logger.info(f"Creating new lead for {data.phone_e164}.")
         insert_data = data.model_dump()
-        if insert_data.get("workspace_id") is None:
-            # Fallback to first available workspace (usually one in this project)
-            from app.modules.workspaces.models import Workspace
+        if insert_data.get("company_id") is None:
+            # Fallback to first available company (usually one in this project)
+            from app.modules.organizations.models import Company
 
-            res = await db.execute(select(Workspace.id).limit(1))
+            res = await db.execute(select(Company.id).limit(1))
             insertion_ws = res.scalar_one_or_none()
             if not insertion_ws:
                 raise HTTPException(
-                    status_code=400, detail="No workspace found in system."
+                    status_code=400, detail="No company found in system."
                 )
-            insert_data["workspace_id"] = insertion_ws
+            insert_data["company_id"] = insertion_ws
 
         lead = Lead(**insert_data)
         lead.first_contact_at = datetime.now()

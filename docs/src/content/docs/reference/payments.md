@@ -24,7 +24,7 @@ Cuando un cliente opta por un plan mensual:
 1.  **Customer Creation**: El sistema verifica si el usuario ya existe en Stripe; si no, lo crea.
 2.  **Payment Method**: Se vincula el método de pago proporcionado.
 3.  **Subscription Link**: Se asocia el `price_id` del plan de Yastubo con la suscripción en Stripe.
-4.  **Commission Splitting**: Si el vendedor tiene Connect activo, se aplica el `application_fee_percent` definido en el `Workspace`.
+4.  **Commission Splitting**: Si el vendedor tiene Connect activo, se aplica el `application_fee_percent` definido en el `Company`.
 
 ### Gestión de Errores y Reintentos
 
@@ -82,15 +82,15 @@ async def create_subscription(
     Gestiona la división de comisiones si hay un revendedor activo.
     """
     policy = await emission_service.get_policy(db, data.policy_id)
-    workspace = await get_workspace(db, policy.workspace_id)
+    company = await get_company(db, policy.company_id)
 
     # Configuración de comisiones para Stripe Connect
     connect_account_id = None
     app_fee_percent = None
 
-    if workspace.is_reseller and workspace.stripe_connect_id:
-        connect_account_id = workspace.stripe_connect_id
-        app_fee_percent = float(workspace.commission_rate) # Lo que se queda la plataforma
+    if company.is_reseller and company.stripe_connect_id:
+        connect_account_id = company.stripe_connect_id
+        app_fee_percent = float(company.commission_rate) # Lo que se queda la plataforma
 
     # 1. Obtener o crear el cliente en Stripe
     customer_id = await get_or_create_customer(stripe, policy.client)

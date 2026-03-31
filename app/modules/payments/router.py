@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.modules.auth.dependencies import (
     get_current_user,
     require_role,
-    get_current_workspace_id,
+    get_current_company_id,
 )
 from app.modules.auth.models import User
 from app.modules.payments.schemas import (
@@ -88,7 +88,9 @@ async def create_connect_onboarding(
     return await service.create_connect_onboarding(db, stripe_c, current_user)
 
 
-@router.post("/transactions/{transaction_id}/retry", response_model=RetryPaymentResponse)
+@router.post(
+    "/transactions/{transaction_id}/retry", response_model=RetryPaymentResponse
+)
 async def retry_payment(
     transaction_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
@@ -106,10 +108,10 @@ async def retry_payment(
 @router.get("/reseller/dashboard", response_model=ResellerDashboardResponse)
 async def get_reseller_dashboard(
     db: AsyncSession = Depends(get_db),
-    workspace_id: uuid.UUID = Depends(get_current_workspace_id),
+    company_id: uuid.UUID = Depends(get_current_company_id),
     current_user: User = Depends(require_role("VENDEDOR", "ADMIN")),
 ):
-    return await service.get_reseller_dashboard(db, workspace_id)
+    return await service.get_reseller_dashboard(db, company_id)
 
 
 @router.post("/webhook")

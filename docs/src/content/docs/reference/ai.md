@@ -59,13 +59,13 @@ El siguiente fragmento muestra cómo se orquestra la llamada a la IA integrando 
 
 ```python
 async def chat_with_context(
-    self, db: AsyncSession, workspace_id: uuid.UUID, session_id: str, message: str
+    self, db: AsyncSession, company_id: uuid.UUID, session_id: str, message: str
 ) -> str:
     """
     Gestiona una sesión de chat inteligente aplicando RAG.
     """
     # 1. Recuperar documentos relevantes (Búsqueda semántica)
-    docs = await self.get_relevant_documents(db, workspace_id, message)
+    docs = await self.get_relevant_documents(db, company_id, message)
     context = "\n".join([f"Fuente: {d.title}\nContenido: {d.content}" for d in docs])
 
     # 2. Construir el prompt de sistema con el conocimiento inyectado

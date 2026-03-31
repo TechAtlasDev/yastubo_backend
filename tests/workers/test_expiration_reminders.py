@@ -62,7 +62,7 @@ async def test_send_expiration_reminders_skips_active_subscription(
     from app.modules.payments.models import Subscription
 
     sub = Subscription(
-        workspace_id=policy.workspace_id,
+        company_id=policy.company_id,
         policy_id=policy.id,
         stripe_subscription_id="sub_123",
         stripe_customer_id="cus_test_123",

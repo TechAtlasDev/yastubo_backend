@@ -24,7 +24,7 @@ async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
     result = await db.execute(
         select(User)
         .where(User.email == email)
-        .options(selectinload(User.roles), selectinload(User.workspaces))
+        .options(selectinload(User.roles), selectinload(User.companies))
     )
     return result.scalar_one_or_none()
 
@@ -33,7 +33,7 @@ async def get_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> Optional[User]
     result = await db.execute(
         select(User)
         .where(User.id == user_id)
-        .options(selectinload(User.roles), selectinload(User.workspaces))
+        .options(selectinload(User.roles), selectinload(User.companies))
     )
     return result.scalar_one_or_none()
 

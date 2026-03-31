@@ -33,7 +33,7 @@ class NewFeature(Base, TimestampMixin):
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    workspace_id = Column(Integer, ForeignKey("workspaces.id"), nullable=False)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
 ```
 
 ### 2. Capa de Servicio (`service.py`)
@@ -44,9 +44,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .models import NewFeature
 from .schemas import FeatureCreate
 
-async def create_feature(db: AsyncSession, data: FeatureCreate, workspace_id: int):
+async def create_feature(db: AsyncSession, data: FeatureCreate, company_id: int):
     # Lógica de negocio aquí
-    obj = NewFeature(**data.model_dump(), workspace_id=workspace_id)
+    obj = NewFeature(**data.model_dump(), company_id=company_id)
     db.add(obj)
     await db.commit()
     await db.refresh(obj)

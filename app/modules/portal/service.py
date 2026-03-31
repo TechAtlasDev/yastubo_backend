@@ -179,15 +179,15 @@ async def pay_pending_policy(
 
     is_succeeded = str(pi_status).lower() == "succeeded"
 
-    ws_id = policy.workspace_id
+    ws_id = policy.company_id
     if not ws_id:
-        from app.modules.workspaces.models import Workspace
+        from app.modules.organizations.models import Company
 
-        res_ws = await db.execute(select(Workspace.id).limit(1))
+        res_ws = await db.execute(select(Company.id).limit(1))
         ws_id = res_ws.scalar_one_or_none()
 
     transaction = Transaction(
-        workspace_id=ws_id,
+        company_id=ws_id,
         policy_id=policy.id,
         stripe_payment_intent_id=str(pi_id),
         amount=float(policy.final_price),

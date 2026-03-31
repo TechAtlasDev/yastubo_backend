@@ -26,8 +26,8 @@ class FunnelStage(str, enum.Enum):
 class Lead(BaseModel):
     __tablename__ = "leads"
 
-    workspace_id: Mapped[uuid.UUID] = mapped_column(
-        GUID(), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False
     )
 
     # Identity

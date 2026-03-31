@@ -16,7 +16,7 @@ async def test_dashboard_metrics_returns_valid_data(
 
     # 1. Add a transaction
     tx = Transaction(
-        workspace_id=admin_user.workspaces[0].id,
+        company_id=admin_user.companies[0].id,
         policy_id=issued_policy["id"],
         amount=100.00,
         currency="USD",
@@ -28,7 +28,7 @@ async def test_dashboard_metrics_returns_valid_data(
 
     # 2. Add an active subscription
     sub = Subscription(
-        workspace_id=admin_user.workspaces[0].id,
+        company_id=admin_user.companies[0].id,
         policy_id=issued_policy["id"],
         stripe_subscription_id="sub_test_123",
         stripe_customer_id="cus_test_123",
@@ -76,7 +76,7 @@ async def test_loss_ratio_calculation(
 
     # 1. Add revenue (1000 USD)
     tx = Transaction(
-        workspace_id=admin_user.workspaces[0].id,
+        company_id=admin_user.companies[0].id,
         policy_id=issued_policy["id"],
         amount=1000.00,
         currency="USD",

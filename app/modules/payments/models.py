@@ -25,8 +25,8 @@ if TYPE_CHECKING:
 class Transaction(BaseModel):
     __tablename__ = "transactions"
 
-    workspace_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        GUID(), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True
+    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        GUID(), ForeignKey("companies.id", ondelete="CASCADE"), nullable=True
     )
     policy_id: Mapped[uuid.UUID] = mapped_column(
         GUID(), ForeignKey("policies.id", ondelete="CASCADE"), nullable=False
@@ -73,8 +73,8 @@ class PaymentMethod(BaseModel):
 class Subscription(BaseModel):
     __tablename__ = "subscriptions"
 
-    workspace_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        GUID(), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True
+    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        GUID(), ForeignKey("companies.id", ondelete="CASCADE"), nullable=True
     )
     policy_id: Mapped[uuid.UUID] = mapped_column(
         GUID(),

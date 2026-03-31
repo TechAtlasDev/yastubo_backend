@@ -14,10 +14,10 @@ async def get_dashboard_metrics(
     current_user: User = Depends(require_role("ADMIN")),
 ):
     """
-    Get KPI metrics for the current workspace dashboard.
+    Get KPI metrics for the current company dashboard.
     Only accessible by ADMIN.
     """
-    if not current_user.workspaces:
-        raise HTTPException(status_code=404, detail="No workspace found for this user")
-    workspace_id = current_user.workspaces[0].id
-    return await service.get_dashboard_metrics(db, workspace_id)
+    if not current_user.companies:
+        raise HTTPException(status_code=404, detail="No company found for this user")
+    company_id = current_user.companies[0].id
+    return await service.get_dashboard_metrics(db, company_id)

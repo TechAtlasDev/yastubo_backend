@@ -47,35 +47,35 @@ async def get_current_user(
     return user
 
 
-async def get_current_workspace_id(
+async def get_current_company_id(
     user: User = Depends(get_current_user),
-    workspace_id: Optional[uuid.UUID] = Header(None, alias="X-Workspace-Id"),
+    company_id: Optional[uuid.UUID] = Header(None, alias="X-Company-Id"),
 ) -> uuid.UUID:
     """
-    Get the current workspace ID for the user.
-    If multiple workspaces exist, the X-Workspace-Id header must be provided.
+    Get the current company ID for the user.
+    If multiple companies exist, the X-Company-Id header must be provided.
     """
-    if workspace_id:
-        # Check if user belongs to this workspace
-        if any(ws.id == workspace_id for ws in user.workspaces):
-            return workspace_id
+    if company_id:
+        # Check if user belongs to this company
+        if any(ws.id == company_id for ws in user.companies):
+            return company_id
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have access to this workspace",
+            detail="You do not have access to this company",
         )
 
-    if len(user.workspaces) == 1:
-        return user.workspaces[0].id
+    if len(user.companies) == 1:
+        return user.companies[0].id
 
-    if len(user.workspaces) > 1:
+    if len(user.companies) > 1:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Multiple workspaces found. Please specify X-Workspace-Id header.",
+            detail="Multiple companies found. Please specify X-Company-Id header.",
         )
 
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="User is not assigned to any workspace",
+        detail="User is not assigned to any company",
     )
 
 

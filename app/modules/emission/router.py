@@ -23,8 +23,8 @@ async def register_client(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role("ADMIN", "VENDEDOR")),
 ):
-    workspace_id = current_user.workspaces[0].id
-    return await service.register_client(db, data, current_user.id, workspace_id)
+    company_id = current_user.companies[0].id
+    return await service.register_client(db, data, current_user.id, company_id)
 
 
 @router.get("/clients/{client_id}", response_model=schemas.ClientResponse)
@@ -124,7 +124,7 @@ async def get_policy_passbook(
         raise HTTPException(status_code=404, detail="Policy not found")
 
     # Multi-tenancy check
-    if not any(ws.id == policy.workspace_id for ws in current_user.workspaces):
+    if not any(ws.id == policy.company_id for ws in current_user.companies):
         raise HTTPException(
             status_code=403, detail="You do not have access to this policy"
         )

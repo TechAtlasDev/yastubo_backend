@@ -14,12 +14,12 @@ from app.modules.ai.models import ChatMessage
 
 
 @pytest.mark.asyncio
-async def test_mark_beneficiary_deceased_adjusts_stripe(db_session, default_workspace):
+async def test_mark_beneficiary_deceased_adjusts_stripe(db_session, default_company):
     # Setup: Policy with Subscription and Beneficiary
     from app.modules.emission.models import Client
 
     client = Client(
-        workspace_id=default_workspace.id,
+        company_id=default_company.id,
         first_name="Test",
         last_name="Client",
         email="debt@example.com",
@@ -35,7 +35,7 @@ async def test_mark_beneficiary_deceased_adjusts_stripe(db_session, default_work
     await db_session.flush()
 
     policy = Policy(
-        workspace_id=default_workspace.id,
+        company_id=default_company.id,
         policy_number="YAS-DEBT-001",
         client_id=client.id,
         plan_id=uuid.uuid4(),
@@ -52,7 +52,7 @@ async def test_mark_beneficiary_deceased_adjusts_stripe(db_session, default_work
     await db_session.flush()
 
     sub = Subscription(
-        workspace_id=default_workspace.id,
+        company_id=default_company.id,
         policy_id=policy.id,
         stripe_subscription_id="sub_test_123",
         stripe_customer_id="cus_test_123",
@@ -98,7 +98,7 @@ async def test_mark_beneficiary_deceased_adjusts_stripe(db_session, default_work
 
 
 @pytest.mark.asyncio
-async def test_ai_chat_persists_history(db_session, default_workspace):
+async def test_ai_chat_persists_history(db_session, default_company):
     service = AIService(api_key="fake_key")
 
     # Mock Gemini response
@@ -116,7 +116,7 @@ async def test_ai_chat_persists_history(db_session, default_workspace):
 
     # First call
     response = await service.chat_with_context(
-        db_session, default_workspace.id, session_id, message
+        db_session, default_company.id, session_id, message
     )
     assert response == "Hello! I am your assistant."
 
@@ -129,7 +129,7 @@ async def test_ai_chat_persists_history(db_session, default_workspace):
 
     # Second call - should use history
     await service.chat_with_context(
-        db_session, default_workspace.id, session_id, "And who are you?"
+        db_session, default_company.id, session_id, "And who are you?"
     )
 
     # Verify call to Gemini included history
@@ -140,13 +140,13 @@ async def test_ai_chat_persists_history(db_session, default_workspace):
 
 
 @pytest.mark.asyncio
-async def test_lead_sync_to_zoho_called(db_session, default_workspace):
+async def test_lead_sync_to_zoho_called(db_session, default_company):
     lead_data = LeadCreate(
         first_name="Zoho",
         last_name="Test",
         phone_e164="+573005554433",
         email="zoho@example.com",
-        workspace_id=default_workspace.id,
+        company_id=default_company.id,
     )
 
     with patch("app.modules.leads.service.sync_lead_to_crm") as mock_sync:
