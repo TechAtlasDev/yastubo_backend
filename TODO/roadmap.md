@@ -250,7 +250,7 @@ Ejecuta en orden:
 
 ## FASE 6 — Capitados
 
-### [ ] T-06 · Módulo de capitados — seguros colectivos y procesamiento batch
+### [x] T-06 · Módulo de capitados — seguros colectivos y procesamiento batch
 
 **Objetivo:** Implementar el módulo más complejo del sistema: gestión de contratos colectivos, carga mensual de registros desde Excel (2000+ filas), lógica de "mismo asegurado en distintos productos" y estados de conciliación.
 
@@ -363,7 +363,7 @@ Copia esta tabla y úsala para rastrear el avance:
 | T-03 | Auth y perfiles | [x] | 6866a16 | Tests pasados (153) |
 | T-04 | Sistema de productos | [x] | 6860d2d | Tests pasados (151) |
 | T-05 | Finanzas y comisiones | [x] | eb37207 | Tests pasados (158) |
-| T-06 | Módulo de capitados | [ ] | — | — |
+| T-06 | Módulo de capitados | [x] | de5c8d3 | Tests pasados (161) |
 | T-07 | Integración y cierre | [ ] | — | — |
 
 ---
