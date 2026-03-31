@@ -26,11 +26,15 @@ app/modules/emission/
 
 ### Límites de Dominio (Domain Boundaries)
 
-1.  **Auth (Identidad):** Gestiona usuarios, roles y autenticación JWT. No sabe nada de pólizas.
-2.  **Plans (Lógica Actuarial):** Define productos, coberturas y recargos por edad. Es el motor de cálculo.
-3.  **Emission (Negocio Core):** Gestiona pólizas y beneficiarios. Depende de `Plans` para saber qué está emitiendo.
-4.  **Payments (Fintech):** Abstracción total de Stripe. Gestiona suscripciones y eventos de pago.
-5.  **Audit (Cross-cutting):** Inyecta trazabilidad en todos los demás módulos sin "ensuciar" el código de negocio.
+1.  **Auth (Identidad):** Gestiona usuarios, perfiles (customer/staff), roles y autenticación JWT con RBAC granular.
+2.  **Organizations (Estructura):** Jerarquía corporativa de `Company` -> `BusinessUnit`. Gestiona branding por unidad.
+3.  **Products & Plans (Lógica Actuarial):** Sistema de `Product` -> `Plan` -> `PlanVersion`. Define coberturas, recargos por edad y precios por país.
+4.  **Capitados (Colectivos):** Gestión masiva de seguros grupales con procesamiento batch (Excel) y conciliación mensual.
+5.  **Emission (Negocio Core):** Gestiona pólizas individuales y beneficiarios. Utiliza el motor de planes para la emisión.
+6.  **Finance (Monetario):** Manejo de monedas (`Currency`), unidades de medida y lógica de dispersión de comisiones.
+7.  **Geography (Global):** Catálogo centralizado de países (`Country`) y zonas de riesgo (`Zone`).
+8.  **Payments (Fintech):** Abstracción de Stripe. Gestiona suscripciones y eventos de pago.
+9.  **Audit (Cross-cutting):** Trazabilidad automática de cambios en todos los módulos.
 
 ## Ejemplo de Implementación: Router Modular
 

@@ -308,7 +308,7 @@ IMPORTANTE: En el paso 1, espera mi confirmación antes de continuar.
 
 ## FASE 7 — Integración y Cierre
 
-### [ ] T-07 · Integración final, limpieza y documentación de concurso
+### [x] T-07 · Integración final, limpieza y documentación de concurso
 
 **Objetivo:** Verificar que el sistema completo funciona end-to-end con el nuevo esquema, eliminar referencias al esquema antiguo, actualizar la documentación de arquitectura y preparar el proyecto para el concurso.
 
@@ -364,7 +364,7 @@ Copia esta tabla y úsala para rastrear el avance:
 | T-04 | Sistema de productos | [x] | 6860d2d | Tests pasados (151) |
 | T-05 | Finanzas y comisiones | [x] | eb37207 | Tests pasados (158) |
 | T-06 | Módulo de capitados | [x] | de5c8d3 | Tests pasados (161) |
-| T-07 | Integración y cierre | [ ] | — | — |
+| T-07 | Integración y cierre | [x] | b839ab1 | Tests pasados (162) |
 
 ---
 

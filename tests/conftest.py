@@ -175,15 +175,15 @@ async def admin_user(db_session, roles, default_company):
         )
 
     # Always ensure company link
-    ws_res = await db_session.execute(
+    company_user_res = await db_session.execute(
         select(CompanyUser).where(
             CompanyUser.user_id == user.id,
             CompanyUser.company_id == default_company.id,
         )
     )
-    if not ws_res.scalar_one_or_none():
-        user_ws = CompanyUser(user_id=user.id, company_id=default_company.id)
-        db_session.add(user_ws)
+    if not company_user_res.scalar_one_or_none():
+        company_user = CompanyUser(user_id=user.id, company_id=default_company.id)
+        db_session.add(company_user)
 
     await db_session.commit()
     await db_session.refresh(user, ["roles", "companies"])
@@ -218,15 +218,15 @@ async def client_user(db_session, roles, default_company):
         )
 
     # Always ensure company link
-    ws_res = await db_session.execute(
+    company_user_res = await db_session.execute(
         select(CompanyUser).where(
             CompanyUser.user_id == user.id,
             CompanyUser.company_id == default_company.id,
         )
     )
-    if not ws_res.scalar_one_or_none():
-        user_ws = CompanyUser(user_id=user.id, company_id=default_company.id)
-        db_session.add(user_ws)
+    if not company_user_res.scalar_one_or_none():
+        company_user = CompanyUser(user_id=user.id, company_id=default_company.id)
+        db_session.add(company_user)
 
     await db_session.commit()
     await db_session.refresh(user, ["roles", "companies"])
