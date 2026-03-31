@@ -362,7 +362,7 @@ Copia esta tabla y úsala para rastrear el avance:
 | T-02 | Refactor organizations | [x] | d5e4c00 | Tests pasados (151) |
 | T-03 | Auth y perfiles | [x] | 6866a16 | Tests pasados (153) |
 | T-04 | Sistema de productos | [x] | 6860d2d | Tests pasados (151) |
-| T-05 | Finanzas y comisiones | [ ] | — | — |
+| T-05 | Finanzas y comisiones | [x] | eb37207 | Tests pasados (158) |
 | T-06 | Módulo de capitados | [ ] | — | — |
 | T-07 | Integración y cierre | [ ] | — | — |
 

@@ -24,6 +24,7 @@ from app.modules.voice.router import router as voice_router
 from app.modules.dashboard.router import router as dashboard_router
 from app.modules.claims.router import router as claims_router
 from app.modules.geography.router import router as geography_router
+from app.modules.finance.router import router as finance_router
 
 
 @asynccontextmanager
@@ -83,6 +84,7 @@ api_v1_router.include_router(voice_router)
 api_v1_router.include_router(dashboard_router)
 api_v1_router.include_router(claims_router)
 api_v1_router.include_router(geography_router)
+api_v1_router.include_router(finance_router)
 
 
 @api_v1_router.get("/health", tags=["Infrastructure"])

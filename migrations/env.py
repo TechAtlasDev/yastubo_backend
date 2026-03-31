@@ -19,6 +19,7 @@ import app.modules.audit.models  # noqa: F401
 import app.modules.organizations.models  # noqa: F401
 import app.modules.claims.models  # noqa: F401
 import app.modules.geography.models  # noqa: F401
+import app.modules.finance.models  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
