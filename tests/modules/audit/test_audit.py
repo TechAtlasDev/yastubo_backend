@@ -32,50 +32,29 @@ def client_token(client_user):
 
 
 @pytest.mark.asyncio
-async def test_audit_log_created_on_plan_creation(
-    client: AsyncClient, admin_token: str, db_session: AsyncSession
+async def test_audit_log_created_on_product_creation(
+    client: AsyncClient, admin_token: str, db_session: AsyncSession, product_payload
 ):
-    # 1. Create a plan
-    plan_data = {
-        "name": "Audit Test Plan",
-        "description": "Testing audit log",
-        "base_price": 50.0,
-        "currency": "USD",
-        "max_entry_age": 70,
-        "max_renewal_age": 80,
-        "repatriation_countries": ["CO", "EC"],
-        "age_ranges": [{"min_age": 0, "max_age": 70, "surcharge_percentage": 0}],
-        "country_configs": [
-            {
-                "country_code": "CO",
-                "country_name": "Colombia",
-                "base_price_override": 45.0,
-                "is_available": True,
-            }
-        ],
-        "coverage_ids": [],
-        "terms_es": "Términos",
-        "terms_en": "Terms",
-    }
+    # 1. Create a product
     response = await client.post(
-        "/api/v1/plans/",
-        json=plan_data,
+        "/api/v1/products/",
+        json=product_payload,
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 201
-    plan_id = response.json()["id"]
+    product_id = response.json()["id"]
 
     # 2. Check audit logs
     audit_response = await client.get(
         "/api/v1/audit/",
-        params={"action": "PLAN_CREATED", "entity_id": plan_id},
+        params={"action": "PRODUCT_CREATED", "entity_id": product_id},
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert audit_response.status_code == 200
     data = audit_response.json()
     assert data["total"] >= 1
-    assert data["items"][0]["action"] == "PLAN_CREATED"
-    assert data["items"][0]["entity_id"] == plan_id
+    assert data["items"][0]["action"] == "PRODUCT_CREATED"
+    assert data["items"][0]["entity_id"] == product_id
 
 
 @pytest.mark.asyncio

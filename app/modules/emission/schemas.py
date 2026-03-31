@@ -59,7 +59,9 @@ class BeneficiaryResponse(BeneficiaryCreate):
 class EmissionRequest(BaseModel):
     client_id: uuid.UUID
     plan_id: uuid.UUID
+    plan_version_id: uuid.UUID
     country_code: str = Field(..., min_length=2, max_length=2)
+
     start_date: date
     notes: Optional[str] = None
     # Phase 1: Support for multiple beneficiaries
@@ -93,6 +95,7 @@ class PolicyResponse(BaseModel):
     policy_number: str
     client_id: uuid.UUID
     plan_id: uuid.UUID
+    plan_version_id: uuid.UUID
     status: str
     base_price: Decimal
     surcharge_amount: Decimal
@@ -132,7 +135,9 @@ class DeceasedReport(BaseModel):
 class BulkEmissionRequest(BaseModel):
     client_id: uuid.UUID
     plan_id: uuid.UUID
+    plan_version_id: uuid.UUID
     country_code: str = Field(..., min_length=2, max_length=2)
+
     start_date: date
     notes: Optional[str] = None
 

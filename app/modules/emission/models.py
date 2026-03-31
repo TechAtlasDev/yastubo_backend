@@ -89,6 +89,9 @@ class Policy(BaseModel):
     plan_id: Mapped[uuid.UUID] = mapped_column(
         GUID(), ForeignKey("plans.id"), nullable=False
     )
+    plan_version_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("plan_versions.id"), nullable=False
+    )
     plan_version_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
     status: Mapped[str] = mapped_column(
         String(30), nullable=False, default="DRAFT"

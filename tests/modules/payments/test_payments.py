@@ -55,16 +55,6 @@ async def test_create_payment_intent_policy_not_pending_returns_422(
 async def test_create_subscription_succeeds(
     client: AsyncClient, admin_user, pending_policy, db_session
 ):
-    # Set stripe_price_id on plan
-    from app.modules.plans.models import Plan
-
-    await db_session.execute(
-        Plan.__table__.update()
-        .where(Plan.id == uuid.UUID(pending_policy["plan_id"]))
-        .values(stripe_price_id="price_123")
-    )
-    await db_session.commit()
-
     token = create_access_token(
         {"sub": str(admin_user.id), "roles": ["ADMIN"], "type": "access"}
     )

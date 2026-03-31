@@ -239,8 +239,6 @@ async def coverage(db_session):
     coverage = Coverage(
         name="Repatriación",
         description="Traslado de restos",
-        limit_amount=5000.00,
-        limit_unit="USD",
     )
     db_session.add(coverage)
     await db_session.commit()
@@ -249,48 +247,80 @@ async def coverage(db_session):
 
 
 @pytest.fixture
-def plan_payload(coverage):
+def product_payload(coverage):
     return {
-        "name": "Plan Familiar Latam",
-        "description": "Cobertura completa para familias",
-        "base_price": 50.00,
-        "currency": "USD",
-        "max_entry_age": 65,
-        "max_renewal_age": 85,
-        "repatriation_countries": ["CO", "MX", "EC"],
-        "terms_es": "Términos en español",
-        "terms_en": "Terms in english",
-        "age_ranges": [
-            {"min_age": 0, "max_age": 30, "surcharge_percentage": 0},
-            {"min_age": 31, "max_age": 65, "surcharge_percentage": 20},
-        ],
-        "country_configs": [
+        "name": "Asistencia Funeraria",
+        "description": "Producto base de repatriación",
+        "product_type": "repatriation",
+        "is_active": True,
+        "plans": [
             {
-                "country_code": "CO",
-                "country_name": "Colombia",
-                "base_price_override": None,
-                "is_available": True,
-            },
-            {
-                "country_code": "MX",
-                "country_name": "México",
-                "base_price_override": 60.00,
-                "is_available": True,
-            },
+                "name": "Plan Familiar Latam",
+                "description": "Cobertura completa para familias",
+                "is_active": True,
+                "versions": [
+                    {
+                        "version_number": 1,
+                        "cost_price": 40.00,
+                        "public_price": 50.00,
+                        "currency": "USD",
+                        "max_entry_age": 65,
+                        "max_renewal_age": 85,
+                        "wtime_suicide": 365,
+                        "wtime_preexisting": 180,
+                        "wtime_accident": 0,
+                        "age_surcharges": [
+                            {"min_age": 0, "max_age": 30, "surcharge_percentage": 0},
+                            {"min_age": 31, "max_age": 65, "surcharge_percentage": 20},
+                        ],
+                        "countries": [
+                            {
+                                "country_code": "CO",
+                                "country_name": "Colombia",
+                                "price_override": None,
+                                "is_available": True,
+                            },
+                            {
+                                "country_code": "MX",
+                                "country_name": "México",
+                                "price_override": 60.00,
+                                "is_available": True,
+                            },
+                        ],
+                        "coverages": [
+                            {
+                                "coverage_id": str(coverage.id),
+                                "value_int": 5000,
+                                "is_included": True,
+                            }
+                        ],
+                        "repatriation_countries": [
+                            {"country_code": "CO", "country_name": "Colombia"},
+                            {"country_code": "MX", "country_name": "México"},
+                        ],
+                    }
+                ],
+            }
         ],
-        "coverage_ids": [str(coverage.id)],
     }
 
 
 @pytest.fixture
-async def created_plan(client: AsyncClient, admin_user, plan_payload):
+async def created_product(client: AsyncClient, admin_user, product_payload):
     token = create_access_token(
         {"sub": str(admin_user.id), "roles": ["ADMIN"], "type": "access"}
     )
     headers = {"Authorization": f"Bearer {token}"}
-    response = await client.post("/api/v1/plans/", json=plan_payload, headers=headers)
+    response = await client.post(
+        "/api/v1/products/", json=product_payload, headers=headers
+    )
     assert response.status_code == 201
     return response.json()
+
+
+@pytest.fixture
+async def created_plan(created_product):
+    return created_product["plans"][0]
 
 
 # Shared Emission Fixtures
@@ -324,6 +354,7 @@ def emission_request_payload(test_client, created_plan):
     return {
         "client_id": test_client["id"],
         "plan_id": created_plan["id"],
+        "plan_version_id": created_plan["versions"][0]["id"],
         "country_code": "MX",
         "start_date": str(date.today() + timedelta(days=1)),
         "notes": "Prueba de emisión",

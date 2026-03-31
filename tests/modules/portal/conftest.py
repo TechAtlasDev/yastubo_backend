@@ -84,6 +84,7 @@ async def active_policy_for_client(db_session: AsyncSession, client_user_with_pr
         policy_number=f"POL-{uuid.uuid4().hex[:6].upper()}",
         client_id=client.id,
         plan_id=uuid.uuid4(),  # Dummy ID
+        plan_version_id=uuid.uuid4(),
         plan_version_snapshot={"name": "Test Plan"},
         status=PolicyStatus.ACTIVE,
         base_price=100.0,

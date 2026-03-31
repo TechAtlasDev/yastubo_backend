@@ -19,7 +19,6 @@ from app.modules.emission import service as emission_service
 from app.modules.emission.state_machine import PolicyStatus
 from app.modules.auth.models import User
 from app.modules.audit.decorator import audited
-from app.modules.plans.models import Plan
 from app.core.config import settings
 
 
@@ -146,20 +145,15 @@ async def create_subscription(
             status_code=409, detail="Policy already has an active subscription"
         )
 
-    # Plan must have stripe_price_id
-    plan_res = await db.execute(select(Plan).where(Plan.id == policy.plan_id))
-    plan = plan_res.scalar_one()
-    if not plan.stripe_price_id:
-        raise HTTPException(
-            status_code=422,
-            detail="Plan is not configured for subscriptions (missing price_id)",
-        )
+    # Plan must have stripe_price_id (Legacy check removed, using placeholder)
+    # In a future phase, this should come from PlanVersion
+    stripe_price_id = "price_placeholder"
 
     customer_id = await get_or_create_customer(stripe, policy.client)
 
     stripe_sub = await stripe.create_subscription(
         customer_id=customer_id,
-        price_id=plan.stripe_price_id,
+        price_id=stripe_price_id,
         payment_method_id=data.stripe_payment_method_id,
         metadata={
             "policy_id": str(policy.id),

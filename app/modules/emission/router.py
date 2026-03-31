@@ -144,6 +144,7 @@ async def get_policy_passbook(
 async def bulk_upload_beneficiaries(
     client_id: uuid.UUID = Form(...),
     plan_id: uuid.UUID = Form(...),
+    plan_version_id: uuid.UUID = Form(...),
     country_code: str = Form(...),
     start_date: str = Form(...),
     notes: Optional[str] = Form(None),
@@ -160,6 +161,7 @@ async def bulk_upload_beneficiaries(
     data = schemas.BulkEmissionRequest(
         client_id=client_id,
         plan_id=plan_id,
+        plan_version_id=plan_version_id,
         country_code=country_code,
         start_date=datetime.strptime(start_date, "%Y-%m-%d").date(),
         notes=notes,

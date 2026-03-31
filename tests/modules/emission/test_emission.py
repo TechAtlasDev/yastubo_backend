@@ -95,9 +95,11 @@ async def test_issue_policy_age_exceeds_max_entry_age_returns_422(
     payload = {
         "client_id": test_client["id"],
         "plan_id": created_plan["id"],
+        "plan_version_id": created_plan["versions"][0]["id"],
         "country_code": "CO",
         "start_date": str(date.today() + timedelta(days=1)),
     }
+
     response = await client.post(
         "/api/v1/emission/issue", json=payload, headers=headers
     )
@@ -116,6 +118,7 @@ async def test_issue_policy_invalid_country_returns_422(
     payload = {
         "client_id": test_client["id"],
         "plan_id": created_plan["id"],
+        "plan_version_id": created_plan["versions"][0]["id"],
         "country_code": "AR",  # Not in plan
         "start_date": str(date.today() + timedelta(days=1)),
     }

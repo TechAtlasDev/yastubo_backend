@@ -121,10 +121,11 @@ async def issue_policy(
 
     await leads_service.update_lead(db, lead.id, LeadUpdate(checkout_started=True))
 
-    # 2. Get Plan
-    plan = await plans_service.get_plan(db, data.plan_id)
-    if not plan.is_active:
-        raise HTTPException(status_code=400, detail="Plan is inactive")
+    # 2. Get Plan Version
+    pv = await plans_service.get_plan_version(db, data.plan_version_id)
+    if not pv.is_active:
+        raise HTTPException(status_code=400, detail="Plan Version is inactive")
+    plan = pv.plan
 
     # 3. Handle Beneficiaries (Default to client if empty)
     beneficiaries_data = data.beneficiaries
@@ -142,7 +143,7 @@ async def issue_policy(
     config = next(
         (
             cc
-            for cc in plan.country_configs
+            for cc in pv.countries
             if cc.country_code == data.country_code and cc.is_available
         ),
         None,
@@ -159,11 +160,11 @@ async def issue_policy(
             "max_age": ar.max_age,
             "surcharge_percentage": ar.surcharge_percentage,
         }
-        for ar in plan.age_ranges
+        for ar in pv.age_surcharges
     ]
     country_override = (
-        Decimal(str(config.base_price_override))
-        if config.base_price_override is not None
+        Decimal(str(config.price_override))
+        if config.price_override is not None
         else None
     )
 
@@ -177,15 +178,15 @@ async def issue_policy(
         age = calculate_age(b_data.date_of_birth, data.start_date)
 
         # Validate eligibility
-        if age > plan.max_entry_age:
+        if pv.max_entry_age and age > pv.max_entry_age:
             raise HTTPException(
                 status_code=422,
-                detail=f"Beneficiary {b_data.first_name} age {age} exceeds max entry age {plan.max_entry_age}",
+                detail=f"Beneficiary {b_data.first_name} age {age} exceeds max entry age {pv.max_entry_age}",
             )
 
         try:
             calc_result = calculator.calculate_price(
-                base_price=Decimal(str(plan.base_price)),
+                base_price=Decimal(str(pv.public_price)),
                 age=age,
                 age_ranges=age_ranges,
                 country_override=country_override,
@@ -218,30 +219,30 @@ async def issue_policy(
     counter = count_res.scalar() + 1
     policy_number = f"YAS-{year}-{counter:06d}"
 
-    # 6. Snapshot
+    # 6. Snapshot (Legacy/Compact version for PDF)
     plan_snapshot = {
         "name": plan.name,
-        "base_price": float(plan.base_price),
+        "base_price": float(pv.public_price),
         "age_ranges": [
             {
                 "min": ar.min_age,
                 "max": ar.max_age,
                 "pct": float(ar.surcharge_percentage),
             }
-            for ar in plan.age_ranges
+            for ar in pv.age_surcharges
         ],
         "countries": [
             {
                 "code": cc.country_code,
-                "price": float(cc.base_price_override)
-                if cc.base_price_override is not None
+                "price": float(cc.price_override)
+                if cc.price_override is not None
                 else None,
             }
-            for cc in plan.country_configs
+            for cc in pv.countries
         ],
-        "coverages": [c.name for c in plan.coverages],
-        "terms_es": plan.terms_es,
-        "repatriation_countries": plan.repatriation_countries,
+        "coverages": [c.coverage.name for c in pv.coverages],
+        "terms_es": pv.terms_es,
+        "repatriation_countries": [rc.country_code for rc in pv.repatriation_countries],
     }
 
     # 7. Create Policy (DRAFT)
@@ -264,12 +265,13 @@ async def issue_policy(
         client_id=client.id,
         lead_id=lead.id,  # Link lead for Phase 2
         plan_id=plan.id,
+        plan_version_id=pv.id,
         plan_version_snapshot=plan_snapshot,
         status=state_machine.PolicyStatus.DRAFT,
         base_price=float(total_base_price),
         surcharge_amount=float(total_surcharge),
         final_price=float(total_final_price),
-        currency=plan.currency,
+        currency=pv.currency,
         country_code=data.country_code,
         start_date=data.start_date,
         end_date=end_date,
@@ -574,6 +576,7 @@ async def bulk_issue_policy(
     emission_req = EmissionRequest(
         client_id=data.client_id,
         plan_id=data.plan_id,
+        plan_version_id=data.plan_version_id,
         country_code=data.country_code,
         start_date=data.start_date,
         notes=data.notes,

@@ -17,6 +17,7 @@ async def test_issue_policy_with_multiple_beneficiaries(
     payload = {
         "client_id": test_client["id"],
         "plan_id": created_plan["id"],
+        "plan_version_id": created_plan["versions"][0]["id"],
         "country_code": "MX",
         "start_date": str(date.today() + timedelta(days=1)),
         "notes": "Multi beneficiary test",

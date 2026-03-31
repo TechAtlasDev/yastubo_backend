@@ -105,6 +105,7 @@ async def test_multi_tenancy_and_reseller_flow(
         policy_number="POL-TEST-001",
         client_id=test_client.id,
         plan_id=uuid.uuid4(),  # Mock plan ID
+        plan_version_id=uuid.uuid4(),
         plan_version_snapshot={"name": "Plan Mock"},
         status="ACTIVE",
         base_price=100.0,

@@ -39,6 +39,7 @@ async def test_mark_beneficiary_deceased_adjusts_stripe(db_session, default_comp
         policy_number="YAS-DEBT-001",
         client_id=client.id,
         plan_id=uuid.uuid4(),
+        plan_version_id=uuid.uuid4(),
         plan_version_snapshot={"name": "Test Plan"},
         status="ACTIVE",
         base_price=100.0,
