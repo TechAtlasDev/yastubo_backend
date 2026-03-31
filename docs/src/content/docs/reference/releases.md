@@ -3,6 +3,26 @@ title: Historial de Lanzamientos (Releases)
 description: Registro de cambios y mejoras arquitectónicas del backend de Yastubo.
 ---
 
+## [0.5.0] - 2026-03-31
+
+### Añadido
+- **Módulo de Geografía (Legacy Sync)**: Implementación del primer módulo sincronizado 1:1 con el esquema real legado.
+  - Tablas: `countries` (soporte multi-idioma JSON, ISO2/3), `zones` y `country_zone`.
+  - Endpoints: CRUD completo para países y zonas, con lógica de asociación muchos-a-muchos.
+  - Integración: Soporte para IDs de tipo `BigInteger` para compatibilidad con datos históricos.
+- **Documentación de Referencia**: Nueva sección `Geography` detallando la arquitectura técnica y endpoints del módulo.
+- **Tests de Integración**: Suite completa para el módulo de geografía (`tests/modules/geography/test_geography.py`).
+
+### Solucionado (Deuda Técnica Crítica)
+- **Reinicio de Migraciones Alembic**: Se eliminaron las migraciones intermedias corruptas (vacías) e incompletas, generando un nuevo **Baseline Consistente** (`cfcc3aa64589`). Esto permite desplegar el esquema completo desde cero en bases de datos PostgreSQL limpias.
+- **Infraestructura (pgvector)**: Actualización de la imagen de PostgreSQL en `docker-compose.yml` a `pgvector/pgvector:pg16`. Se habilitó la extensión `vector` en la migración base para soportar el módulo de IA.
+- **Alembic env.py**: Automatización de la importación de todos los módulos del dominio para asegurar la integridad de las migraciones autogeneradas.
+
+### Mejoras
+- **MIGRATION_BASELINE.md**: Documento maestro de seguimiento de la migración al esquema legado (Tarea T-01 marcada como completada).
+
+---
+
 ## [0.4.0] - 2026-03-30
 
 ### Añadido

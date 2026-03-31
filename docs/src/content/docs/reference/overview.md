@@ -112,3 +112,4 @@ Returns the status of the database and Redis connections. No authentication requ
 | [Payments](/reference/payments/) | `/api/v1/payments` | Stripe payments, subscriptions, transactions |
 | [Audit](/reference/audit/) | `/api/v1/audit` | Paginated system-wide audit log |
 | [Portal](/reference/portal/) | `/api/v1/portal` | Self-service portal for clients |
+| [Geography](/reference/geography/) | `/api/v1/geography` | Countries, zones and geographic associations |
