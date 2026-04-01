@@ -46,10 +46,10 @@ async def voice_stream(websocket: WebSocket):
                 # ELEVENLABS TTS
                 # ElevenLabs returns binary audio. We convert to base64 and send to Twilio.
                 # In a real scenario, this would be streamed.
-                audio_iter = el_client.generate(
+                audio_iter = el_client.text_to_speech.convert(
                     text=response_text,
-                    voice="Rachel",  # Empathetic Spanish voice
-                    model="eleven_multilingual_v2",
+                    voice_id=settings.ELEVENLABS_VOICE_ID,
+                    model_id="eleven_multilingual_v2",
                 )
 
                 import base64

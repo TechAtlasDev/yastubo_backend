@@ -117,6 +117,10 @@ export const financeApi = {
     const { data } = await apiClient.post("/payments/connect/onboarding");
     return data;
   },
+  dashboardUrl: async (): Promise<{ url: string }> => {
+    const { data } = await apiClient.post("/payments/connect/dashboard");
+    return data;
+  },
   getConnectStatus: async (): Promise<StripeConnectStatus> => {
     const { data } = await apiClient.get("/payments/connect/status");
     return data;
@@ -138,6 +142,31 @@ export const financeApi = {
 export const auditApi = {
   logs: async (params: any): Promise<PaginatedAuditResponse> => {
     const { data } = await apiClient.get("/audit/", { params });
+    return data;
+  }
+};
+
+export const emissionApi = {
+  registerClient: async (payload: any) => {
+    const { data } = await apiClient.post("/emission/clients", payload);
+    return data;
+  },
+  issuePolicy: async (payload: any) => {
+    const { data } = await apiClient.post("/emission/issue", payload);
+    return data;
+  },
+  listPolicies: async (params?: any) => {
+    const { data } = await apiClient.get("/emission/policies", { params });
+    return data;
+  },
+  getPolicy: async (id: string) => {
+    const { data } = await apiClient.get(`/emission/policies/${id}`);
+    return data;
+  },
+  downloadPDF: async (id: string): Promise<Blob> => {
+    const { data } = await apiClient.get(`/emission/policies/${id}/pdf`, {
+      responseType: 'blob'
+    });
     return data;
   }
 };

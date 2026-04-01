@@ -75,6 +75,10 @@ class ResellerDashboardResponse(BaseModel):
     currency: str = "USD"
 
 
+class StripeDashboardResponse(BaseModel):
+    url: str
+
+
 class RetryPaymentResponse(BaseModel):
     transaction_id: uuid.UUID
     attempt_count: int

@@ -59,6 +59,7 @@ class PlanVersion(BaseModel):
     cost_price: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
     public_price: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
     currency: Mapped[str] = mapped_column(String(3), default="USD")
+    stripe_price_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     # Rules
     max_entry_age: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)

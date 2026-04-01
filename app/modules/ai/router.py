@@ -115,11 +115,11 @@ async def chat_with_ai(
     ai_service: AIService = Depends(get_ai_service),
     current_user: User = Depends(get_current_user),
 ):
-    response_text = await ai_service.chat_with_context(
+    response_text, final_session_id = await ai_service.chat_with_context(
         db=db,
         company_id=company_id,
         session_id=data.session_id,
         message=data.message,
     )
 
-    return ChatResponse(response=response_text, session_id=data.session_id)
+    return ChatResponse(response=response_text, session_id=final_session_id)

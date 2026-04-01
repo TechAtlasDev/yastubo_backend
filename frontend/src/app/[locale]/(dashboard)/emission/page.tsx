@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { 
   FilePlus, 
   Users, 
@@ -19,10 +20,21 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmissionAssistant } from "@/components/emission/emission-assistant";
+import { emissionApi, type Policy } from "@/lib/api/emission";
 
 export default function EmissionPage() {
   const [activeTab, setActiveTab] = useState("active");
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+
+  const { data: policies, isLoading } = useQuery({
+    queryKey: ["policies", activeTab],
+    queryFn: () => emissionApi.listPolicies({ status: activeTab.toUpperCase() }),
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ["emission-stats"],
+    queryFn: () => emissionApi.getStats(),
+  });
 
   if (isAssistantOpen) {
     return (
@@ -73,28 +85,28 @@ export default function EmissionPage() {
         <GlassCard className="p-5 border-none shadow-sm flex flex-col justify-between bg-white">
             <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Pendientes de Pago</p>
             <div className="flex items-end justify-between mt-2">
-                <span className="text-2xl font-black text-amber-600">14</span>
+                <span className="text-2xl font-black text-amber-600">{stats?.pending_payment_count ?? 0}</span>
                 <Clock className="w-5 h-5 text-amber-200" />
             </div>
         </GlassCard>
         <GlassCard className="p-5 border-none shadow-sm flex flex-col justify-between bg-white font-sans">
             <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Activas (Mes)</p>
             <div className="flex items-end justify-between mt-2 text-indigo-900">
-                <span className="text-2xl font-black">128</span>
+                <span className="text-2xl font-black">{stats?.active_count ?? 0}</span>
                 <ShieldCheck className="w-5 h-5 text-indigo-200" />
             </div>
         </GlassCard>
         <GlassCard className="p-5 border-none shadow-sm flex flex-col justify-between bg-white">
             <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Siniestros Reportados</p>
             <div className="flex items-end justify-between mt-2 text-red-900">
-                <span className="text-2xl font-black">2</span>
+                <span className="text-2xl font-black">{stats?.claims_count ?? 0}</span>
                 <AlertCircle className="w-5 h-5 text-red-200" />
             </div>
         </GlassCard>
         <GlassCard className="p-5 border-none shadow-sm flex flex-col justify-between bg-primary-600 text-white">
             <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">Retention Rate</p>
             <div className="flex items-end justify-between mt-2">
-                <span className="text-2xl font-black">94.2%</span>
+                <span className="text-2xl font-black">{stats?.retention_rate ?? 0}%</span>
                 <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center text-[10px]">↗</div>
             </div>
         </GlassCard>
@@ -118,18 +130,75 @@ export default function EmissionPage() {
         </div>
 
         {/* Empty State / List */}
-        <GlassCard className="border-none shadow-glass bg-white/70 min-h-[400px] flex flex-col items-center justify-center text-center p-12">
-            <div className="w-20 h-20 bg-neutral-50 rounded-3xl flex items-center justify-center mb-6 border border-neutral-100">
-                <FilePlus className="w-10 h-10 text-neutral-300" />
-            </div>
-            <h3 className="text-xl font-bold text-neutral-900">Comienza a emitir cobertura</h3>
-            <p className="text-neutral-500 max-w-sm mt-2">
-                Aún no hay pólizas registradas en este estado. Utiliza el botón de "Nueva Emisión" para registrar un titular y activar un plan.
-            </p>
-            <Button className="mt-8 bg-primary-600 text-white px-8 rounded-xl h-11" onClick={() => setIsAssistantOpen(true)}>
-                Lanzar Asistente de Emisión
-            </Button>
-        </GlassCard>
+        {isLoading ? (
+          <GlassCard className="border-none shadow-glass bg-white/70 min-h-[400px] flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+          </GlassCard>
+        ) : policies && policies.length > 0 ? (
+          <GlassCard className="border-none shadow-glass bg-white/70 min-h-[400px] overflow-hidden">
+             <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="border-b border-neutral-100 bg-neutral-50/50">
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Póliza</th>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Titular</th>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Plan</th>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Estado</th>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Premium</th>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400"></th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100">
+                        {(policies as Policy[]).map((policy) => (
+                            <tr key={policy.id} className="hover:bg-neutral-50/50 transition-colors">
+                                <td className="px-6 py-4">
+                                    <div className="flex flex-col">
+                                        <span className="font-bold text-neutral-900">{policy.policy_number}</span>
+                                        <span className="text-[10px] text-neutral-400">Ene 14, 2024</span>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4 text-sm font-medium text-neutral-600">{policy.client_name}</td>
+                                <td className="px-6 py-4">
+                                    <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-100 text-[10px] uppercase font-bold">
+                                        {policy.plan_name}
+                                    </Badge>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <Badge className={cn(
+                                        "text-[10px] uppercase font-bold",
+                                        policy.status === "ACTIVE" ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" : 
+                                        policy.status === "PENDING" ? "bg-amber-100 text-amber-700 hover:bg-amber-100" :
+                                        "bg-neutral-100 text-neutral-700 hover:bg-neutral-100"
+                                    )}>
+                                        {policy.status === "ACTIVE" ? "Activa" : policy.status === "PENDING" ? "Pendiente" : "Anulada"}
+                                    </Badge>
+                                </td>
+                                <td className="px-6 py-4 font-mono text-sm font-bold text-neutral-900">${policy.premium_amount}</td>
+                                <td className="px-6 py-4 text-right">
+                                    <Button variant="ghost" size="sm" className="text-neutral-400 hover:text-primary-600">
+                                        <ChevronRight className="w-4 h-4" />
+                                    </Button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+             </div>
+          </GlassCard>
+        ) : (
+          <GlassCard className="border-none shadow-glass bg-white/70 min-h-[400px] flex flex-col items-center justify-center text-center p-12">
+              <div className="w-20 h-20 bg-neutral-50 rounded-3xl flex items-center justify-center mb-6 border border-neutral-100">
+                  <FilePlus className="w-10 h-10 text-neutral-300" />
+              </div>
+              <h3 className="text-xl font-bold text-neutral-900">Comienza a emitir cobertura</h3>
+              <p className="text-neutral-500 max-w-sm mt-2">
+                  Aún no hay pólizas registradas en este estado. Utiliza el botón de "Nueva Emisión" para registrar un titular y activar un plan.
+              </p>
+              <Button className="mt-8 bg-primary-600 text-white px-8 rounded-xl h-11" onClick={() => setIsAssistantOpen(true)}>
+                  Lanzar Asistente de Emisión
+              </Button>
+          </GlassCard>
+        )}
       </div>
     </div>
   );

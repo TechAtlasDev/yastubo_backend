@@ -48,6 +48,7 @@ async def get_current_user(
 
 
 async def get_current_company_id(
+    db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
     company_id: Optional[uuid.UUID] = Header(None, alias="X-Company-Id"),
 ) -> uuid.UUID:
@@ -55,6 +56,8 @@ async def get_current_company_id(
     Get the current company ID for the user.
     If multiple companies exist, the X-Company-Id header must be provided.
     """
+    from app.modules.organizations.models import Company
+
     if company_id:
         # Check if user belongs to this company
         if any(ws.id == company_id for ws in user.companies):
@@ -72,6 +75,16 @@ async def get_current_company_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Multiple companies found. Please specify X-Company-Id header.",
         )
+
+    # Fallback: if user is ADMIN but has no company, use the first one available
+    user_roles = [role.name for role in user.roles]
+    if "ADMIN" in user_roles:
+        from sqlalchemy import select
+
+        res = await db.execute(select(Company).limit(1))
+        first_company = res.scalar_one_or_none()
+        if first_company:
+            return first_company.id
 
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,

@@ -51,11 +51,27 @@ async def issue_policy(
 @router.get("/policies", response_model=List[schemas.PolicyResponse])
 async def list_policies(
     status: Optional[str] = None,
+    search: Optional[str] = None,
     client_id: Optional[uuid.UUID] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role("ADMIN", "VENDEDOR")),
 ):
-    return await service.list_policies(db, status=status, client_id=client_id)
+    """
+    Lista las pólizas de la compañía del usuario. Soporta filtrado por estado, búsqueda o ID de cliente.
+    """
+    company_id = current_user.companies[0].id
+    return await service.list_policies(
+        db, company_id, status=status, search=search, client_id=client_id
+    )
+
+
+@router.get("/stats", response_model=schemas.EmissionStats)
+async def get_emission_stats(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role("ADMIN", "VENDEDOR")),
+):
+    company_id = current_user.companies[0].id
+    return await service.get_stats(db, company_id)
 
 
 @router.get("/policies/{policy_id}", response_model=schemas.PolicyResponse)

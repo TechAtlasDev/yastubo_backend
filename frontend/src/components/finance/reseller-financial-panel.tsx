@@ -30,11 +30,21 @@ export function ResellerFinancialPanel() {
 
   const onboardingMutation = useMutation({
     mutationFn: () => financeApi.onboardingUrl(),
-    onSuccess: (data) => {
+    onSuccess: (data: { url: string }) => {
       window.open(data.url, '_blank');
     },
     onError: (error: any) => {
       toast.error("No se pudo generar el enlace: " + error.message);
+    }
+  });
+
+  const dashboardMutation = useMutation({
+    mutationFn: () => financeApi.dashboardUrl(),
+    onSuccess: (data: { url: string }) => {
+      window.open(data.url, '_blank');
+    },
+    onError: (error: any) => {
+      toast.error("No se pudo generar el enlace al dashboard: " + error.message);
     }
   });
 
@@ -130,9 +140,11 @@ export function ResellerFinancialPanel() {
             ) : (
                 <Button 
                     variant="outline"
+                    onClick={() => dashboardMutation.mutate()}
+                    disabled={dashboardMutation.isPending}
                     className="border-neutral-200 h-12 px-8 rounded-2xl text-neutral-600 font-bold hover:bg-neutral-50"
                 >
-                    Ver Dashboard de Stripe
+                    {dashboardMutation.isPending ? "Cargando..." : "Ver Dashboard de Stripe"}
                     <ExternalLink className="w-4 h-4 ml-2" />
                 </Button>
             )}

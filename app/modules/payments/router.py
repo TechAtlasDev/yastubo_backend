@@ -22,6 +22,7 @@ from app.modules.payments.schemas import (
     SubscriptionResponse,
     ConnectOnboardingResponse,
     ResellerDashboardResponse,
+    StripeDashboardResponse,
     RetryPaymentResponse,
     StripeConnectStatus,
 )
@@ -87,6 +88,19 @@ async def create_connect_onboarding(
     current_user: User = Depends(get_current_user),
 ):
     return await service.create_connect_onboarding(db, stripe_c, current_user)
+
+
+@router.post("/connect/dashboard", response_model=StripeDashboardResponse)
+async def create_stripe_dashboard_url(
+    db: AsyncSession = Depends(get_db),
+    stripe_c: StripeClient = Depends(get_stripe_client),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Genera una URL de Single Sign-On para el Dashboard de Stripe Express.
+    Solo disponible si el onboarding está completo.
+    """
+    return await service.create_stripe_dashboard_url(db, stripe_c, current_user)
 
 
 @router.get("/connect/status", response_model=StripeConnectStatus)

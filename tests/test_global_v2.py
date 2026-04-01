@@ -68,7 +68,10 @@ async def test_multi_tenancy_and_reseller_flow(
     with patch(
         "app.modules.ai.service.AIService.chat_with_context", new_callable=AsyncMock
     ) as mock_chat:
-        mock_chat.return_value = "Respuesta simulada de Gemini basada en contexto."
+        mock_chat.return_value = (
+            "Respuesta simulada de Gemini basada en contexto.",
+            "session-123",
+        )
 
         response = await client.post(
             "/api/v1/ai/chat", json=chat_payload, headers=headers

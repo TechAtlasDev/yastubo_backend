@@ -116,10 +116,10 @@ async def test_ai_chat_persists_history(db_session, default_company):
     message = "What is Yastubo?"
 
     # First call
-    response = await service.chat_with_context(
+    response_text, _ = await service.chat_with_context(
         db_session, default_company.id, session_id, message
     )
-    assert response == "Hello! I am your assistant."
+    assert response_text == "Hello! I am your assistant."
 
     # Manually update timestamps to ensure order in SQLite
     msgs_stmt = select(ChatMessage).order_by(ChatMessage.id)  # arbitrary but fixed

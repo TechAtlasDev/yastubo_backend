@@ -20,8 +20,8 @@ class KnowledgeDocumentResponse(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    session_id: str
     message: str
+    session_id: Optional[str] = None
 
 
 class ChatResponse(BaseModel):

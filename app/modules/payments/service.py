@@ -294,6 +294,20 @@ async def create_connect_onboarding(
     return {"url": link["url"], "account_id": acc.stripe_account_id}
 
 
+async def create_stripe_dashboard_url(
+    db: AsyncSession, stripe: StripeClient, user: User
+) -> dict:
+    res = await db.execute(
+        select(StripeAccount).where(StripeAccount.user_id == user.id)
+    )
+    acc = res.scalar_one_or_none()
+    if not acc:
+        raise HTTPException(status_code=404, detail="No Stripe account found")
+
+    link = await stripe.create_login_link(acc.stripe_account_id)
+    return {"url": link["url"]}
+
+
 async def get_connect_status(
     db: AsyncSession, stripe: StripeClient, user: User
 ) -> dict:

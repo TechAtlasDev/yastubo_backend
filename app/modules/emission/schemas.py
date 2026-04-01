@@ -148,3 +148,12 @@ class BulkEmissionResponse(BaseModel):
     beneficiaries_count: int
     errors: List[str] = []
     message: str
+
+
+class EmissionStats(BaseModel):
+    active_count: int
+    pending_payment_count: int
+    cancelled_count: int
+    total_premium: float
+    retention_rate: float
+    claims_count: int

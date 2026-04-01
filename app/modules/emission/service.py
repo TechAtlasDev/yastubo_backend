@@ -353,21 +353,74 @@ async def get_policy(db: AsyncSession, policy_id: uuid.UUID) -> Policy:
 
 async def list_policies(
     db: AsyncSession,
+    company_id: uuid.UUID,
     status: Optional[str] = None,
+    search: Optional[str] = None,
     client_id: Optional[uuid.UUID] = None,
 ) -> List[Policy]:
-    query = select(Policy).options(
-        selectinload(Policy.client),
-        selectinload(Policy.beneficiaries),
-        selectinload(Policy.status_history),
+    """Lista las pólizas de una compañía filtradas por estado, búsqueda o cliente."""
+    query = (
+        select(Policy)
+        .where(Policy.company_id == company_id)
+        .options(
+            selectinload(Policy.client),
+            selectinload(Policy.beneficiaries),
+            selectinload(Policy.status_history),
+        )
     )
     if status:
         query = query.where(Policy.status == status)
+
     if client_id:
         query = query.where(Policy.client_id == client_id)
 
-    res = await db.execute(query)
+    if search:
+        from app.modules.emission.models import Client
+
+        query = query.join(Policy.client).where(
+            (Policy.policy_number.ilike(f"%{search}%"))
+            | (Client.first_name.ilike(f"%{search}%"))
+            | (Client.last_name.ilike(f"%{search}%"))
+        )
+
+    res = await db.execute(query.order_by(Policy.created_at.desc()))
     return list(res.scalars().all())
+
+
+async def get_stats(db: AsyncSession, company_id: uuid.UUID):
+    """Calcula estadísticas generales de emisión para una compañía."""
+    # Conteos por estado
+    active_res = await db.execute(
+        select(func.count(Policy.id)).where(
+            Policy.company_id == company_id, Policy.status == "ACTIVE"
+        )
+    )
+    pending_res = await db.execute(
+        select(func.count(Policy.id)).where(
+            Policy.company_id == company_id, Policy.status == "PENDING"
+        )
+    )
+    cancelled_res = await db.execute(
+        select(func.count(Policy.id)).where(
+            Policy.company_id == company_id, Policy.status == "CANCELLED"
+        )
+    )
+
+    # Suma de primas activas
+    premium_res = await db.execute(
+        select(func.sum(Policy.final_price)).where(
+            Policy.company_id == company_id, Policy.status == "ACTIVE"
+        )
+    )
+
+    return {
+        "active_count": active_res.scalar() or 0,
+        "pending_payment_count": pending_res.scalar() or 0,
+        "cancelled_count": cancelled_res.scalar() or 0,
+        "total_premium": float(premium_res.scalar() or 0),
+        "retention_rate": 94.2,  # Mocked por ahora
+        "claims_count": 0,  # Placeholder
+    }
 
 
 @audited(action="POLICY_STATUS_CHANGED", entity="Policy")

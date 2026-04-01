@@ -66,16 +66,23 @@ class AIService:
         return list(result.scalars().all())
 
     async def chat_with_context(
-        self, db: AsyncSession, company_id: uuid.UUID, session_id: str, message: str
+        self,
+        db: AsyncSession,
+        company_id: uuid.UUID,
+        session_id: Optional[str],
+        message: str,
     ) -> str:
         # 1. Find or create the conversation for this session
+        final_session_id = session_id or str(uuid.uuid4())
         conv_res = await db.execute(
-            select(ChatConversation).where(ChatConversation.session_id == session_id)
+            select(ChatConversation).where(
+                ChatConversation.session_id == final_session_id
+            )
         )
         conversation = conv_res.scalar_one_or_none()
         if not conversation:
             conversation = ChatConversation(
-                company_id=company_id, session_id=session_id
+                company_id=company_id, session_id=final_session_id
             )
             db.add(conversation)
             await db.flush()
@@ -158,7 +165,7 @@ CONTEXTO:
         db.add(assistant_msg)
         await db.commit()
 
-        return assistant_text
+        return assistant_text, conversation.session_id
 
     async def voice_chat(self, text: str) -> str:
         """Simple AI response for voice calls with specialized instructions."""
