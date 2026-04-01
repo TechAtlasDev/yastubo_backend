@@ -1,73 +1,63 @@
 ---
-title: "Yastubo Dev Machine (CLI)"
+title: "Dev Machine (CLI)"
 description: "Panel de control interactivo para desarrolladores de Yastubo."
 ---
 
-import { Aside, Steps } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge } from '@astrojs/starlight/components';
 
-La **Yastubo Dev Machine** es una interfaz de terminal interactiva (TUI) diseñada para centralizar todas las tareas de desarrollo, monitoreo y operaciones en una sola herramienta. Abstrae la ejecución de comandos de Docker, Pytest o Alembic mediante una interfaz unificada.
+La **Yastubo Dev Machine** es una interfaz de terminal interactiva (TUI) diseñada para centralizar cada aspecto del desarrollo en un panel de control único y visual. Olvida memorizar decenas de comandos; la CLI es el cerebro operativo que orquestra Docker, Pytest, Alembic y el scaffolding del proyecto.
 
-## Cómo iniciar la CLI
+## 🚀 Inicio Inmediato
 
 Para lanzar el panel de control, ejecute el siguiente comando desde la raíz del proyecto:
 
 ```bash
 make cli
 ```
-*(También puede usar `make tui` si lo prefiere)*.
 
 ---
 
-## Módulos y Capacidades
+## 🎨 Tour Visual (Visual Tour)
 
-La CLI se organiza en pestañas temáticas accesibles mediante atajos de teclado o el puntero:
+La consola se organiza mediante un sistema de pestañas diseñado para agilizar el flujo de trabajo diario de un arquitecto de backend.
 
-### 1. Inicio (Dashboard)
-Es el centro de control principal. Muestra en tiempo real:
-*   **Salud del Entorno:** Versión de Python, Sistema Operativo y estado de uv.
-*   **Validación de Secretos:** Verifica si el archivo .env tiene las variables críticas (DATABASE_URL, SECRET_KEY, etc.) configuradas.
-*   **Métricas del Proyecto:** Conteo de módulos activos y archivos de prueba.
+<p align="center">
+  <img src="https://res.cloudinary.com/de1xmnmeq/image/upload/v1775019056/8086053f-7679-450f-90e7-3806fb619213.png" alt="Yastubo Dev CLI Mockup" width="100%" />
+</p>
 
-### 2. Gestión de Módulos
-Visualiza la jerarquía de la arquitectura modular de Yastubo. Permite inspeccionar rápidamente los módulos cargados y su estructura interna.
+### 1. 🏠 Inicio (Dashboard)
+Es la cabina de mando. Al iniciar, el CLI realiza un diagnóstico automático de la salud de tu entorno local:
+*   **Health Check:** Estado real de las conexiones a PostgreSQL y Redis.
+*   **Configuración:** Alertas visuales si faltan variables críticas en tu `.env`.
+*   **Software Stack:** Verificación de versiones de Python (`3.12+`) y uv.
 
-### 3. Laboratorio de Tests
-Ejecuta la suite completa de pruebas o permite seleccionar pruebas específicas. Incluye visualización de resultados y logs de error integrados.
+### 2. 📂 Gestión de Módulos (Architecture)
+En esta pestaña puedes inspeccionar la arquitectura del Monolito Modular. No es solo visual: facilita la creación de nuevos dominios (ej. `marketing`, `partnerships`) asegurando que se sigan los estándares de estructura `models -> schemas -> services -> routers`.
 
-### 4. Panel de Operaciones (Ops)
-Gestiona la ejecución de comandos de infraestructura y mantenimiento:
-*   **make setup**: Inicialización completa del proyecto.
-*   **make build**: Ejecución del quality gate (lint y tests).
-*   **make smoke**: Pruebas de infraestructura (Base de Datos y Redis).
-*   **uv sync**: Sincronización de dependencias del proyecto.
+### 3. 🧪 Laboratorio de Tests (Lab)
+Un selector dinámico para ejecutar la suite completa de pruebas o suites individuales. Se integra con **Pytest** para mostrar errores estilizados y logs de depuración directamente en la TUI.
 
 ---
 
-## Atajos de Teclado
+## ⌨️ Atajos de Control Maestro
+
+La **Dev Machine** está optimizada para que nunca tengas que soltar el teclado.
 
 | Tecla | Acción |
 | :--- | :--- |
-| `1` - `5` | Cambiar entre pestañas (Inicio, Módulos, Tests, Docs, Ops) |
-| `d` | Cambiar entre tema Claro y Oscuro |
-| `q` | Salir de la CLI |
+| <Badge text="1 - 5" variant="note" /> | Navegación instantánea entre pestañas |
+| <Badge text="D" variant="caution" /> | Cambiar entre tema **Dark** y **Light** |
+| <Badge text="Q" variant="danger" /> | Salir de la CLI |
 
 ---
 
-## Análisis Técnico: Utilidad de la CLI
+## 🏗️ Filosofía de Automatización
 
-En sistemas de Ejecución Duradera como Yastubo, la gestión de tareas asíncronas y cambios de estado requiere una supervisión constante. La CLI facilita este proceso mediante:
-
-1.  **Visibilidad Inmediata:** Diagnóstico automático de conexiones al iniciar la herramienta.
-2.  **Consistencia Operativa:** Estandarización de comandos para todo el equipo de desarrollo.
-3.  **Logs Centralizados:** Captura y formateo de la salida de comandos en la pestaña de Operaciones.
+En Yastubo, creemos que el tiempo del desarrollador es sagrado. La CLI abstrae tareas complejas como:
+1.  **Scaffolding Atómico:** Creación de carpetas de módulos y archivos base en un clic.
+2.  **Mantenimiento:** Sincronización de dependencias (`uv sync`) y limpieza de caché.
+3.  **Calidad:** Ejecución del Quality Gate (`make build`) antes de enviar cambios al repositorio.
 
 <Aside type="tip">
-  Se recomienda mantener una terminal activa con la CLI durante el desarrollo para detectar de forma temprana interrupciones en los servicios o faltas en la configuración.
+  Se recomienda mantener una terminal fija con la CLI abierta durante tu jornada. La monitorización en tiempo real de la salud del entorno te ahorrará horas de debugging en configuraciones rotas.
 </Aside>
-
-## Flujo de Trabajo con la CLI
-
-<p align="center">
-  <img src="https://res.cloudinary.com/de1xmnmeq/image/upload/v1774964994/b3af017d-6998-4319-a7f0-17f91a97495a.png" alt="Dev CLI Flow" width="100%" />
-</p>
-

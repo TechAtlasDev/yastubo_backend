@@ -118,7 +118,7 @@ export default function CompanyDetailPage() {
                                     <LayoutGrid className="w-7 h-7" />
                                 </div>
                                 <Badge className="bg-neutral-100 text-neutral-600 border-none group-hover:bg-info-100 group-hover:text-info-700 transition-colors">
-                                    {unit.type || "Sucursal"}
+                                    {typeof unit.type === 'string' ? unit.type : "Sucursal"}
                                 </Badge>
                             </div>
                             <h3 className="text-xl font-bold text-neutral-900 mb-2 truncate">{unit.name}</h3>

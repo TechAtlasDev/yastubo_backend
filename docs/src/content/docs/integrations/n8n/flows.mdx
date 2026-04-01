@@ -1,0 +1,63 @@
+---
+title: Catálogo de Integraciones
+description: Eventos del backend que disparan automatizaciones en n8n.
+---
+
+import { Tabs, TabItem, Badge } from '@astrojs/starlight/components';
+
+Yastubo ya emite los siguientes eventos críticos hacia n8n. Puedes capturarlos usando un nodo **Webhook (POST)** en n8n e integrarlos con tus herramientas de preferencia.
+
+---
+
+## 📈 Marketing & Ventas (Leads)
+
+### `LEAD_UPSERTED`
+Se dispara cada vez que un prospecto deja sus datos o cuando vuelve a interactuar en un funnel de ventas.
+*   **Webhook Destination:** `N8N_WEBHOOK_LEADS`.
+*   **Payload:** Incluye datos del lead (`phone_e164`, `email`, `lead_score`) y parámetros de atribución (`utm_source`, `utm_campaign`).
+*   **Uso:** Sincronizar automáticamente con **Zoho CRM** o enviar un link de bienvenida por **WhatsApp**.
+
+---
+
+## 💰 Finanzas (Payments)
+
+### `PAYMENT_SUCCEEDED`
+Se dispara cuando Stripe confirma el cobro exitoso de un `PaymentIntent` o una factura de suscripción.
+*   **Webhook Destination:** `N8N_WEBHOOK_PAYMENTS`.
+*   **Payload:** ID de la transacción, monto, ID de la póliza y moneda.
+*   **Uso:** Enviar recibos PDF dinámicos o notificar comisiones a los vendedores en Slack.
+
+### `PAYMENT_FAILED`
+Se dispara tras el rechazo de una tarjeta o falta de fondos.
+*   **Webhook Destination:** `N8N_WEBHOOK_PAYMENTS`.
+*   **Uso:** Disparar secuencias automáticas de recuperación de cobro.
+
+---
+
+## 🖋️ Operaciones (Policies & Claims)
+
+### `POLICY_ISSUED`
+Ocurre cuando se crea formalmente el contrato de seguro.
+*   **Webhook Destination:** `N8N_WEBHOOK_POLICIES`.
+*   **Payload:** Información técnica de la póliza y del titular.
+*   **Uso:** Generar el contrato legal PDF o registrar al cliente en una plataforma de gestión de siniestros externa.
+
+### `CLAIM_REPORTED`
+Disparado al instante en que se reporta un fallecimiento.
+*   **Webhook Destination:** `N8N_WEBHOOK_CLAIMS`.
+*   **Payload:** Datos del beneficiario, descripción del evento y contacto del reportante.
+*   **Uso:** Alerta prioritaria a la central de emergencias funerarias.
+
+---
+
+## 🤖 Inteligencia (AI)
+
+### `AI_CHAT_ANSWERED`
+Disparado tras cada respuesta generada por el chatbot experto.
+*   **Webhook Destination:** `N8N_WEBHOOK_CHAT`.
+*   **Uso:** Almacenar logs de conversación para análisis de sentimiento o entrenamiento humano de modelos.
+
+### `AI_KNOWLEDGE_UPLOADED`
+Ocurre cuando un administrador carga nuevo conocimiento (PDF/RAG).
+*   **Webhook Destination:** `N8N_WEBHOOK_CHAT`.
+*   **Uso:** Notificar a los agentes comerciales que ahora la IA conoce las nuevas condiciones de los planes.

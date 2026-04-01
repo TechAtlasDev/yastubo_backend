@@ -1,0 +1,51 @@
+---
+title: Seguridad y Buenas Prácticas
+description: Cómo proteger tus flujos de n8n y asegurar la comunicación con Yastubo.
+---
+
+import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+
+La comunicación entre Yastubo y n8n debe ser bidireccional y estar siempre protegida. No dejes tus webhooks expuestos a internet sin validación.
+
+---
+
+## 🔒 Protegiendo la Llamada desde n8n al Backend
+
+Cuando un flujo en n8n necesita actualizar algo en el backend de Yastubo (ej. marcar un lead como contactado), debe autenticarse igual que cualquier otro cliente.
+
+### Recomendación:
+1.  **Crea una API Key Administrativa:** Registra un usuario de tipo `BOT` o usa una cuenta `ADMIN` existente.
+2.  **Usa Bearer Auth:** En el nodo **HTTP Request** de n8n, añade un header de `Authorization: Bearer <TU_JWT_TOKEN>`.
+3.  **Scopes Mínimos:** Asegúrate de que la cuenta solo tenga los permisos necesarios para realizar la tarea de la automatización (Principio de Menor Privilegio).
+
+---
+
+## 🛡️ Protegiendo los Webhooks de n8n (Incoming)
+
+Cualquiera que conozca la URL de tu webhook de n8n podría enviar datos falsos. Protege estas entradas siguiendo estos pasos:
+
+### ⚙️ Implementación de Firma (Header):
+Actualmente, Yastubo envía un header personalizado de seguridad en cada petición hacia n8n.
+
+<Steps>
+1.  **Configurar Secret:** Define una variable `N8N_WEBHOOK_SECRET` en tu `.env`.
+2.  **Validar en n8n:** Añade un nodo **If** al principio de tu flujo de n8n que verifique si el header de autenticación coincide con tu secret.
+3.  **Rechazar:** Si el header no coincide, termina el flujo inmediatamente con un `HTTP 401 Unauthorized`.
+</Steps>
+
+---
+
+## 🚀 Mejores Prácticas (Performance & Resiliencia)
+
+### 1. Respuesta Rápida (Pattern Fire-and-Forget)
+El backend de Yastubo espera máximo 3 segundos por n8n. Para evitar que el backend aborte la conexión, tu flujo en n8n **debe** responder con un `HTTP 200` lo antes posible.
+- **Tip:** Coloca el nodo **Respond to Webhook** al principio del flujo, antes del procesamiento pesado.
+
+### 2. Manejo de Errores (Error Workflows)
+Configura un **Error Workflow** en n8n para que, si un flujo crítico falla (ej. falla al enviar un WhatsApp), recibas una notificación en Slack o email.
+
+### 3. Reintentos (Retry Logic)
+Si n8n necesita hablar con un servicio inestable (ej. una API gubernamental), configura el nodo con **Retry on Fail** para aumentar la robustez de la integración.
+
+### 4. Logging de Eventos
+Evita enviar información extremadamente sensible en el payload del evento (ej. contraseñas). Envía solo IDs (`policy_id`, `user_id`) y haz que n8n consulte la información necesaria mediante una petición autenticada al API de Yastubo.

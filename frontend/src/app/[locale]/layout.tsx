@@ -32,7 +32,19 @@ export default async function RootLayout({
   
   // Providing all messages to the client
   // side is the easiest way to get started
-  const messages = await getMessages();
+  let messages;
+  try {
+    messages = await getMessages();
+    
+    // Safety check: ensure messages is not an error object
+    if (messages && typeof messages === 'object' && 'msg' in messages && 'loc' in messages) {
+       console.error("Detected validation error in messages:", messages);
+       messages = {}; 
+    }
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    messages = {};
+  }
 
   return (
     <html lang={locale} className={`${outfit.variable} ${firaCode.variable}`}>

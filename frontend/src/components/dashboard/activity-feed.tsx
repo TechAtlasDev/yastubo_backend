@@ -78,8 +78,8 @@ export function ActivityFeed({ activities, isLoading }: ActivityFeedProps) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-[var(--color-neutral-900)] truncate">
-                      <span className="font-bold">{activity.user_name}</span>{" "}
-                      {activity.action}
+                      <span className="font-bold">{typeof activity.user_name === 'string' ? activity.user_name : "Usuario"}</span>{" "}
+                      {typeof activity.action === 'string' ? activity.action : "realizó una acción"}
                     </p>
                     <p className="text-xs text-[var(--color-neutral-400)] mt-1">
                       {formatDistanceToNow(new Date(activity.created_at), {

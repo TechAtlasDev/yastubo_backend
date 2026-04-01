@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 
 const companySchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
+  short_code: z.string().min(2, "Mínimo 2 caracteres").max(20, "Máximo 20 caracteres"),
   tax_id: z.string().min(5, "Tax ID inválido"),
   email: z.string().email("Email inválido").optional().or(z.literal("")),
   phone: z.string().optional().or(z.literal("")),
@@ -44,6 +45,7 @@ export default function NewCompanyPage() {
     resolver: zodResolver(companySchema),
     defaultValues: {
       name: "",
+      short_code: "",
       tax_id: "",
       email: "",
       phone: "",
@@ -115,6 +117,20 @@ export default function NewCompanyPage() {
                       <FormControl>
                         <Input placeholder="123456789-0" {...field} className="bg-white/50 border-neutral-200 focus:border-primary-500 h-11" />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="short_code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Código Corto (Slug)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="EJ: ATLAS-SA" {...field} className="bg-white/50 border-neutral-200 focus:border-primary-500 h-11" />
+                      </FormControl>
+                      <FormDescription>Identificador único interno para la empresa.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

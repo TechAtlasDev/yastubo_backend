@@ -32,6 +32,7 @@ import { Input } from "@/components/ui/input";
 const unitSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
   code: z.string().min(2, "El código debe tener al menos 2 caracteres"),
+  type: z.enum(["office", "agency"]),
 });
 
 type UnitFormValues = z.infer<typeof unitSchema>;
@@ -51,6 +52,7 @@ export function CreateUnitModal({ companyId, isOpen, onClose }: CreateUnitModalP
     defaultValues: {
       name: "",
       code: "",
+      type: "office",
     },
   });
 
@@ -118,6 +120,25 @@ export function CreateUnitModal({ companyId, isOpen, onClose }: CreateUnitModalP
               )}
             />
             
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de Unidad</FormLabel>
+                  <FormControl>
+                    <select
+                      {...field}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="office">Oficina (Principal)</option>
+                      <option value="agency">Agencia (Punto de Venta)</option>
+                    </select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <DialogFooter className="pt-6">
               <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
                 Cancelar

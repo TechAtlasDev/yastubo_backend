@@ -62,7 +62,7 @@ export function AuditTimeline({ entityId, entityType = "Company" }: AuditTimelin
           <div className="flex flex-col gap-3">
              <div className="flex items-center gap-3">
                 <span className="text-xs font-mono font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-md uppercase tracking-wide">
-                    {log.action.replace(/_/g, " ")}
+                    {typeof log.action === 'string' ? log.action.replace(/_/g, " ") : "ACCIÓN"}
                 </span>
                 <span className="text-xs text-neutral-400 font-medium flex items-center gap-1.5">
                     <Clock className="w-3 h-3" />
@@ -77,10 +77,10 @@ export function AuditTimeline({ entityId, entityType = "Company" }: AuditTimelin
                 <div className="flex-1 space-y-2">
                     <div className="flex items-center justify-between">
                         <p className="text-sm font-bold text-neutral-900">
-                            {log.user_name || "Agente del Sistema"}
+                            {typeof log.user_name === 'string' ? log.user_name : "Agente del Sistema"}
                         </p>
                         <Badge variant="outline" className="text-[10px] uppercase font-mono border-neutral-200 bg-neutral-50 text-neutral-500">
-                            {log.entity}
+                            {typeof log.entity === 'string' ? log.entity : "Entidad"}
                         </Badge>
                     </div>
                     

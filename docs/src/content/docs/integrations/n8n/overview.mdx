@@ -1,0 +1,41 @@
+---
+title: Arquitectura n8n
+description: Resumen técnico del bus de eventos asíncrono y la integración con n8n en Yastubo.
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+Yastubo utiliza **n8n** como su orquestador de flujos externos. El backend está diseñado para emitir eventos en tiempo real hacia n8n sin penalizar el rendimiento de la API mediante el patrón **Fire-and-Forget**.
+
+## 🧠 El Bus de Eventos Asíncrono
+
+Cada vez que ocurre una acción crítica en el backend (ej. una póliza se activa o un pago falla), el sistema dispara un evento asíncrono.
+
+<Steps>
+1.  **Backend Activity:** El servicio detecta el cambio de estado (ej. `POLICY_ACTIVE`).
+2.  **Dispatcher:** Se invoca a `notify_n8n()`.
+3.  **Non-blocking Execution:** Se crea una tarea de `asyncio` independiente que no bloquea la respuesta HTTP del usuario.
+4.  **Routing:** El sistema elige el webhook de n8n correspondiente basándose en el tipo de evento (Leads, Payments, etc.).
+5.  **Timeout Check:** El backend espera máximo **3 segundos** por la confirmación de n8n antes de cancelar la conexión para proteger la API.
+</Steps>
+
+<Aside type="caution">
+Un fallo en n8n o su indisponibilidad **nunca** interrumpirá la lógica del backend. Las transacciones de base de datos se completan antes de que el evento sea disparado.
+</Aside>
+
+## 🛡️ Enrutamiento de Webhooks
+
+El backend soporta múltiples webhooks configurables en el archivo `.env`. Esto permite separar el tráfico de automatizaciones por dominio:
+
+| Variable de Entorno | Dominio | Descripción |
+| :--- | :--- | :--- |
+| `N8N_WEBHOOK_LEADS` | **Marketing** | Prospectos de WhatsApp, Meta Ads y Lead Scoring. |
+| `N8N_WEBHOOK_PAYMENTS`| **Financiero**| Recibos de pago, alertas de fraude y reintentos fallidos. |
+| `N8N_WEBHOOK_CLAIMS` | **Operativo** | Reporte de fallecimientos y gestión de beneficiarios. |
+| `N8N_WEBHOOK_CHAT` | **Atención** | Webhooks de Chatwoot e integración con LLMs. |
+| `N8N_WEBHOOK_URL` | **General** | Fallback para cualquier otro evento no clasificado. |
+
+## 🚀 Beneficios del Modelo
+- **Extensibilidad:** Añade integraciones con Zoho, WhatsApp o Slack sin modificar una sola línea de código en Python una vez expuesto el evento.
+- **Resiliencia:** Si n8n cae, el backend sigue funcionando impecablemente.
+- **Trazabilidad:** Cada envío a n8n queda registrado en los logs del servidor con el prefijo `[n8n]`.

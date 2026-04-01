@@ -1,0 +1,62 @@
+---
+title: Crear una Nueva Automatización
+description: Guía paso a paso para añadir nuevos disparadores y flujos a n8n desde Yastubo.
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+Crear una nueva automatización en Yastubo requiere de dos pasos: exponer el evento en el backend y capturarlo en el editor visual de n8n.
+
+## 🛠️ Paso 1: Exponer el Evento en Python
+
+Cualquier servicio del backend puede disparar un evento. Imagina que queremos avisar a n8n cada vez que un administrador actualiza el precio de un plan.
+
+### Procedimiento:
+
+<Steps>
+1.  **Importar el Despachador:** Importa la función `notify_n8n` de `app.core.events`.
+    ```python
+    from app.core.events import notify_n8n
+    ```
+2.  **Preparar el Payload:** Define un diccionario con la información útil que n8n necesite procesar.
+3.  **Llamar al Dispatcher:** Ejecuta la función pasando un nombre descriptivo para el evento.
+    ```python
+    await notify_n8n(
+        event_name="PLAN_PRICE_UPDATED",
+        payload={
+            "plan_id": plan.id,
+            "new_price": plan.public_price,
+            "currency": plan.currency
+        }
+    )
+    ```
+</Steps>
+
+<Aside type="tip">
+El despachador enrutará automáticamente el evento basado en palabras clave. Por ejemplo, al contener "PLAN", irá al webhook general; si contuviera "PAYMENT", iría al webhook de pagos.
+</Aside>
+
+## 🎨 Paso 2: Crear el Workflow en n8n
+
+Una vez disparado el evento desde el backend, n8n debe estar listo para recibirlo.
+
+### Procedimiento:
+
+<Steps>
+1.  **Nodo Webhook:** Añade un nodo de tipo **Webhook** en n8n.
+    - **HTTP Method:** `POST`.
+    - **Path:** El nombre que hayas configurado en tu `.env` (ej. `/webhook/general`).
+2.  **Nodo de Respuesta:** Añade un nodo **Respond to Webhook** después del trigger para enviar un `HTTP 200` rápido de vuelta al backend.
+3.  **Lógica del Negocio:** A partir de aquí, usa los datos del evento para integrarlos con lo que necesites:
+    - **Send Email:** vía Resend o Gmail.
+    - **CRM:** vía Zoho o Salesforce.
+    - **Notificaciones:** vía WhatsApp (API Cloud) o Slack.
+</Steps>
+
+## 🧪 Paso 3: Pruebas y Monitoreo
+
+Para validar que tu nueva automatización funciona correctamente:
+
+1.  **Ejecutar n8n en modo Listen:** Pulsa el botón "Listen for Event" en n8n.
+2.  **Ejecutar la Acción en Yastubo:** Dispara la acción en el backend (ej. actualiza el precio vía API).
+3.  **Validar Logs:** Revisa los logs de Yastubo para ver el mensaje `🚀 [n8n] Evento 'PLAN_PRICE_UPDATED' enviado con éxito`.

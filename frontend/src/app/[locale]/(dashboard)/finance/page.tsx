@@ -5,9 +5,10 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Button } from "@/components/ui/button";
 import { DollarSign, BadgeDollarSign, CreditCard, ArrowUpRight, TrendingUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { financeApi } from "@/lib/api/modules";
+import { financeApi, Transaction } from "@/lib/api/modules";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 export default function FinancePage() {
   const t = useTranslations("dashboard");
@@ -15,6 +16,16 @@ export default function FinancePage() {
     queryKey: ["currencies"],
     queryFn: financeApi.currencies,
   });
+
+  const { data: transactions, isLoading: isTxLoading } = useQuery({
+    queryKey: ["transactions"],
+    queryFn: financeApi.transactions,
+  });
+
+  // Calculate real summaries based on transactions
+  const totalPrimas = transactions?.filter(tx => tx.status === 'PAID').reduce((sum, tx) => sum + tx.amount, 0) || 0;
+  const pendingCommissions = totalPrimas * 0.085; // Simulating business logic calculation logic
+  const stripeBalance = totalPrimas * 0.90; // Just as estimation for the UI before Stripe balance API integration
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -27,9 +38,19 @@ export default function FinancePage() {
             Monitorea ingresos, comisiones y configuración de monedas
           </p>
         </div>
-        <Button className="bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)] text-white shadow-lg shadow-primary-500/20">
-          <TrendingUp className="w-5 h-5 mr-2" />
-          Ver Reporte Mensual
+        <Button 
+          className="bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)] text-white shadow-lg shadow-primary-500/20"
+          onClick={async () => {
+            try {
+              const { url } = await financeApi.onboardingUrl();
+              window.open(url, '_blank');
+            } catch (error) {
+              console.error("Stripe Onboarding error", error);
+            }
+          }}
+        >
+          <CreditCard className="w-5 h-5 mr-2" />
+          Stripe Onboarding
         </Button>
       </div>
 
@@ -42,21 +63,25 @@ export default function FinancePage() {
             </div>
           </div>
           <div className="flex items-end gap-2">
-            <span className="text-3xl font-bold">$45,210.00</span>
-            <span className="text-xs mb-1 bg-white/20 px-2 py-0.5 rounded-full font-medium">+12%</span>
+            <span className="text-3xl font-bold">
+                {isTxLoading ? "..." : `$${totalPrimas.toLocaleString()}`}
+            </span>
+            <span className="text-xs mb-1 bg-white/20 px-2 py-0.5 rounded-full font-medium">LIVE</span>
           </div>
         </GlassCard>
 
         <GlassCard className="p-6 h-40 flex flex-col justify-between border-none shadow-glass bg-white/80 transition-transform group hover:scale-[1.02]">
            <div className="flex justify-between items-center">
-            <span className="text-sm font-medium text-neutral-500">Comisiones Totales</span>
+            <span className="text-sm font-medium text-neutral-500">Estimación Comisiones</span>
             <div className="w-8 h-8 bg-info-100/50 rounded-lg flex items-center justify-center text-info-600">
               <BadgeDollarSign className="w-5 h-5" />
             </div>
           </div>
           <div className="flex items-end gap-2 text-neutral-900">
-            <span className="text-3xl font-bold">$3,845.50</span>
-            <span className="text-xs mb-1 text-success font-medium">En espera de dispersión</span>
+            <span className="text-3xl font-bold">
+                {isTxLoading ? "..." : `$${pendingCommissions.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+            </span>
+            <span className="text-xs mb-1 text-info-600 font-medium">Auto-Split (8.5%)</span>
           </div>
         </GlassCard>
 
@@ -68,7 +93,9 @@ export default function FinancePage() {
             </div>
           </div>
           <div className="flex items-end gap-2 text-neutral-900">
-            <span className="text-3xl font-bold">$12,400.00</span>
+            <span className="text-3xl font-bold">
+                {isTxLoading ? "..." : `$${stripeBalance.toLocaleString()}`}
+            </span>
             <ArrowUpRight className="w-5 h-5 text-primary-500" />
           </div>
         </GlassCard>
@@ -108,14 +135,48 @@ export default function FinancePage() {
 
         <GlassCard className="p-6 h-[400px] border-none shadow-glass flex flex-col">
           <h3 className="text-lg font-bold text-neutral-900 mb-6 font-sans">Movimientos Recientes</h3>
-          <div className="flex-1 flex flex-col items-center justify-center text-center py-10">
-             <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mb-4">
-              <TrendingUp className="w-8 h-8 text-neutral-300" />
-            </div>
-            <h4 className="text-lg font-bold text-neutral-900">Sin movimientos financieros</h4>
-            <p className="text-sm text-neutral-500 max-w-[280px] mt-2">
-              Las transacciones de primas y comisiones aparecerán aquí una vez que comiences a operar.
-            </p>
+          <div className="flex-1 overflow-y-auto pr-2 space-y-3">
+            {isTxLoading ? (
+               Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-xl" />
+              ))
+            ) : transactions && transactions.length > 0 ? (
+              transactions.map((tx: any) => (
+                 <div key={tx.id} className="flex items-center justify-between p-4 bg-white/50 border border-neutral-100 rounded-xl hover:border-primary-100 transition-colors">
+                    <div className="flex items-center gap-4">
+                        <div className={cn(
+                            "w-10 h-10 rounded-lg flex items-center justify-center",
+                            tx.status === 'PAID' ? "bg-success-100 text-success-600" : "bg-warning-100 text-warning-600"
+                        )}>
+                            <TrendingUp className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-bold text-neutral-900">Cobro Póliza {tx.policy_id.split('-')[0]}</p>
+                            <p className="text-[10px] text-neutral-500">{new Date(tx.created_at).toLocaleString()}</p>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-sm font-bold text-neutral-900">${tx.amount.toLocaleString()}</p>
+                        <Badge className={cn(
+                            "text-[10px] h-5 border-none",
+                            tx.status === 'PAID' ? "bg-success-50 text-success-700" : "bg-amber-50 text-amber-700"
+                        )}>
+                            {tx.status}
+                        </Badge>
+                    </div>
+                 </div>
+              ))
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-center py-10">
+                <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mb-4">
+                  <TrendingUp className="w-8 h-8 text-neutral-300" />
+                </div>
+                <h4 className="text-lg font-bold text-neutral-900">Sin movimientos financieros</h4>
+                <p className="text-sm text-neutral-500 max-w-[280px] mt-2">
+                  Las transacciones de primas aparecerán aquí una vez que comiences a operar.
+                </p>
+              </div>
+            )}
           </div>
         </GlassCard>
       </div>

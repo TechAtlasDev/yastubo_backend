@@ -93,7 +93,15 @@ export default defineConfig({
 						{ label: 'Monitoreo', slug: 'operations/monitoring' },
 						{ label: 'CI/CD', slug: 'operations/cicd' },
 						{ label: 'Migraciones', slug: 'operations/migrations' },
-						{ label: 'Integración con n8n', slug: 'operations/n8n' },
+					],
+				},
+				{
+					label: 'Integraciones & n8n',
+					items: [
+						{ label: 'Arquitectura n8n', slug: 'integrations/n8n/overview' },
+						{ label: 'Catálogo de Flujos', slug: 'integrations/n8n/flows' },
+						{ label: 'Guía de Creación', slug: 'integrations/n8n/guide' },
+						{ label: 'Seguridad y Auth', slug: 'integrations/n8n/security' },
 					],
 				},
 				{
