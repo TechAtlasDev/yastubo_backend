@@ -220,6 +220,20 @@ async def handle_stripe_event(event: dict, db: AsyncSession) -> None:
                     processed_at=datetime.now(),
                 )
                 db.add(transaction)
+
+                from app.core.events import notify_n8n
+
+                await notify_n8n(
+                    "SUBSCRIPTION_ACTIVATED",
+                    {
+                        "subscription_id": str(subscription.id),
+                        "client_id": str(subscription.policy.client_id),
+                        "plan_id": str(subscription.policy.plan_id),
+                        "amount": float(transaction.amount),
+                        "currency": transaction.currency,
+                    },
+                )
+
                 audit = AuditLog(
                     company_id=subscription.company_id,
                     action="SUBSCRIPTION_PAYMENT_SUCCEEDED",

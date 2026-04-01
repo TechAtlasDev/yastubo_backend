@@ -60,6 +60,18 @@ class AIService:
         db.add(user_msg)
         await db.flush()
 
+        from app.core.events import notify_n8n
+
+        await notify_n8n(
+            "COMMENT_RECEIVED",
+            {
+                "conversation_id": str(conversation.id),
+                "message": message,
+                "sentiment_hint": None,
+                "channel": "WEB_CHAT",
+            },
+        )
+
         # 3. Retrieve recent history (last 10 messages) for context
         history_res = await db.execute(
             select(ChatMessage)

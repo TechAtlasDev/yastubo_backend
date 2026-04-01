@@ -74,6 +74,7 @@ async def get_lead(db: AsyncSession, lead_id: uuid.UUID) -> Lead:
 
 async def update_lead(db: AsyncSession, lead_id: uuid.UUID, data: LeadUpdate) -> Lead:
     lead = await get_lead(db, lead_id)
+    old_status = lead.lead_status
 
     # Track checkout state changes
     if data.checkout_started and not lead.checkout_started:
@@ -95,6 +96,19 @@ async def update_lead(db: AsyncSession, lead_id: uuid.UUID, data: LeadUpdate) ->
 
     await db.commit()
     await db.refresh(lead)
+
+    from app.core.events import notify_n8n
+
+    await notify_n8n(
+        "LEAD_STATUS_CHANGED",
+        {
+            "lead_id": str(lead.id),
+            "old_status": str(old_status),
+            "new_status": str(lead.lead_status),
+            "company_id": str(lead.company_id),
+        },
+    )
+
     return lead
 
 

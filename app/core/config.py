@@ -62,6 +62,8 @@ class Settings(BaseSettings):
     N8N_WEBHOOK_LEADS: Optional[str] = None
     N8N_WEBHOOK_PAYMENTS: Optional[str] = None
     N8N_WEBHOOK_POLICIES: Optional[str] = None
+    N8N_WEBHOOK_SUBSCRIPTIONS: Optional[str] = None
+    N8N_WEBHOOK_CHAT: Optional[str] = None
 
     # Apple Wallet
     APPLE_PASS_CERT_PATH: str = ""
