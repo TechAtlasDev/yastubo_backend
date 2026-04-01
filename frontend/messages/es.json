@@ -1,0 +1,10 @@
+{
+  "dashboard": {
+    "title": "Panel de Control",
+    "description": "Bienvenido a Yastubo Admin"
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión"
+  }
+}

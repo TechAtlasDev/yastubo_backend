@@ -1,0 +1,10 @@
+{
+  "dashboard": {
+    "title": "Dashboard",
+    "description": "Welcome to Yastubo Admin"
+  },
+  "auth": {
+    "login": "Log in",
+    "logout": "Log out"
+  }
+}

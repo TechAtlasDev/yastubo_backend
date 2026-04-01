@@ -1,0 +1,56 @@
+---
+title: Gestión de Migraciones
+description: Estrategia de evolución del esquema de datos y control de cambios estructurales.
+---
+
+En Yastubo Backend v1, las migraciones de base de datos son tratadas como **código de misión crítica**. Utilizamos Alembic con una capa de introspección dinámica para garantizar que los cambios estructurales se realicen de forma segura, incluso en entornos de alta disponibilidad.
+
+## Filosofía de Migración Blindada
+
+A diferencia de las migraciones autogeneradas tradicionales, nuestra estrategia para cambios masivos (como el refactor `Workspaces` ➔ `Companies`) se basa en tres pilares:
+
+### 1. Detección Dinámica de Objetos (FK Discovery)
+No asumimos nombres de constraints hardcodeados. El sistema utiliza el `sa.inspect` de SQLAlchemy en tiempo de ejecución para:
+- Consultar el `information_schema` de la base de datos real.
+- Identificar dinámicamente cualquier llave foránea (FK) que dependa de una columna antes de modificarla.
+- Eliminar solo los constraints detectados, evitando fallos por inconsistencias de nombrado entre entornos.
+
+### 2. Idempotencia Total (Check-Before-Act)
+Cada operación destructiva o de renombramiento verifica el estado actual de la base de datos antes de ejecutarse:
+- Si una tabla ya fue renombrada en un intento previo, el script lo detecta y lo omite silenciosamente (`[SKIP]`).
+- Esto permite re-ejecutar migraciones que fallaron a mitad de camino sin dejar la base de datos en un estado inconsistente.
+
+### 3. Trazabilidad Quirúrgica (Logging)
+Durante el proceso de `alembic upgrade`, emitimos logs detallados que explican exactamente qué acción se está tomando sobre qué objeto. Esto es vital para el monitoreo durante despliegues en vivo.
+
+---
+
+## Caso de Estudio: Refactor de Organizaciones (1b249b89876e)
+
+Esta migración transformó la estructura base del sistema para soportar una jerarquía multi-nivel.
+
+### Qué hace
+1. **Normaliza**: Convierte la tabla genérica `workspaces` en una entidad rica llamada `companies`.
+2. **Jerarquiza**: Crea la tabla `business_units` para permitir que una empresa tenga múltiples agencias u oficinas.
+3. **Propaga**: Actualiza recursivamente el campo `workspace_id` a `company_id` en las 11 tablas del sistema core.
+
+### Cómo recuperarse (Downgrade)
+En caso de fallo crítico en producción, el sistema permite revertir la estructura mediante:
+
+```bash
+uv run alembic downgrade -1
+```
+
+Este comando realizará las siguientes acciones inversas:
+- Eliminará la jerarquía de `business_units`.
+- Revertirá los nombres de las columnas a `workspace_id`.
+- Restaurará la tabla `workspaces`.
+- **Re-creará dinámicamente las llaves foráneas originales** hacia la tabla base.
+
+---
+
+## Mejores Prácticas en el Proyecto
+
+- **Nunca usar nombres fijos** para constraints en scripts de migración complejos.
+- **Validar tipos de datos**: Asegurar la compatibilidad entre `GUID` (UUID) e identificadores legacy durante la transformación.
+- **Smoke Testing**: Siempre ejecutar la suite de tests después de una migración para verificar que los modelos de SQLAlchemy sigan siendo coherentes con el nuevo esquema físico.

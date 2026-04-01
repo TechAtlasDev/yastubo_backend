@@ -69,8 +69,11 @@ Se ejecutó la suite completa de tests para validar el estado funcional antes de
 | ID | Tarea | Estado | Observaciones |
 | :--- | :--- | :--- | :--- |
 | **T-01** | **Módulo de Geografía** | ✅ COMPLETADA | Modelos `Country` y `Zone` creados. Router, Service y Tests funcionando. |
-| **T-02** | **Org Hierarchical** | 🕐 PENDIENTE | Mover de `Workspace` a `Organization -> BusinessUnit`. |
-| **T-03** | **Plan Normalization**| 🕐 PENDIENTE | Descomponer JSON de planes en tablas relacionales. |
+| **T-02** | **Org Hierarchical** | ✅ COMPLETADA | Migración de `Workspace` a jerarquía `Company -> BusinessUnit` finalizada. |
+| **T-03** | **Plan Normalization**| ✅ COMPLETADA | Estructura `Product -> Plan -> PlanVersion` con tablas relacionales implementada. |
+| **T-04** | **Capitados System**  | ✅ COMPLETADA | Soporte para seguros colectivos, batches y registros mensuales. |
+| **T-05** | **Auth & RBAC Refactor**| ✅ COMPLETADA | Perfiles de staff/cliente y permisos granulares integrados. |
+| **T-06** | **Final Integration** | ✅ COMPLETADA | Verificación de estado limpio y documentación técnica actualizada. |
 
 ---
-**Nota**: Este baseline servirá para medir el progreso de la migración y asegurar que la funcionalidad existente (tests pasando) no se rompa durante la adaptación.
+**Nota**: El sistema ha superado la fase de baseline y se encuentra en un estado de **Feature Ready** para los módulos core de la migración.

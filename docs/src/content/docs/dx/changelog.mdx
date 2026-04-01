@@ -11,6 +11,21 @@ Este documento registra todos los cambios significativos realizados en Yastubo B
 *   **Transparencia**: Información clara sobre nuevas funcionalidades para los desarrolladores.
 *   **Gestión de Versiones**: Control de versiones semántico para facilitar despliegues seguros.
 
+## [1.0.0] - 2026-03-31
+### Added
+*   **Jerarquía Organizacional**: Implementación de `Company -> BusinessUnit` con soporte para multi-tenancy complejo.
+*   **Normalización de Planes**: Estructura relacional `Product -> Plan -> PlanVersion` para mayor rigor actuarial.
+*   **Sistema de Capitados**: Módulo completo para seguros colectivos, batches masivos y conciliación mensual.
+*   **Documentación de Ingeniería**: Nueva sección técnica de migraciones y arquitectura de datos.
+
+### Changed
+*   **Refactor Crítico de Datos**: Migración blindada de `Workspaces` a `Companies` con detección dinámica de FKs e idempotencia.
+*   **Seguridad RBAC**: Perfiles granulares de staff/cliente y permisos integrados en la jerarquía de unidades de negocio.
+
+### Fixed
+*   **Estabilidad de Migraciones**: Corrección de fallos en el renombramiento de columnas mediante introspección en tiempo de ejecución.
+*   **Integración de Geografía**: Sincronización final de modelos de países y zonas con el esquema real.
+
 ## [0.2.0] - 2026-03-29
 ### Added
 *   **Módulo de IA**: Integración con modelos generativos para evaluación de riesgos y asistentes de siniestros.
