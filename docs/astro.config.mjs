@@ -51,6 +51,19 @@ export default defineConfig({
 					],
 				},
 				{
+					label: 'API Reference',
+					items: [
+						{ label: 'IAM / Autenticación', slug: 'api-reference/iam' },
+						{ label: 'Catálogo / Productos', slug: 'api-reference/catalog' },
+						{ label: 'Emisión / Pólizas', slug: 'api-reference/policy-engine' },
+						{ label: 'Finanzas / Pagos', slug: 'api-reference/financial' },
+						{ label: 'Inteligencia / IA', slug: 'api-reference/intelligence' },
+						{ label: 'CRM / Leads', slug: 'api-reference/crm-leads' },
+						{ label: 'Siniestros / Claims', slug: 'api-reference/claims' },
+						{ label: 'Operaciones / Infra', slug: 'api-reference/ops' },
+					],
+				},
+				{
 					label: 'Guides',
 					items: [
 						{ label: 'Creación de un Nuevo Módulo', slug: 'guides/creating-new-module' },

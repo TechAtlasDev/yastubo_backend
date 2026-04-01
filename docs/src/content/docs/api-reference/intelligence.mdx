@@ -1,0 +1,80 @@
+---
+title: Intelligence (AI, RAG & Vectors)
+description: Referencia técnica del motor de IA, ingesta de conocimiento y arquitectura RAG.
+---
+
+import { Tabs, TabItem, Badge } from '@astrojs/starlight/components';
+
+El módulo **Intelligence** implementa capacidades de Inteligencia Artificial Generativa mediante **Gemini 1.5 Flash**. Utiliza una base de datos vectorial (**pgvector**) para realizar búsquedas semánticas y proporcionar respuestas contextuales precisas sobre pólizas, términos y condiciones.
+
+---
+
+## 📚 Gestión del Conocimiento (Knowledge Base)
+
+### 1. Ingesta de Documentos PDF
+<Badge text="POST" variant="success" /> `/api/v1/ai/knowledge/upload`
+<Badge text="Role: ADMIN" variant="danger" />
+<Badge text="Multipart/Form" variant="note" />
+
+Endpoint especializado para cargar guías de seguros, términos legales o manuales en formato PDF.
+
+#### Proceso Interno:
+1.  **Extracción:** Utiliza `pypdf` para extraer el contenido textual de forma local.
+2.  **Embeddings:** Envía el texto a la API de Google GenAI para generar un vector de **3072 dimensiones**.
+3.  **Persistencia:** Almacena el texto y su vector en la tabla `knowledge_documents` con soporte para búsqueda de similitud coseno.
+
+#### Códigos de Respuesta
+*   **`200 OK`**: Documento indexado correctamente. Retorna `KnowledgeDocumentResponse`.
+*   **`400 Bad Request`**: `"Solo se permiten archivos PDF"` o el PDF no tiene texto legible.
+*   **`500 Internal Server Error`**: Falla en la comunicación con el servicio de Embeddings.
+
+---
+
+### 2. Ingesta de Conocimiento Manual (Texto)
+<Badge text="POST" variant="success" /> `/api/v1/ai/knowledge`
+<Badge text="Role: ADMIN" variant="danger" />
+
+Permite cargar fragmentos de conocimiento directamente en formato texto sin necesidad de un archivo físico.
+
+#### Esquema de Petición (`KnowledgeDocumentCreate`)
+```json
+{
+  "title": "Exclusión de Preexistencias",
+  "content": "A partir de la versión 2.0, las enfermedades preexistentes tienen una carencia de 180 días...",
+  "metadata_json": { "tag": "legales", "version": "2.0" }
+}
+```
+
+---
+
+## 🤖 Asistente Virtual (Chat API)
+
+### 3. Consulta con Contexto (RAG)
+<Badge text="POST" variant="success" /> `/api/v1/ai/chat`
+<Badge text="Auth Required" variant="note" />
+
+Interacción con el chatbot de Yastubo. No es un chat genérico; utiliza la base de conocimiento cargada para responder.
+
+#### Parámetros de Petición (`ChatRequest`)
+*   `message`: Pregunta del usuario en lenguaje natural.
+*   `session_id`: UUID para mantener el hilo de la conversación (memoria a corto plazo).
+
+#### Diagrama del Flujo RAG:
+1.  **Captura:** Se recibe la pregunta del usuario.
+2.  **Retrieval:** Se genera un embedding de la pregunta y se busca en `pgvector` los 3-5 fragmentos de conocimiento más similares del `company_id` actual.
+3.  **Prompt Augmentation:** Se construye un prompt para Gemini estructuralmente así:
+    > "Eres un experto en seguros funerarios. Basándote ÚNICAMENTE en este contexto: [FRAGMENTOS], responde a lo siguiente: [MENSAJE_USUARIO]"
+4.  **Generation:** Gemini genera la respuesta basada estrictamente en los hechos recuperados.
+
+#### Códigos de Respuesta
+*   **`200 OK`**: Respuesta generada. Retorna `ChatResponse`.
+*   **`429 Too Many Requests`**: Cuota de API de Google GenAI excedida.
+
+---
+
+## ⚙️ Especificaciones Técnicas AI
+
+*   **Modelo de Chat:** `gemini-1.5-flash-latest` (Optimizado para latencia baja y RAG).
+*   **Modelo de Embeddings:** `text-embedding-004`.
+*   **Dimensiones del Vector:** `3072`.
+*   **Aislamiento Comercial:** Las búsquedas vectoriales siempre están filtradas por el identificador de la organización (`company_id`), garantizando que un vendedor no pueda acceder al conocimiento confidencial de otra organización.

@@ -1,0 +1,88 @@
+---
+title: CRM & Leads (Prospectos)
+description: Referencia técnica de la captura de leads, atribución de marketing y funnel de ventas.
+---
+
+import { Tabs, TabItem, Badge } from '@astrojs/starlight/components';
+
+El módulo de **Leads** gestiona la entrada de prospectos al ecosistema de Yastubo. Está optimizado para la captura desde canales digitales y el seguimiento del comportamiento de compra (checkout tracking).
+
+---
+
+## 📈 Captura de Prospectos
+
+### 1. Upsert de Lead (Público)
+<Badge text="POST" variant="success" /> `/api/v1/leads/`
+<Badge text="Public Access" variant="note" />
+
+Crea un nuevo prospecto o actualiza uno existente si hay coincidencia en el teléfono.
+
+#### Clave de Identidad (Matching Key)
+El sistema utiliza el campo **`phone_e164`** como identificador único. 
+*   **Formato Requerido:** E.164 (ej. `+15550123456`).
+*   **Lógica:** Si el teléfono ya existe, el endpoint actualiza los datos del lead en lugar de crear un duplicado, manteniendo la trazabilidad de la fuente original.
+
+#### Campos de Atribución (Marketing ROI)
+| Campo | Tipo | Descripción |
+| :--- | :--- | :--- |
+| `source_channel` | `string` | Canal de origen (ej. `WhatsApp`, `Facebook`, `Organic`). |
+| `utm_source` | `string` | Fuente de la campaña UTM. |
+| `utm_medium` | `string` | Medio de la campaña (ej. `cpc`, `email`). |
+| `campaign_id` | `string` | ID técnico de la campaña en la plataforma de anuncios. |
+| `landing_page` | `string` | URL donde se capturó el registro. |
+
+---
+
+## 🚦 Embudo de Ventas (Funnel)
+
+### 2. Actualizar Estado y Comportamiento
+<Badge text="PATCH" variant="caution" /> `/api/v1/leads/{id}`
+<Badge text="Auth Required" variant="note" />
+
+Permite actualizar la etapa del prospecto y monitorear su avance en el proceso de compra.
+
+#### Ciclo de Vida del Lead (`LeadStatus`)
+*   `NEW`: Registro fresco sin contacto.
+*   `CONTACTED`: Ya se ha iniciado una conversación.
+*   `QUALIFIED`: Cumple con los requisitos para ser asegurado.
+*   `DISQUALIFIED`: No apto o fuera de zona de cobertura.
+*   `CONVERTED`: Se ha convertido en cliente con póliza emitida.
+
+#### Tracking de Checkout (Abandono de Carrito)
+El sistema permite rastrear micro-microconversiones para campañas de retargeting:
+*   `form_started` / `form_completed`.
+*   `checkout_started`: El usuario entró a la pasarela de pago.
+*   `abandoned_checkout_flag`: Marcado automáticamente si no hubo `purchase_completed` tras X tiempo.
+
+---
+
+## 🔍 Consulta y Operaciones
+
+### 3. Listado de Leads
+<Badge text="GET" variant="note" /> `/api/v1/leads/`
+<Badge text="Auth Required" variant="note" />
+
+Retorna la lista de prospectos con filtros por estado.
+
+**Query Parameters:**
+*   `status`: Filtra por `NEW`, `QUALIFIED`, etc.
+
+#### Esquema de Respuesta (`LeadResponse`)
+```json
+{
+  "id": "uuid-v4",
+  "first_name": "Maria",
+  "phone_e164": "+34600123456",
+  "lead_score": 85,
+  "zoho_lead_id": "crm_12345",
+  "converted_to_contact_flag": false,
+  "created_at": "2024-03-31T20:00:00Z"
+}
+```
+
+---
+
+## 🛠️ Integraciones CRM
+Yastubo sincroniza automáticamente los leads calificados con Zoho CRM. 
+*   **Trigger:** Al pasar a estado `QUALIFIED` o `CONVERTED`.
+*   **ID Externo:** El campo `zoho_lead_id` almacena la referencia para futuras actualizaciones bidireccionales.

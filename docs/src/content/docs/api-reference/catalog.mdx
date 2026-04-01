@@ -1,0 +1,103 @@
+---
+title: Catalog (Products & Plans)
+description: Referencia técnica del motor actuarial, jerarquía de productos y cálculo dinámico de primas.
+---
+
+import { Tabs, TabItem, Badge } from '@astrojs/starlight/components';
+
+El módulo de **Catalog** define la oferta comercial y técnica de la plataforma Yastubo. Utiliza una arquitectura de **cinco niveles** (Producto -> Plan -> Versión -> Detalles) para garantizar la flexibilidad y el cumplimiento legal.
+
+## 🏗️ Dominios y Jerarquía de Datos
+
+1.  **Product:** Entidad raíz definida por su `product_type` (ej. `repatriation`).
+2.  **Plan:** Variante comercial del producto (ej. "Plan Familiar Senior", "Plan Repatriación Individual").
+3.  **Plan Version:** Definición técnica/comercial en un momento dado. Incluye precios base, moneda (`USD`, `EUR`) y tiempos de carencia.
+4.  **Surcharges & Countries:** Reglas dinámicas de precio basadas en edad y precios específicos por país.
+5.  **Coverages:** Definición detallada de coberturas vinculadas a la versión del plan.
+
+---
+
+## 🏦 Gestión de Productos y Configuraciones
+
+### 1. Listar Catálogo Completo
+<Badge text="GET" variant="note" /> `/api/v1/products/`
+**Seguridad:** Requiere Autenticación.
+
+Retorna el catálogo completo con la máxima profundidad de relaciones cargadas recursivamente (Eager Loading).
+
+#### Filtros (Query Params)
+| Parámetro | Tipo | Default | Descripción |
+| :--- | :--- | :--- | :--- |
+| `active_only` | `boolean` | `true` | Si es true, solo devuelve productos marcados con `is_active: True`. |
+
+#### Respuesta de Éxito (`List[ProductResponse]`)
+*   `id`: UUID único del producto.
+*   `name`: Nombre comercial.
+*   `product_type`: Categoría técnica del seguro.
+*   `plans`: Lista de objetos `PlanResponse` anidados.
+    *   `versions`: Lista de objetos `PlanVersionResponse` (detalles técnicos).
+
+---
+
+### 2. Creación de Productos (Configuración Actuarial)
+<Badge text="POST" variant="success" /> `/api/v1/products/`
+<Badge text="Role: ADMIN" variant="danger" />
+
+Este endpoint permite cargar una estructura de producto completa en una sola transacción atómica.
+
+#### Esquema de Petición (`ProductCreate`)
+*   `name`: Nombre comercial del producto (máx 255 chars).
+*   `description`: Texto explicativo largo.
+*   `product_type`: Por defecto `"repatriation"`.
+*   `plans`: Lista de planes iniciales.
+    *   `company_id`: ID opcional de la empresa dueña del plan.
+    *   `versions`: Lista de versiones técnicas.
+        *   `cost_price`: Precio de costo interno (Decimal).
+        *   `public_price`: Precio de venta base (Decimal).
+        *   `currency`: Moneda de tres caracteres (`USD`, `EUR`, `MXN`).
+        *   `max_entry_age`: Edad máxima de contratación (ej. 75 años).
+        *   `max_renewal_age`: Edad máxima de renovación permitida.
+        *   **Tiempos de Carencia:** `wtime_suicide`, `wtime_accident`, `wtime_preexisting` (Días).
+
+#### Códigos de Respuesta
+*   **`201 Created`**: Producto y toda su jerarquía creada.
+*   **`403 Forbidden`**: El usuario no tiene rol `ADMIN`.
+*   **`422 Unprocessable Entity`**: Error en la estructura de datos anidada.
+
+---
+
+## 🧮 Motor de Precios (Calculator)
+
+### 3. Cotización Dinámica de Prima
+<Badge text="POST" variant="success" /> `/api/v1/plans/calculate-price`
+**Seguridad:** Cualquier usuario autenticado.
+
+Endpoint especializado para el cálculo en tiempo real del precio final del seguro, aplicando todas las reglas de negocio configuradas.
+
+#### Esquema de Petición (`PriceCalculationRequest`)
+```json
+{
+  "plan_version_id": "uuid-v4",
+  "age": 62,
+  "country_code": "US",
+  "quantity": 1
+}
+```
+
+#### Reglas de Validación Internas
+1.  **Estado:** La versión del plan debe tener `is_active: True`. De lo contrario, retorna `400 Bad Request`.
+2.  **Disponibilidad Geográfica:** El `country_code` debe estar configurado en la tabla `plan_version_countries` y tener `is_available: True`. Si no está, retorna `422 Unprocessable Entity` (`"Plan not available in country XX"`).
+3.  **Límite de Edad Actuarial:** Si la edad enviada supera el `max_entry_age` de la versión, retorna `422` (`"Age {age} exceeds max entry age {limit}"`).
+
+#### Respuesta de Éxito (`PriceCalculationResponse`)
+*   `final_price`: Precio total a pagar (Decimal).
+*   `base_price`: Precio base configurado en la versión.
+*   `country_override`: Precio especial por país si aplica (sobrescribe al base).
+*   `age_surcharge_percentage`: Porcentaje de recargo por edad calculado.
+*   `age_surcharge_amount`: Monto neto del recargo por edad.
+*   `breakdown`: Diccionario con el desglose matemático detallado del cálculo.
+
+#### Códigos de Respuesta
+*   **`200 OK`**: Cálculo exitoso.
+*   **`404 Not Found`**: El ID de versión del plan no existe.
+*   **`422 Unprocessable Entity`**: Error de validación de negocio (País u Edad).

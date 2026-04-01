@@ -1,0 +1,132 @@
+---
+title: Policy Engine (Emission & Portal)
+description: Referencia técnica exhaustiva del motor de emisión de pólizas, gestión de asegurados y portal del cliente.
+---
+
+import { Tabs, TabItem, Badge } from '@astrojs/starlight/components';
+
+El **Policy Engine** es el módulo central de operaciones de Yastubo. Gestiona el ciclo completo desde la creación del cliente hasta la post-venta en el portal.
+
+---
+
+## 🖋️ Emisión de Pólizas e Identidades
+
+### 1. Registro de Cliente Asegurado
+<Badge text="POST" variant="success" /> `/api/v1/emission/clients`
+**Seguridad:** Requiere rol `VENDEDOR` o `ADMIN`.
+
+Crea el registro legal del titular de la póliza.
+
+#### Esquema de Petición (`ClientCreate`)
+| Campo | Tipo | Restricción | Descripción |
+| :--- | :--- | :--- | :--- |
+| `first_name` | `string` | No nulo | Nombres del titular. |
+| `last_name` | `string` | No nulo | Apellidos del titular. |
+| `email` | `string` | `EmailStr` | Correo único para contacto y portal. |
+| `birth_date` | `date` | YYYY-MM-DD | Fecha de nacimiento para cálculo actuarial. |
+| `nationality` | `string` | ISO 2 (Upper) | País de origen del asegurado. |
+| `country_of_residence`| `string` | ISO 2 (Upper) | País donde reside actualmente. |
+| `acquisition_channel` | `string` | Opcional | Canal de venta (ej. Facebook, Organics). |
+
+#### Códigos de Respuesta
+*   **`201 Created`**: Cliente registrado. Retorna `ClientResponse` con su UUID asignado.
+*   **`409 Conflict`**: `"Client already exists with this email"`.
+
+---
+
+### 2. Emisión Formal de Póliza (Individual)
+<Badge text="POST" variant="success" /> `/api/v1/emission/issue`
+**Seguridad:** Requiere rol `VENDEDOR` o `ADMIN`.
+
+Genera el contrato de seguro vinculando al cliente con un plan específico.
+
+#### Esquema de Petición (`EmissionRequest`)
+*   `client_id`: UUID del cliente ya registrado.
+*   `plan_version_id`: Versión técnica activada del plan.
+*   `start_date`: Fecha de inicio de cobertura (No puede ser en el pasado).
+*   **`beneficiaries`**: Lista de beneficiarios incluidos en la póliza.
+    *   `kinship_type`: Tipo de parentesco (`SELF`, `SPOUSE`, `CHILD`, `PARENT`, `OTHER`).
+    *   `date_of_birth`: Obligatorio para validar límites de edad por beneficiario.
+
+#### Lógica de Ejecución
+1.  **Validación Actuarial:** El sistema llama al motor de precios para validar que todos los beneficiarios cumplan los requisitos de edad de la versión del plan.
+2.  **Cálculo de Prima:** Calcula el `final_price` sumando los recargos individuales de cada beneficiario.
+3.  **Estado Inicial:** La póliza es creada por defecto en estado `PENDING_PAYMENT` y dispara una notificación al cliente.
+
+#### Códigos de Respuesta
+*   **`201 Created`**: Póliza emitida exitosamente. Retorna `PolicyResponse` completa.
+*   **`422 Unprocessable Entity`**: Error de validación actuarial (edades) o de país.
+
+---
+
+### 3. Transición de Estado de Póliza
+<Badge text="POST" variant="caution" /> `/api/v1/emission/policies/{id}/transition`
+**Seguridad:** Requiere rol `ADMIN`.
+
+Controla el flujo de vida de la póliza mendiante una **Máquina de Estados**.
+
+#### Estados Permitidos (`PolicyStatus`)
+*   `DRAFT` (Borrador)
+*   `PENDING_PAYMENT` (Esperando pago inicial)
+*   `ACTIVE` (Cobertura activada)
+*   `CANCELLED` (Póliza anulada)
+*   `EXPIRED` (Término de vigencia)
+
+#### Auditoría de Cambios
+Cada transición exitosa guarda un registro en `PolicyStatusHistory` con:
+*   `from_status` / `to_status`.
+*   `changed_by`: ID del usuario/sistema responsable.
+*   `reason`: Motivo textual del cambio.
+
+---
+
+## 📄 Generación de Credenciales Digitales
+
+### 4. Certificado de Cobertura (PDF)
+<Badge text="GET" variant="note" /> `/api/v1/emission/policies/{id}/pdf`
+
+Genera un archivo PDF legal con los sellos de Yastubo y los datos del contrato.
+*   **Media Type:** `application/pdf`.
+*   **Formato de Archivo:** `policy_<id>.pdf`.
+
+---
+
+### 5. Tarjeta de Asistencia (Passbook)
+<Badge text="GET" variant="note" /> `/api/v1/emission/policies/{id}/passbook`
+
+Genera un archivo compatible con **Wallet (iOS/Android)**.
+*   **Contenido:** Incluye código QR para validación rápida en funerarias asociadas.
+*   **Media Type:** `application/vnd.apple.pkpass`.
+
+---
+
+## 📂 Emisión Masiva (Bulk Upload)
+
+### 6. Carga desde Excel
+<Badge text="POST" variant="success" /> `/api/v1/emission/bulk-upload`
+**Tipo:** `Multipart/Form-Data`
+
+Procesa un archivo Excel para emitir una póliza con cientos de beneficiarios en una sola operación.
+
+#### Columnas Esperadas en el Archivo:
+*   `first_name`, `last_name`: Nombres y apellidos.
+*   `date_of_birth`: Formato `YYYY-MM-DD`.
+*   `kinship_type`: Parentesco.
+*   `country_of_residence`: Código ISO2.
+
+---
+
+## 👤 Portal del Asegurado (Portal API)
+
+### 7. Perfil del Asegurado (Me)
+<Badge text="GET" variant="note" /> `/api/v1/portal/me`
+
+Retorna los datos del cliente autenticado basándose en su email de sesión.
+
+---
+
+### 8. Registro de Fallecimiento
+<Badge text="POST" variant="danger" /> `/api/v1/emission/beneficiaries/{id}/mark-deceased`
+**Seguridad:** Solo `ADMIN` o Integración CRM.
+
+Activa el proceso de siniestro marcando a un beneficiario como fallecido (`deceased_flag = True`).

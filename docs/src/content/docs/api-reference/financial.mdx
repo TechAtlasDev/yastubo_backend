@@ -1,0 +1,93 @@
+---
+title: Financial (Payments & Subscriptions)
+description: Referencia técnica de integración con Stripe, suscripciones recurrentes y gestión de comisiones.
+---
+
+import { Tabs, TabItem, Badge } from '@astrojs/starlight/components';
+
+El módulo **Financial** gestiona el flujo de caja de la plataforma. Utiliza **Stripe** como procesador principal y soporta pagos con tarjeta, suscripciones mensuales y dispersión de fondos a vendedores vía **Stripe Connect**.
+
+---
+
+## 💸 Gestión de Pagos
+
+### 1. Crear Intento de Pago (One-Time)
+<Badge text="POST" variant="success" /> `/api/v1/payments/intent`
+<Badge text="Role: VENDEDOR+" variant="note" />
+
+Genera un `PaymentIntent` en Stripe para cobrar el total de una póliza o una cuota específica.
+
+#### Esquema de Petición (`CreatePaymentIntentRequest`)
+*   `policy_id`: UUID de la póliza asociada.
+*   `payment_method_id`: Opcional. ID de una tarjeta guardada previamente.
+*   `save_payment_method`: Boolean. Si es `true`, la tarjeta se adjunta permanentemente al cliente en Stripe.
+
+#### Respuesta de Éxito (`TransactionResponse`)
+Retorna un `client_secret`. Este campo es **obligatorio** para que el frontend pueda completar la autenticación 3DS (SCA) mediante Stripe Elements.
+
+---
+
+### 2. Registro de Pago Manual (Offline)
+<Badge text="POST" variant="success" /> `/api/v1/payments/manual`
+<Badge text="Role: ADMIN" variant="danger" />
+
+Permite registrar ingresos que no pasan por Stripe (ej. efectivo, transferencia bancaria directa). 
+
+**Efecto:** Crea una transacción con estado `PAID` vinculada a la póliza, disparando la activación de la misma si el monto cubre la prima.
+
+---
+
+## 🔁 Suscripciones Recurrentes
+
+### 3. Crear Suscripción Mensual
+<Badge text="POST" variant="success" /> `/api/v1/payments/subscription`
+<Badge text="Role: VENDEDOR+" variant="note" />
+
+Inicia un cobro recurrente automático.
+
+#### Configuración Actuarial
+*   **`billing_anchor_day`**: Entero (1-28). Permite anclar el cobro a un día específico del mes (ej. todos los días 5). Si no se envía, se toma el día actual.
+
+#### Códigos de Respuesta
+*   **`201 Created`**: Suscripción activa en Stripe.
+*   **`402 Payment Required`**: La tarjeta fue rechazada durante el primer cobro.
+
+---
+
+### 4. Cancelar Suscripción
+<Badge text="POST" variant="caution" /> `/api/v1/payments/subscription/cancel`
+<Badge text="Role: ADMIN" variant="danger" />
+
+Detiene los cobros recurrentes de una póliza.
+*   `cancel_immediately`: Si es `true`, termina la cobertura al instante. Si es `false`, espera al final del periodo pagado.
+
+---
+
+## 🏦 Resellers y Comisiones (Stripe Connect)
+
+### 5. Onboarding de Vendedor
+<Badge text="POST" variant="success" /> `/api/v1/payments/connect/onboarding`
+<Badge text="Auth Required" variant="note" />
+
+Genera un enlace temporal de Stripe para que el vendedor vincule su cuenta bancaria. 
+*   **Response:** Retorna una `url` a la cual el frontend debe redirigir al usuario para completar su perfil financiero.
+
+---
+
+## 📡 Webhooks (Eventos de Stripe)
+
+<Badge text="POST" variant="success" /> `/api/v1/payments/webhook`
+**Seguridad:** Verifica la firma `stripe-signature` usando el secret del servidor.
+
+El sistema procesa en segundo plano (`BackgroundTasks`) los siguientes eventos críticos:
+
+1.  **`invoice.paid`**: Marca la póliza como `ACTIVE` y genera el PDF.
+2.  **`invoice.payment_failed`**: Notifica al cliente y cambia el estado a `PAID_FAILED`.
+3.  **`customer.subscription.deleted`**: Se dispara cuando una suscripción expira o es cancelada desde el dashboard de Stripe.
+
+---
+
+### 📊 Consulta de Transacciones
+<Badge text="GET" variant="note" /> `/api/v1/payments/transactions`
+
+Lista el historial financiero. Permite filtrar por `policy_id` o `status` (`PENDING`, `PAID`, `FAILED`).

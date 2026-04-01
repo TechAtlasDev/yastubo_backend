@@ -1,0 +1,94 @@
+---
+title: Claims (Siniestros)
+description: Referencia técnica de la gestión de siniestros, reportes de fallecimiento y tracking de gastos funerarios.
+---
+
+import { Tabs, TabItem, Badge } from '@astrojs/starlight/components';
+
+El módulo de **Claims** gestiona los eventos de siniestro (fallecimientos) reportados por los clientes corporativos o asegurados. Permite la trazabilidad absoluta desde el reporte inicial hasta el cierre del servicio y la liquidación de gastos.
+
+---
+
+## 🧾 Reporte de Siniestros
+
+### 1. Crear un Siniestro
+<Badge text="POST" variant="success" /> `/api/v1/claims/`
+<Badge text="Auth Required" variant="note" />
+
+Abre un nuevo expediente de siniestro vinculado a una póliza activa.
+
+#### Esquema de Petición (`ClaimCreate`)
+| Campo | Tipo | Descripción |
+| :--- | :--- | :--- |
+| `policy_id` | UUID | ID de la póliza bajo la cual se reclama. |
+| `beneficiary_id`| UUID | ID del beneficiario fallecido. |
+| `description` | `string` | Notas iniciales sobre el evento. |
+
+#### Reglas de Validación
+1.  **Vigencia:** El sistema verifica que la póliza esté en estado `ACTIVE` en la fecha del reporte.
+2.  **Identidad:** El beneficiario debe existir dentro de la póliza especificada.
+
+---
+
+### 2. Gestión de Gastos Funerarios
+<Badge text="POST" variant="success" /> `/api/v1/claims/{id}/expenses`
+<Badge text="Auth Required" variant="note" />
+
+Registra costos individuales asociados al siniestro (repatriación, servicios funerarios, traslados).
+
+#### Esquema de Petición (`ClaimExpenseCreate`)
+*   `amount`: Monto neto del gasto.
+*   `currency`: Moneda (`USD` por defecto).
+*   `expense_type`: Categoría del gasto (ej. `"REPATRIATION"`, `"FUNERAL_SERVICE"`).
+*   `receipt_url`: Enlace al comprobante digital o factura.
+
+---
+
+## 🚦 Flujo de Resolución
+
+### 3. Actualizar Estado de Siniestro
+<Badge text="PATCH" variant="caution" /> `/api/v1/claims/{id}/status`
+<Badge text="Role: GESTOR+" variant="danger" />
+
+Permite a los operadores de Yastubo transicionar el siniestro por las etapas de revisión.
+
+#### Estados Disponibles
+*   `PENDING`: Recién reportado, pendiente de documentación.
+*   `IN_REVIEW`: En proceso de validación técnica/legal.
+*   `APPROVED`: Siniestro validado, servicios en ejecución.
+*   `REJECTED`: El siniestro no procede (ej. periodo de carencia no cumplido).
+*   `CLOSED`: Proceso finalizado y gastos liquidados.
+
+**Body Parameters:**
+```json
+{
+  "status": "APPROVED",
+  "reason": "Documentación completa y periodo de carencia validado."
+}
+```
+
+---
+
+## 🔍 Consulta de Expedientes
+
+### 4. Detalle de Siniestro
+<Badge text="GET" variant="note" /> `/api/v1/claims/{id}`
+
+Retorna el historial completo del siniestro, incluyendo el desglose de gastos y el estado actual.
+
+#### Respuesta de Éxito (`ClaimResponse`)
+```json
+{
+  "id": "uuid-v4",
+  "status": "APPROVED",
+  "reported_at": "2024-03-31T21:00:00Z",
+  "expenses": [
+    {
+      "id": "exp-uuid",
+      "amount": 2500.00,
+      "expense_type": "REPATRIATION",
+      "receipt_url": "https://storage.yastubo.com/receipts/001.pdf"
+    }
+  ]
+}
+```

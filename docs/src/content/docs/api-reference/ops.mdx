@@ -1,0 +1,93 @@
+---
+title: Operations & Infrastructure
+description: Referencia técnica de auditoría forense, jerarquía de organizaciones y configuración geográfica.
+---
+
+import { Tabs, TabItem, Badge } from '@astrojs/starlight/components';
+
+El módulo de **Operations** provee las herramientas necesarias para la gobernanza global de la plataforma, asegurando la trazabilidad de cada acción y la correcta segmentación de datos por empresa.
+
+---
+
+## 🛡️ Auditoría Forense (Logs)
+
+### 1. Consultar Logs de Auditoría
+<Badge text="GET" variant="note" /> `/api/v1/audit/`
+<Badge text="Role: ADMIN" variant="danger" />
+
+Permite inspeccionar cada acción realizada en el sistema. Los logs son generados automáticamente por el decorador `@audited`.
+
+#### Parámetros de Filtrado (Query Params)
+| Parámetro | Tipo | Descripción |
+| :--- | :--- | :--- |
+| `user_id` | UUID | Filtra acciones realizadas por un usuario específico. |
+| `action` | `string` | Nombre del evento (ej. `USER_REGISTERED`, `POLICY_CREATED`). |
+| `entity` | `string` | Tabla afectada (ej. `User`, `Policy`, `Lead`). |
+| `date_from` / `to` | `datetime` | Rango temporal de la búsqueda. |
+| `page` / `page_size` | `int` | Paginación (Default: 50 por página). |
+
+#### Respuesta de Éxito (`PaginatedAuditResponse`)
+```json
+{
+  "items": [
+    {
+      "id": "uuid-v4",
+      "action": "POLICY_ISSUED",
+      "user_id": "admin-uuid",
+      "entity": "Policy",
+      "entity_id": "policy-uuid",
+      "ip_address": "192.168.1.1",
+      "created_at": "2024-03-31T22:00:00Z"
+    }
+  ],
+  "total": 1250,
+  "page": 1,
+  "page_size": 50
+}
+```
+
+---
+
+## 🏢 Estructura de Organizaciones
+
+### 2. Registro de Empresas (Companies)
+<Badge text="POST" variant="success" /> `/api/v1/organizations/companies`
+<Badge text="Role: ADMIN" variant="danger" />
+
+Crea una nueva organización raíz en el sistema.
+
+---
+
+### 3. Crear Unidades de Negocio (Business Units)
+<Badge text="POST" variant="success" /> `/api/v1/organizations/companies/{id}/business-units`
+<Badge text="Role: ADMIN" variant="danger" />
+
+Segmenta una empresa en unidades operativas menores.
+*   **Jerarquía:** Los usuarios y registros (pólizas, leads) suelen estar vinculados a una `BusinessUnit` para control de visibilidad local.
+
+---
+
+## 🌍 Geografía y Zonas de Riesgo
+
+### 4. Catálogo de Países
+<Badge text="GET" variant="note" /> `/api/v1/geography/countries`
+
+Retorna la lista de países soportados por la plataforma.
+*   **Campos:** `iso_code` (2 chars), `name`, `continent`.
+*   **Relación:** Un país puede estar asociado a múltiples **Zonas** (regiones comerciales).
+
+---
+
+### 5. Gestión de Zonas
+<Badge text="POST" variant="success" /> `/api/v1/geography/zones`
+<Badge text="Role: ADMIN" variant="danger" />
+
+Crea una zona geográfica (ej. "Unión Europea", "Región Andina"). Las zonas se utilizan en el módulo de **Catalog** para habilitar planes de seguros de forma masiva en varios países.
+
+---
+
+### 6. Asociar País a Zona
+<Badge text="POST" variant="success" /> `/api/v1/geography/zones/{zone_id}/countries/{country_id}`
+<Badge text="Role: ADMIN" variant="danger" />
+
+Vincula un país específico a una zona comercial. Una vez vinculado, el país heredará la disponibilidad de los planes configurados para esa zona.

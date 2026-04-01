@@ -1,0 +1,139 @@
+---
+title: IAM (Identity & Access Management)
+description: Especificación técnica exhaustiva de autenticación, control de acceso RBAC y gestión de identidades.
+---
+
+import { Tabs, TabItem, Badge } from '@astrojs/starlight/components';
+
+Esta sección detalla cada endpoint del módulo de **Identity & Access Management**. El sistema utiliza **JWT (JSON Web Tokens)** para la autorización y **Redis** para la gestión de sesiones activas y revocación.
+
+---
+
+## 🛡️ Autenticación y Registro
+
+### 1. Registro de Usuario
+<Badge text="POST" variant="success" /> `/api/v1/auth/register`
+
+Crea una identidad única en la plataforma. Este endpoint es público.
+
+#### Esquema de Petición (`UserRegister`)
+| Campo | Tipo | Restricción | Descripción |
+| :--- | :--- | :--- | :--- |
+| `email` | `string` | `EmailStr` | Correo electrónico único. |
+| `password` | `string` | `min_length: 8` | Contraseña en texto plano. Se almacena como un hash Argon2/Bcrypt. |
+| `full_name` | `string` | No nulo | Nombre completo del usuario. |
+| `phone` | `string` | Opcional | Número de contacto en formato internacional. |
+
+#### Lógica de Ejecución
+1.  **Validación de Unicidad:** Verifica si el `email` ya existe en la tabla `users`.
+2.  **Persistencia:** Crea el registro del usuario con `is_active=True`.
+3.  **Roles Automáticos:** Asigna por defecto el rol `CLIENTE`.
+4.  **Perfiles:** Inicializa automáticamente un `CustomerProfile` vinculado al usuario.
+5.  **Auditoría:** Dispara el evento `USER_REGISTERED` en los logs de auditoría.
+
+#### Códigos de Respuesta
+*   **`201 Created`**: Usuario creado exitosamente. Retorna el objeto `UserResponse`.
+*   **`409 Conflict`**: `"Email already registered"`. Ocurre cuando el email ya está en uso.
+*   **`422 Unprocessable Entity`**: Error de validación en los campos (ej. contraseña muy corta).
+
+---
+
+### 2. Login de Usuario
+<Badge text="POST" variant="success" /> `/api/v1/auth/login`
+
+Autentica credenciales y emite tokens de acceso.
+
+#### Esquema de Petición (`UserLogin`)
+```json
+{
+  "email": "dev@yastubo.com",
+  "password": "misuperpassword"
+}
+```
+
+#### Respuesta de Éxito (`TokenResponse`)
+*   `access_token`: Token JWT de corta duración (configurado en `settings.ACCESS_TOKEN_EXPIRE_MINUTES`).
+*   `refresh_token`: Token para renovar la sesión, almacenado en Redis.
+*   `token_type`: Siempre `"bearer"`.
+*   `expires_in`: Tiempo en segundos hasta la expiración del access token.
+
+#### Códigos de Respuesta
+*   **`200 OK`**: Login exitoso.
+*   **`401 Unauthorized`**: `"Invalid email or password"`. Credenciales incorrectas.
+*   **`403 Forbidden`**: `"User account is disabled"`. El usuario existe pero tiene `is_active=False`.
+
+---
+
+### 3. Renovación de Tokens (Refresh)
+<Badge text="POST" variant="success" /> `/api/v1/auth/refresh`
+
+Extiende la sesión sin requerir credenciales.
+
+#### Lógica de Validación
+1.  Verifica que el token enviado tenga el atributo `type: "refresh"`.
+2.  Verifica el `sub` (ID de usuario) dentro del payload del token.
+3.  **Check de Redis:** Busca la clave `refresh:{user_id}` en Redis. Si el token no coincide o la clave expiró, se deniega la petición.
+4.  Genera un nuevo set completo de tokens (rotación).
+
+#### Códigos de Respuesta
+*   **`200 OK`**: Tokens renovados.
+*   **`401 Unauthorized`**: Token inválido, expirado o revocado manualmente (logout).
+
+---
+
+## 👤 Gestión de Perfil y Seguridad
+
+### 4. Obtener Información de Usuario (Me)
+<Badge text="GET" variant="note" /> `/api/v1/auth/me`
+**Seguridad:** Requiere Header `Authorization: Bearer <access_token>`
+
+#### Esquema de Respuesta (`UserResponse`)
+```json
+{
+  "id": "uuid-v4",
+  "email": "john@doe.com",
+  "full_name": "John Doe",
+  "phone": "+123456789",
+  "is_active": true,
+  "roles": ["CLIENTE"],
+  "created_at": "2024-03-31T20:00:00Z"
+}
+```
+
+---
+
+### 5. Cambio de Contraseña
+<Badge text="PUT" variant="caution" /> `/api/v1/auth/password`
+**Seguridad:** Solo el usuario autenticado.
+
+#### Reglas de Validación de Historial
+Para prevenir ataques y mejorar la seguridad, el sistema mantiene una tabla `password_histories`.
+*   **Validación de Actual:** Se requiere la contraseña antigua correcta.
+*   **No Reutilización:** Se comparan los últimos **5 hashes** de historial. Si la nueva contraseña coincide con alguna anterior, la petición falla.
+
+#### Códigos de Respuesta
+*   **`200 OK`**: `{"message": "Password changed successfully"}`.
+*   **`400 Bad Request`**: `"Cannot reuse a recent password"`.
+*   **`401 Unauthorized`**: `"Invalid old password"`.
+
+---
+
+## 🛠️ Administración y Control de Acceso (RBAC)
+
+### 6. Asignación de Roles
+<Badge text="POST" variant="danger" /> `/api/v1/auth/roles/assign`
+**Seguridad:** Requiere rol `ADMIN`.
+
+#### Esquema de Petición (`RoleAssign`)
+*   `user_id`: UUID del usuario al que se le asignará el rol.
+*   `role_name`: Nombre del rol (ej. `"ADMIN"`, `"VENDEDOR"`, `"GESTOR"`).
+
+#### Efectos en Base de Datos
+*   Inserta registro en `user_roles`.
+*   Si el rol asignado tiene `scope="customer"`, asegura la existencia de un `CustomerProfile`.
+*   Registra la acción en auditoría incluyendo `assigned_by` (ID del admin).
+
+#### Códigos de Respuesta
+*   **`200 OK`**: Retorna el `UserResponse` actualizado.
+*   **`403 Forbidden`**: El usuario que realiza la petición no posee el rol de Administrador.
+*   **`404 Not Found`**: El rol especificado o el ID de usuario no existen en el sistema.
