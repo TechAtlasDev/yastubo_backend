@@ -40,35 +40,38 @@ Para activar el bus de eventos, debes configurar las URLs de tus webhooks de n8n
 
 ## 📡 Eventos Core Implementados
 
-Actualmente, el sistema emite automáticamente los siguientes eventos:
+Actualmente, el sistema emite automáticamente los siguientes eventos para alimentar tu máquina de ventas:
 
-| Evento | Origen | Payload Clave |
-| :--- | :--- | :--- |
-| `CLIENT_REGISTERED` | Emisión | `client_id`, `email`, `company_id` |
-| `POLICY_ISSUED` | Emisión | `policy_number`, `amount`, `currency` |
-| `PAYMENT_FAILED` | Pagos | `transaction_id`, `error`, `attempt_count` |
+| Evento | Módulo | Cuándo se dispara | Payload Clave |
+| :--- | :--- | :--- | :--- |
+| `LEAD_CREATED` | CRM | Registro de nuevo prospecto. | `lead_id`, `email`, `source` |
+| `CLIENT_REGISTERED` | Emisión | Registro de cliente formal. | `client_id`, `email`, `company_id` |
+| `POLICY_ISSUED` | Emisión | Póliza creada inicialmente. | `policy_number`, `amount` |
+| `POLICY_STATUS_CHANGED`| Emisión | Cambio de estado (ej. Active). | `old_status`, `new_status` |
+| `SUBSCRIPTION_ACTIVATED`| Pagos | Pago inicial de suscripción OK. | `subscription_id`, `amount` |
+| `PAYMENT_FAILED` | Pagos | Intento de cobro fallido. | `error`, `attempt_count` |
+| `PAYMENT_RETRY_SCHEDULED`| Pagos | Reintento automático programado. | `scheduled_at`, `amount` |
+| `COMMENT_RECEIVED` | AI / Chat | Mensaje entrante del usuario. | `message`, `channel` |
+| `AGENT_HANDOFF_REQUIRED`| AI | El bot detecta necesidad humana. | `reason`, `last_bot_response` |
+| `CLAIM_OPENED` | Siniestros | Reporte de un nuevo siniestro. | `claim_id`, `claim_type` |
+| `CLAIM_STATUS_CHANGED` | Siniestros | Cambio en la gestión del caso. | `old_status`, `new_status` |
 
 ---
 
 ## 🛠️ Cómo agregar un nuevo Evento
 
-Cualquier desarrollador puede extender la capacidad de automatización siguiendo estos pasos:
+Cualquier desarrollador puede extender la capacidad de automatización de Yastubo siguiendo nuestra guía de ingeniería. El Bus de Eventos está diseñado para ser desacoplado:
 
 <Steps>
-1.  **Identificar el punto de negocio:** Localiza el `service.py` donde ocurre la acción importante.
-2.  **Importar el dispatcher:**
-    ```python
-    from app.core.events import notify_n8n
-    ```
-3.  **Llamar a la función:**
-    ```python
-    await notify_n8n("MY_CUSTOM_EVENT", {
-        "id": str(obj.id),
-        "status": obj.status
-    })
-    ```
-4.  **Configurar n8n:** Crea un nodo *Webhook* (POST) en n8n y usa el JSON recibido para disparar tu lógica (ej. enviar a Slack).
+1.  **Identificar el punto de negocio:** Localiza el `service.py` donde ocurre la acción.
+2.  **Importar el dispatcher:** `from app.core.events import notify_n8n`
+3.  **Llamar a la función:** Pasa el nombre del evento y un diccionario plano con la data.
+4.  **Configurar n8n:** Crea tu workflow y listo.
 </Steps>
+
+:::tip[¡Potencia Ilimitada!]
+Con esta arquitectura, puedes implementar las 18 automatizaciones de nuestro Roadmap (Zoho, WhatsApp, TikTok, Meta) en cuestión de horas. Consulta la sección de [Guías de Desarrollo](../guides/index.md) para más detalles sobre cómo crear módulos que emitan eventos personalizados.
+:::
 
 ---
 
