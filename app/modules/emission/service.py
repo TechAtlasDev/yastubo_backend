@@ -409,13 +409,13 @@ async def change_policy_status(
     from app.core.events import notify_n8n
 
     await notify_n8n(
-        "POLICY_ISSUED",
+        "POLICY_STATUS_CHANGED",
         {
             "policy_id": str(policy.id),
             "policy_number": policy.policy_number,
+            "old_status": str(old_status),
+            "new_status": str(policy.status),
             "client_id": str(policy.client_id),
-            "amount": float(policy.final_price),
-            "currency": policy.currency,
         },
     )
 

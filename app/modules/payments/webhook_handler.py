@@ -106,6 +106,18 @@ async def handle_stripe_event(event: dict, db: AsyncSession) -> None:
                     },
                 )
 
+                if transaction.attempt_count < 2:
+                    await notify_n8n(
+                        "PAYMENT_RETRY_SCHEDULED",
+                        {
+                            "transaction_id": str(transaction.id),
+                            "policy_id": str(transaction.policy_id),
+                            "attempt_number": transaction.attempt_count,
+                            "scheduled_at": datetime.utcnow().isoformat() + "Z",
+                            "amount": float(transaction.amount),
+                        },
+                    )
+
                 if transaction.attempt_count >= 2:
                     # Transition to IN_ARREARS
                     from app.modules.emission.service import change_policy_status

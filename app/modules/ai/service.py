@@ -13,6 +13,35 @@ class AIService:
         self.model = genai.GenerativeModel("gemini-1.5-flash")
         self.embedding_model = "models/text-embedding-004"
 
+    def _should_handoff(
+        self, user_message: str, assistant_text: str
+    ) -> tuple[bool, str]:
+        """Detección híbrida para transferencia a humano."""
+        KEYWORDS_HANDOFF = [
+            "humano",
+            "agente",
+            "asesor",
+            "persona real",
+            "hablar con alguien",
+            "no eres humano",
+        ]
+        PHRASES_UNCERTAIN = [
+            "lo siento, no puedo",
+            "no tengo información",
+            "te recomiendo contactar",
+            "está fuera de mi alcance",
+        ]
+
+        u_msg = user_message.lower()
+        if any(kw in u_msg for kw in KEYWORDS_HANDOFF):
+            return True, "user_requested"
+
+        a_txt = assistant_text.lower()
+        if any(ph in a_txt for ph in PHRASES_UNCERTAIN):
+            return True, "bot_uncertain"
+
+        return False, ""
+
     async def generate_embedding(self, text: str) -> List[float]:
         result = genai.embed_content(
             model=self.embedding_model, content=text, task_type="retrieval_document"
@@ -26,8 +55,6 @@ class AIService:
         query_embedding = await self.generate_embedding(query)
 
         # Search using Cosine Similarity (pgvector <-> operator)
-        # Note: In pgvector, <=> is cosine distance, <-> is Euclidean, <#> is negative dot product.
-        # SQLAlchemy pgvector provides .cosine_distance()
         stmt = (
             select(KnowledgeDocument)
             .where(KnowledgeDocument.company_id == company_id)
@@ -107,7 +134,22 @@ CONTEXTO:
         response = await self.model.generate_content_async(full_prompt)
         assistant_text = response.text
 
-        # 7. Persist the assistant response
+        # 7. Handoff Detection & Event
+        should_transfer, reason = self._should_handoff(message, assistant_text)
+        if should_transfer:
+            await notify_n8n(
+                "AGENT_HANDOFF_REQUIRED",
+                {
+                    "conversation_id": str(conversation.id),
+                    "company_id": str(company_id),
+                    "reason": reason,
+                    "last_user_message": message,
+                    "last_bot_response": assistant_text,
+                    "confidence_score": 0.0,
+                },
+            )
+
+        # 8. Persist the assistant response
         assistant_msg = ChatMessage(
             conversation_id=conversation.id,
             role="assistant",
@@ -136,6 +178,5 @@ _ai_service: Optional[AIService] = None
 def get_ai_service() -> AIService:
     global _ai_service
     if _ai_service is None:
-        # Assuming GOOGLE_API_KEY is in settings
         _ai_service = AIService(api_key=settings.GOOGLE_API_KEY)
     return _ai_service

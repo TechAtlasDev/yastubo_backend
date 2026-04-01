@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 from app.modules.claims.models import Claim, ClaimExpense
 from app.modules.claims.schemas import (
@@ -28,14 +29,25 @@ async def create_claim(
     await db.commit()
 
     # Reload with expenses to avoid lazy loading issues in response serialization
-    from sqlalchemy.orm import selectinload
-
     result = await db.execute(
         select(Claim)
         .where(Claim.id == new_claim.id)
         .options(selectinload(Claim.expenses))
     )
     new_claim = result.scalar_one()
+
+    from app.core.events import notify_n8n
+
+    await notify_n8n(
+        "CLAIM_OPENED",
+        {
+            "claim_id": str(new_claim.id),
+            "policy_id": str(new_claim.policy_id),
+            "client_id": str(new_claim.policy_id),  # Reference for n8n lookup
+            "claim_type": new_claim.claim_type,
+            "description": new_claim.description,
+        },
+    )
 
     # Pub/Sub event for creation
     await redis_client.publish(
@@ -73,13 +85,12 @@ async def update_claim_status(
             detail=f"Invalid transition from {claim.status} to {status_update.status}",
         )
 
+    old_status = claim.status
     claim.status = status_update.status
     if claim.status in [ClaimStatus.APPROVED, ClaimStatus.REJECTED]:
         claim.resolved_at = datetime.utcnow()
 
     await db.commit()
-
-    from sqlalchemy.orm import selectinload
 
     result = await db.execute(
         select(Claim).where(Claim.id == claim.id).options(selectinload(Claim.expenses))
@@ -101,6 +112,18 @@ async def update_claim_status(
         await arq_redis.enqueue_job(
             "process_approved_claim", str(claim.id), str(claim.beneficiary_id)
         )
+
+    from app.core.events import notify_n8n
+
+    await notify_n8n(
+        "CLAIM_STATUS_CHANGED",
+        {
+            "claim_id": str(claim.id),
+            "old_status": str(old_status),
+            "new_status": str(claim.status),
+            "assigned_to": str(user_id),
+        },
+    )
 
     return claim
 
@@ -127,8 +150,6 @@ async def add_claim_expense(
 
 
 async def get_claim(db: AsyncSession, claim_id: uuid.UUID) -> Claim:
-    from sqlalchemy.orm import selectinload
-
     result = await db.execute(
         select(Claim).where(Claim.id == claim_id).options(selectinload(Claim.expenses))
     )

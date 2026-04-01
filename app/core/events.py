@@ -34,8 +34,10 @@ async def notify_n8n(event_name: str, payload: Dict[str, Any]):
         url = settings.N8N_WEBHOOK_LEADS
     elif "SUBSCRIPTION" in event_name:
         url = settings.N8N_WEBHOOK_SUBSCRIPTIONS
-    elif any(k in event_name for k in ["COMMENT", "CHAT"]):
+    elif any(k in event_name for k in ["COMMENT", "CHAT", "AGENT", "HANDOFF"]):
         url = settings.N8N_WEBHOOK_CHAT
+    elif "CLAIM" in event_name:
+        url = settings.N8N_WEBHOOK_CLAIMS
     elif "PAYMENT" in event_name:
         url = settings.N8N_WEBHOOK_PAYMENTS
     elif "POLICY" in event_name:
