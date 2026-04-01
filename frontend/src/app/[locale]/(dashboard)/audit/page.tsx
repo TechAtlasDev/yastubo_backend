@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { AuditLogDetailModal } from "@/components/audit/audit-log-detail-modal";
 import { 
     Table, 
     TableBody, 
@@ -35,6 +36,7 @@ import {
 export default function AuditPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [selectedLog, setSelectedLog] = useState<any>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["audit-logs", page, search],
@@ -43,6 +45,11 @@ export default function AuditPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
+      <AuditLogDetailModal 
+        isOpen={!!selectedLog} 
+        onClose={() => setSelectedLog(null)} 
+        log={selectedLog} 
+      />
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -168,8 +175,13 @@ export default function AuditPage() {
                     {log.ip_address || "127.0.0.1"}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Eye className="w-4 h-4 text-neutral-400" />
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => setSelectedLog(log)}
+                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity bg-neutral-100/50 hover:bg-primary-50 hover:text-primary-600"
+                    >
+                        <Eye className="w-4 h-4" />
                     </Button>
                   </TableCell>
                 </TableRow>

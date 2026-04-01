@@ -294,6 +294,42 @@ async def create_connect_onboarding(
     return {"url": link["url"], "account_id": acc.stripe_account_id}
 
 
+async def get_connect_status(
+    db: AsyncSession, stripe: StripeClient, user: User
+) -> dict:
+    res = await db.execute(
+        select(StripeAccount).where(StripeAccount.user_id == user.id)
+    )
+    acc = res.scalar_one_or_none()
+
+    if not acc:
+        return {
+            "is_verified": False,
+            "onboarding_complete": False,
+            "stripe_account_id": None,
+            "charges_enabled": False,
+            "payouts_enabled": False,
+            "details_submitted": False,
+        }
+
+    # Fetch account details from Stripe
+    stripe_acc = await stripe.get_connect_account(acc.stripe_account_id)
+
+    # Update local record if changed
+    acc.onboarding_complete = stripe_acc.get("details_submitted", False)
+    acc.is_verified = stripe_acc.get("charges_enabled", False)
+    await db.commit()
+
+    return {
+        "is_verified": stripe_acc.get("charges_enabled", False),
+        "onboarding_complete": stripe_acc.get("details_submitted", False),
+        "stripe_account_id": acc.stripe_account_id,
+        "charges_enabled": stripe_acc.get("charges_enabled", False),
+        "payouts_enabled": stripe_acc.get("payouts_enabled", False),
+        "details_submitted": stripe_acc.get("details_submitted", False),
+    }
+
+
 async def get_reseller_dashboard(db: AsyncSession, company_id: uuid.UUID) -> dict:
     from sqlalchemy import func
 

@@ -58,6 +58,15 @@ class ConnectOnboardingResponse(BaseModel):
     account_id: str
 
 
+class StripeConnectStatus(BaseModel):
+    is_verified: bool
+    onboarding_complete: bool
+    stripe_account_id: Optional[str]
+    charges_enabled: bool
+    payouts_enabled: bool
+    details_submitted: bool
+
+
 class ResellerDashboardResponse(BaseModel):
     total_sales_count: int
     total_sales_amount: Decimal

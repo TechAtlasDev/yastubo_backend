@@ -23,6 +23,7 @@ from app.modules.payments.schemas import (
     ConnectOnboardingResponse,
     ResellerDashboardResponse,
     RetryPaymentResponse,
+    StripeConnectStatus,
 )
 from app.modules.payments import service, webhook_handler
 from app.modules.payments.stripe_client import get_stripe_client, StripeClient
@@ -86,6 +87,18 @@ async def create_connect_onboarding(
     current_user: User = Depends(get_current_user),
 ):
     return await service.create_connect_onboarding(db, stripe_c, current_user)
+
+
+@router.get("/connect/status", response_model=StripeConnectStatus)
+async def get_stripe_connect_status(
+    db: AsyncSession = Depends(get_db),
+    stripe_c: StripeClient = Depends(get_stripe_client),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Check the current status of the user's Stripe Connect account.
+    """
+    return await service.get_connect_status(db, stripe_c, current_user)
 
 
 @router.post(

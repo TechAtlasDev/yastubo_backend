@@ -101,6 +101,9 @@ class StripeClient:
             metadata=metadata,
         )
 
+    async def get_connect_account(self, account_id: str) -> dict:
+        return await asyncio.to_thread(stripe.Account.retrieve, account_id)
+
     async def create_account_link(
         self, account_id: str, refresh_url: str, return_url: str
     ) -> dict:

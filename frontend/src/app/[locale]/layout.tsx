@@ -3,6 +3,7 @@ import { Outfit, Fira_Code } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { QueryProvider } from "@/providers/query-provider";
+import { StripeProvider } from "@/providers/stripe-provider";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -51,7 +52,9 @@ export default async function RootLayout({
       <body className="min-h-screen font-sans bg-[var(--color-neutral-50)] text-[var(--color-neutral-900)]">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <QueryProvider>
-            {children}
+            <StripeProvider>
+              {children}
+            </StripeProvider>
             <Toaster position="top-right" closeButton richColors />
           </QueryProvider>
         </NextIntlClientProvider>

@@ -13,8 +13,14 @@ import {
 export interface Transaction {
   id: string;
   policy_id: string;
+  stripe_payment_intent_id?: string;
+  stripe_invoice_id?: string;
   amount: number;
-  status: 'PENDING' | 'PAID' | 'FAILED';
+  currency: string;
+  status: 'PENDING' | 'PAID' | 'FAILED' | 'SUCCEEDED';
+  payment_type: string;
+  processed_at?: string;
+  client_secret?: string;
   created_at: string;
 }
 
@@ -25,6 +31,7 @@ export interface AuditLog {
   entity: string;
   entity_id: string;
   ip_address: string;
+  details?: Record<string, any>;
   created_at: string;
 }
 
@@ -84,6 +91,15 @@ export const productsApi = {
   }
 };
 
+export interface StripeConnectStatus {
+  is_verified: boolean;
+  onboarding_complete: boolean;
+  stripe_account_id: string;
+  charges_enabled: boolean;
+  payouts_enabled: boolean;
+  details_submitted: boolean;
+}
+
 export const financeApi = {
   currencies: async () => {
     const { data } = await apiClient.get("/finance/currencies");
@@ -99,6 +115,22 @@ export const financeApi = {
   },
   onboardingUrl: async (): Promise<{ url: string }> => {
     const { data } = await apiClient.post("/payments/connect/onboarding");
+    return data;
+  },
+  getConnectStatus: async (): Promise<StripeConnectStatus> => {
+    const { data } = await apiClient.get("/payments/connect/status");
+    return data;
+  },
+  createPaymentIntent: async (payload: { policy_id: string; save_payment_method?: boolean }): Promise<Transaction> => {
+    const { data } = await apiClient.post("/payments/intent", payload);
+    return data;
+  },
+  createSubscription: async (payload: { 
+    policy_id: string; 
+    stripe_payment_method_id: string; 
+    billing_anchor_day?: number 
+  }) => {
+    const { data } = await apiClient.post("/payments/subscription", payload);
     return data;
   }
 };

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, UTC
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.core.database import SessionLocal
@@ -145,7 +145,7 @@ async def process_approved_claim(ctx, claim_id: str, beneficiary_id: str):
         beneficiary = result.scalar_one_or_none()
         if beneficiary:
             beneficiary.deceased_flag = True
-            beneficiary.deceased_reported_at = datetime.utcnow()
+            beneficiary.deceased_reported_at = datetime.now(UTC)
             beneficiary.coverage_status = "CLAIMED"
             await db.commit()
 

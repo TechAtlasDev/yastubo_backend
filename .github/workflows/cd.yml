@@ -56,21 +56,22 @@ jobs:
     if: >-
       (github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')) &&
-      secrets.DEPLOY_SSH_HOST != '' &&
-      secrets.DEPLOY_SSH_USER != '' &&
-      secrets.DEPLOY_SSH_KEY != ''
+      secrets.VPS_IP != '' &&
+      secrets.VPS_USER != '' &&
+      secrets.VPS_SSH_KEY != ''
     runs-on: ubuntu-latest
 
     steps:
       - name: Deploy on server via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.DEPLOY_SSH_HOST }}
-          username: ${{ secrets.DEPLOY_SSH_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -e
-            cd ${{ secrets.DEPLOY_PATH }}
+            cd ~/yastubo_backend
             docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
             docker compose pull app worker
             docker compose up -d app worker
+            docker compose exec -T app alembic upgrade head

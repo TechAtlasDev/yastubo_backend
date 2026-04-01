@@ -9,6 +9,7 @@ import { financeApi, Transaction } from "@/lib/api/modules";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { ResellerFinancialPanel } from "@/components/finance/reseller-financial-panel";
 
 export default function FinancePage() {
   const t = useTranslations("dashboard");
@@ -38,21 +39,9 @@ export default function FinancePage() {
             Monitorea ingresos, comisiones y configuración de monedas
           </p>
         </div>
-        <Button 
-          className="bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)] text-white shadow-lg shadow-primary-500/20"
-          onClick={async () => {
-            try {
-              const { url } = await financeApi.onboardingUrl();
-              window.open(url, '_blank');
-            } catch (error) {
-              console.error("Stripe Onboarding error", error);
-            }
-          }}
-        >
-          <CreditCard className="w-5 h-5 mr-2" />
-          Stripe Onboarding
-        </Button>
       </div>
+
+      <ResellerFinancialPanel />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <GlassCard className="p-6 h-40 flex flex-col justify-between bg-[var(--color-primary-500)] text-white border-none shadow-glass-primary">

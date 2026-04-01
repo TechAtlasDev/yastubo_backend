@@ -24,7 +24,7 @@ async def test_upload_pdf_to_rag(client, admin_user, default_company):
     with patch(
         "app.modules.ai.service.AIService.generate_embedding", new_callable=AsyncMock
     ) as mock_embed:
-        mock_embed.return_value = [0.1] * 768
+        mock_embed.return_value = [0.1] * 3072
 
         files = {"file": ("test_policy.pdf", pdf_buffer, "application/pdf")}
         response = await client.post(

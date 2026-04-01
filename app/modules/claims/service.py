@@ -1,6 +1,6 @@
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, UTC
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -23,7 +23,7 @@ async def create_claim(
     new_claim = Claim(
         **claim_in.model_dump(),
         status=ClaimStatus.REPORTED,
-        reported_at=datetime.utcnow(),
+        reported_at=datetime.now(UTC),
     )
     db.add(new_claim)
     await db.commit()
@@ -87,7 +87,7 @@ async def update_claim_status(
     old_status = claim.status
     claim.status = status_update.status
     if claim.status in [ClaimStatus.APPROVED, ClaimStatus.REJECTED]:
-        claim.resolved_at = datetime.utcnow()
+        claim.resolved_at = datetime.now(UTC)
 
     await db.commit()
 

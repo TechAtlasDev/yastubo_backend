@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, UTC
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -113,7 +113,7 @@ async def handle_stripe_event(event: dict, db: AsyncSession) -> None:
                             "transaction_id": str(transaction.id),
                             "policy_id": str(transaction.policy_id),
                             "attempt_number": transaction.attempt_count,
-                            "scheduled_at": datetime.utcnow().isoformat() + "Z",
+                            "scheduled_at": datetime.now(UTC).isoformat() + "Z",
                             "amount": float(transaction.amount),
                         },
                     )

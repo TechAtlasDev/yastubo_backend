@@ -18,9 +18,27 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EmissionAssistant } from "@/components/emission/emission-assistant";
 
 export default function EmissionPage() {
   const [activeTab, setActiveTab] = useState("active");
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+
+  if (isAssistantOpen) {
+    return (
+      <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" onClick={() => setIsAssistantOpen(false)}>
+            Volver
+          </Button>
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <FilePlus className="w-5 h-5 text-primary-600" /> Nuevo Proceso de Emisión
+          </h1>
+        </div>
+        <EmissionAssistant onComplete={() => setIsAssistantOpen(false)} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -43,7 +61,7 @@ export default function EmissionPage() {
             <Users className="w-4 h-4 mr-2" />
             Carga Masiva (Excel)
           </Button>
-          <Button className="h-11 bg-primary-600 hover:bg-primary-700 text-white shadow-md">
+          <Button className="h-11 bg-primary-600 hover:bg-primary-700 text-white shadow-md" onClick={() => setIsAssistantOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nueva Emisión Individual
           </Button>
@@ -108,7 +126,7 @@ export default function EmissionPage() {
             <p className="text-neutral-500 max-w-sm mt-2">
                 Aún no hay pólizas registradas en este estado. Utiliza el botón de "Nueva Emisión" para registrar un titular y activar un plan.
             </p>
-            <Button className="mt-8 bg-primary-600 text-white px-8 rounded-xl h-11">
+            <Button className="mt-8 bg-primary-600 text-white px-8 rounded-xl h-11" onClick={() => setIsAssistantOpen(true)}>
                 Lanzar Asistente de Emisión
             </Button>
         </GlassCard>
