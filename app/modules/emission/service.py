@@ -92,7 +92,10 @@ def calculate_age(birth_date: date, reference_date: date) -> int:
 
 @audited(action="POLICY_ISSUED", entity="Policy")
 async def issue_policy(
-    db: AsyncSession, data: EmissionRequest, issued_by: uuid.UUID
+    db: AsyncSession,
+    data: EmissionRequest,
+    issued_by: uuid.UUID,
+    company_id: uuid.UUID,
 ) -> Policy:
     # 1. Get Client
     client = await get_client(db, data.client_id)
@@ -583,6 +586,7 @@ async def bulk_issue_policy(
     data: BulkEmissionRequest,
     file_content: bytes,
     issued_by: uuid.UUID,
+    company_id: uuid.UUID,
 ) -> BulkEmissionResponse:
     # 1. Read Excel
     try:

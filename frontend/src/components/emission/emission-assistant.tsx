@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { productsApi } from "@/lib/api/modules";
+import { productsApi } from "@/lib/api/products";
 import { emissionApi } from "@/lib/api/emission";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 

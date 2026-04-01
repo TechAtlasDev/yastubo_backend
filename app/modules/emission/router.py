@@ -6,7 +6,7 @@ from app.modules.emission.passbook_service import get_passbook_service, Passbook
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.modules.auth.dependencies import require_role
+from app.modules.auth.dependencies import require_role, get_current_company_id
 from app.modules.auth.models import User
 from app.modules.emission import schemas, service
 from app.modules.emission.pdf_service import PDFService
@@ -23,8 +23,8 @@ async def register_client(
     data: schemas.ClientCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role("ADMIN", "VENDEDOR")),
+    company_id: uuid.UUID = Depends(get_current_company_id),
 ):
-    company_id = current_user.companies[0].id
     return await service.register_client(db, data, current_user.id, company_id)
 
 
@@ -38,14 +38,17 @@ async def get_client(
 
 
 @router.post(
-    "/issue", response_model=schemas.PolicyResponse, status_code=status.HTTP_201_CREATED
+    "/issue",
+    response_model=schemas.PolicyResponse,
+    status_code=status.HTTP_201_CREATED,
 )
 async def issue_policy(
     data: schemas.EmissionRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role("ADMIN", "VENDEDOR")),
+    company_id: uuid.UUID = Depends(get_current_company_id),
 ):
-    return await service.issue_policy(db, data, current_user.id)
+    return await service.issue_policy(db, data, current_user.id, company_id)
 
 
 @router.get("/policies", response_model=List[schemas.PolicyResponse])
@@ -55,11 +58,11 @@ async def list_policies(
     client_id: Optional[uuid.UUID] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role("ADMIN", "VENDEDOR")),
+    company_id: uuid.UUID = Depends(get_current_company_id),
 ):
     """
     Lista las pólizas de la compañía del usuario. Soporta filtrado por estado, búsqueda o ID de cliente.
     """
-    company_id = current_user.companies[0].id
     return await service.list_policies(
         db, company_id, status=status, search=search, client_id=client_id
     )
@@ -69,8 +72,8 @@ async def list_policies(
 async def get_emission_stats(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role("ADMIN", "VENDEDOR")),
+    company_id: uuid.UUID = Depends(get_current_company_id),
 ):
-    company_id = current_user.companies[0].id
     return await service.get_stats(db, company_id)
 
 
@@ -133,13 +136,14 @@ async def get_policy_passbook(
     db: AsyncSession = Depends(get_db),
     pass_service: PassbookService = Depends(get_passbook_service),
     current_user: User = Depends(require_role("ADMIN", "VENDEDOR")),
+    company_id: uuid.UUID = Depends(get_current_company_id),
 ):
     policy = await service.get_policy(db, policy_id)
     if not policy:
         raise HTTPException(status_code=404, detail="Policy not found")
 
     # Multi-tenancy check
-    if not any(ws.id == policy.company_id for ws in current_user.companies):
+    if policy.company_id != company_id:
         raise HTTPException(
             status_code=403, detail="You do not have access to this policy"
         )
@@ -166,6 +170,7 @@ async def bulk_upload_beneficiaries(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role("ADMIN", "VENDEDOR")),
+    company_id: uuid.UUID = Depends(get_current_company_id),
 ):
     """
     Bulk upload beneficiaries from an Excel file.
@@ -183,4 +188,6 @@ async def bulk_upload_beneficiaries(
     )
 
     file_content = await file.read()
-    return await service.bulk_issue_policy(db, data, file_content, current_user.id)
+    return await service.bulk_issue_policy(
+        db, data, file_content, current_user.id, company_id
+    )
