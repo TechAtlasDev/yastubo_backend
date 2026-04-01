@@ -93,28 +93,41 @@ async def handle_stripe_event(event: dict, db: AsyncSession) -> None:
                     policy, policy.client, transaction.attempt_count
                 )
 
-            if transaction.attempt_count >= 2:
-                # Transition to IN_ARREARS
-                from app.modules.emission.service import change_policy_status
-                from app.modules.emission.schemas import StatusTransitionRequest
+                from app.core.events import notify_n8n
 
-                await change_policy_status(
-                    db,
-                    transaction.policy_id,
-                    StatusTransitionRequest(
-                        target_status=PolicyStatus.IN_ARREARS,
-                        reason="Payment failed multiple times",
-                    ),
-                    transaction.policy.issued_by,
+                await notify_n8n(
+                    "PAYMENT_FAILED",
+                    {
+                        "transaction_id": str(transaction.id),
+                        "policy_id": str(transaction.policy_id),
+                        "amount": float(transaction.amount),
+                        "error": transaction.last_error,
+                        "attempt": transaction.attempt_count,
+                    },
                 )
-                audit = AuditLog(
-                    company_id=transaction.company_id,
-                    action="PAYMENT_FAILED_MAX_RETRIES",
-                    entity="Transaction",
-                    user_id=None,
-                    details=f"Payment failed max retries for {pi_id}",
-                )
-                db.add(audit)
+
+                if transaction.attempt_count >= 2:
+                    # Transition to IN_ARREARS
+                    from app.modules.emission.service import change_policy_status
+                    from app.modules.emission.schemas import StatusTransitionRequest
+
+                    await change_policy_status(
+                        db,
+                        transaction.policy_id,
+                        StatusTransitionRequest(
+                            target_status=PolicyStatus.IN_ARREARS,
+                            reason="Payment failed multiple times",
+                        ),
+                        transaction.policy.issued_by,
+                    )
+                    audit = AuditLog(
+                        company_id=transaction.company_id,
+                        action="PAYMENT_FAILED_MAX_RETRIES",
+                        entity="Transaction",
+                        user_id=None,
+                        details=f"Payment failed max retries for {pi_id}",
+                    )
+                    db.add(audit)
 
             audit = AuditLog(
                 company_id=transaction.company_id,
@@ -220,6 +233,4 @@ async def handle_stripe_event(event: dict, db: AsyncSession) -> None:
                 db.add(StripeEvent(event_id=event_id, event_type=event_type))
                 await db.commit()
     else:
-        # For unhandled events, we still record them as "seen" to avoid redundant processing if we add them later
-        # OR we just log them. Let's just log them for now and not record as processed unless we actually do something.
         logger.debug(f"Unhandled Stripe event type: {event_type}")

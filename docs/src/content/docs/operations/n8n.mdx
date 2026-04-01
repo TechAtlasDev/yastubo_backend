@@ -1,0 +1,79 @@
+---
+title: Integración con n8n
+description: Configuración y uso del Bus de Eventos para automatizaciones externas.
+---
+
+import { Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Yastubo Backend utiliza un **Bus de Eventos Asíncrono** diseñado para disparar flujos de trabajo en n8n de forma transparente y sin penalizar el rendimiento del core (patrón *fire-and-forget*).
+
+## Arquitectura de Integración
+
+El flujo de datos sigue un modelo de "Gritar y Olvidar":
+
+**Backend (Service)** ➔ `notify_n8n()` ➔ `asyncio.create_task` ➔ **n8n Webhook** ➔ `[Zoho/WhatsApp/Sheets]`
+
+---
+
+## ⚙️ Configuración del Entorno
+
+Para activar el bus de eventos, debes configurar las URLs de tus webhooks de n8n en el archivo `.env`. El sistema soporta enrutamiento específico por tipo de negocio.
+
+<Tabs>
+  <TabItem label="Configuración General">
+    ```bash
+    # Fallback para todos los eventos no específicos
+    N8N_WEBHOOK_URL="https://n8n.tu-dominio.com/webhook/general"
+    ```
+  </TabItem>
+  <TabItem label="Configuración por Módulo">
+    ```bash
+    # Enrutamiento dinámico según el tipo de evento
+    N8N_WEBHOOK_LEADS="https://n8n.tu-dominio.com/webhook/leads"
+    N8N_WEBHOOK_PAYMENTS="https://n8n.tu-dominio.com/webhook/payments"
+    N8N_WEBHOOK_POLICIES="https://n8n.tu-dominio.com/webhook/policies"
+    ```
+  </TabItem>
+</Tabs>
+
+---
+
+## 📡 Eventos Core Implementados
+
+Actualmente, el sistema emite automáticamente los siguientes eventos:
+
+| Evento | Origen | Payload Clave |
+| :--- | :--- | :--- |
+| `CLIENT_REGISTERED` | Emisión | `client_id`, `email`, `company_id` |
+| `POLICY_ISSUED` | Emisión | `policy_number`, `amount`, `currency` |
+| `PAYMENT_FAILED` | Pagos | `transaction_id`, `error`, `attempt_count` |
+
+---
+
+## 🛠️ Cómo agregar un nuevo Evento
+
+Cualquier desarrollador puede extender la capacidad de automatización siguiendo estos pasos:
+
+<Steps>
+1.  **Identificar el punto de negocio:** Localiza el `service.py` donde ocurre la acción importante.
+2.  **Importar el dispatcher:**
+    ```python
+    from app.core.events import notify_n8n
+    ```
+3.  **Llamar a la función:**
+    ```python
+    await notify_n8n("MY_CUSTOM_EVENT", {
+        "id": str(obj.id),
+        "status": obj.status
+    })
+    ```
+4.  **Configurar n8n:** Crea un nodo *Webhook* (POST) en n8n y usa el JSON recibido para disparar tu lógica (ej. enviar a Slack).
+</Steps>
+
+---
+
+## 🛡️ Robustez y Límites
+
+-   **Timeout Estricto:** El backend espera máximo **3 segundos** por n8n. Si n8n no responde, el backend cancela la petición para proteger la salud de la API.
+-   **No Bloqueante:** Las llamadas se ejecutan en una tarea de `asyncio` separada. Un fallo en n8n **nunca** hará que falle una transacción en Yastubo.
+-   **Logging:** Los fallos de conexión (HTTP 4xx/5xx) se registran con el tag `[n8n]` en los logs del sistema para facilitar el debugging.

@@ -1,4 +1,4 @@
-from typing import Literal, List
+from typing import Literal, List, Optional
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -59,6 +59,9 @@ class Settings(BaseSettings):
 
     # n8n Webhooks
     N8N_WEBHOOK_URL: str = ""
+    N8N_WEBHOOK_LEADS: Optional[str] = None
+    N8N_WEBHOOK_PAYMENTS: Optional[str] = None
+    N8N_WEBHOOK_POLICIES: Optional[str] = None
 
     # Apple Wallet
     APPLE_PASS_CERT_PATH: str = ""

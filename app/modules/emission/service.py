@@ -406,6 +406,19 @@ async def change_policy_status(
     # Best-effort, non-blocking CRM stage update
     asyncio.create_task(update_policy_stage_in_crm(get_zoho_client(), policy))
 
+    from app.core.events import notify_n8n
+
+    await notify_n8n(
+        "POLICY_ISSUED",
+        {
+            "policy_id": str(policy.id),
+            "policy_number": policy.policy_number,
+            "client_id": str(policy.client_id),
+            "amount": float(policy.final_price),
+            "currency": policy.currency,
+        },
+    )
+
     return policy
 
 
