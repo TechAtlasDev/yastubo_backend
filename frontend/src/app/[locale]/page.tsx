@@ -1,4 +1,5 @@
 import { useTranslations } from "next-intl";
+import { Link } from "@/navigation";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Button } from "@/components/ui/button";
 
@@ -14,8 +15,11 @@ export default function HomePage() {
         <p className="text-lg text-[var(--color-neutral-500)] mb-8">
           {t("description")}
         </p>
-        <Button className="bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)] text-white">
-          Continuar
+        <Button
+          asChild
+          className="bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)] text-white"
+        >
+          <Link href="/organizations">{t("continue")}</Link>
         </Button>
       </GlassCard>
     </main>

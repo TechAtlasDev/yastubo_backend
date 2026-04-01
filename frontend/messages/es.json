@@ -1,10 +1,24 @@
 {
   "dashboard": {
     "title": "Panel de Control",
-    "description": "Bienvenido a Yastubo Admin"
+    "description": "Bienvenido a Yastubo Admin",
+    "continue": "Continuar"
   },
   "auth": {
     "login": "Iniciar sesión",
-    "logout": "Cerrar sesión"
+    "logout": "Cerrar sesión",
+    "register_title": "Crear una cuenta",
+    "register_subtitle": "Ingresa tus datos para registrarte",
+    "full_name": "Nombre Completo",
+    "email": "Correo Electrónico",
+    "password": "Contraseña",
+    "phone": "Teléfono",
+    "optional": "opcional",
+    "register_button": "Crear cuenta",
+    "registering": "Creando cuenta...",
+    "already_have_account": "¿Ya tienes una cuenta?",
+    "login_link": "Inicia sesión",
+    "dont_have_account": "¿No tienes una cuenta?",
+    "register_link": "Regístrate"
   }
 }

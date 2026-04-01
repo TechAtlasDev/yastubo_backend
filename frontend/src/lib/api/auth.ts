@@ -18,4 +18,8 @@ export const authApi = {
     const { data } = await apiClient.post("/auth/login", credentials);
     return data;
   },
+  register: async (userData: any) => {
+    const { data } = await apiClient.post("/auth/register", userData);
+    return data;
+  },
 };

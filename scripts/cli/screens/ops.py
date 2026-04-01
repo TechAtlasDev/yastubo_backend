@@ -31,7 +31,8 @@ class OpsScreen(Vertical):
         with Horizontal(id="ops-buttons"):
             yield Button("📦 make setup", id="btn-make-setup", variant="primary")
             yield Button("🛡️ make build", id="btn-make-build", variant="warning")
-            yield Button("🔍 make lint", id="btn-make-lint")
+            yield Button("� Assign ADMIN", id="btn-assign-admin", variant="success")
+            yield Button("�🔍 make lint", id="btn-make-lint")
             yield Button("🔥 make smoke", id="btn-make-smoke", variant="error")
             yield Button("📥 uv sync", id="btn-uv-sync")
             yield Button("🗑 Limpiar Registro", id="btn-clear-log", variant="default")
@@ -54,6 +55,7 @@ class OpsScreen(Vertical):
             "btn-make-lint": "make lint",
             "btn-make-smoke": "make smoke",
             "btn-uv-sync": "uv sync --dev",
+            "btn-assign-admin": "uv run python -c \"import asyncio; from app.core.database import SessionLocal; from app.modules.auth.models import User, Role; from sqlalchemy import select; async def run(): async with SessionLocal() as db: u = (await db.execute(select(User).where(User.email == 'gjjimenezdeza@gmail.com'))).scalar_one_or_none(); r = (await db.execute(select(Role).where(Role.name == 'ADMIN'))).scalar_one_or_none(); if u and r: u.roles.append(r) if r not in u.roles else None; await db.commit(); print('✅ ADMIN ROLES UPDATED'); else: print('❌ USER OR ROLE NOT FOUND'); asyncio.run(run())\"",
         }
 
         if button_id in cmd_map:

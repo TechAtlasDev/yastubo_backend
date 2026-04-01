@@ -1,12 +1,41 @@
-# Python-generated files
+# --- Python & Quality Gate ---
 __pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 
-# Virtual environments
-.venv
+# --- Virtual Environments ---
+.venv/
+venv/
+env/
 
-TODO/
+# --- Environment & Secrets (CRITICAL) ---
+.env
+.env.*
+!.env.example
+
+# --- IDEs & OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# --- Documentation (Astro/Starlight) ---
+docs/node_modules/
+docs/dist/
+docs/.astro/
+
+# --- Frontend (Node/Vite) ---
+frontend/node_modules/
+frontend/dist/
+
+# --- Backups & Logs ---
+*.sql
+*.log
+*.bak
+dump.rdb

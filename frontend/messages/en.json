@@ -1,10 +1,24 @@
 {
   "dashboard": {
     "title": "Dashboard",
-    "description": "Welcome to Yastubo Admin"
+    "description": "Welcome to Yastubo Admin",
+    "continue": "Continue"
   },
   "auth": {
     "login": "Log in",
-    "logout": "Log out"
+    "logout": "Log out",
+    "register_title": "Create an account",
+    "register_subtitle": "Enter your details to sign up",
+    "full_name": "Full Name",
+    "email": "Email",
+    "password": "Password",
+    "phone": "Phone",
+    "optional": "optional",
+    "register_button": "Create account",
+    "registering": "Creating account...",
+    "already_have_account": "Already have an account?",
+    "login_link": "Log in",
+    "dont_have_account": "Don't have an account?",
+    "register_link": "Sign up"
   }
 }

@@ -58,7 +58,10 @@ class Policy(Base):
 
 ## Arquitectura de Alto Nivel
 
-> [FLOW: El cliente envía una petición vía REST API que atraviesa el Middleware de Seguridad y Auditoría. La petición es enrutada al Módulo correspondiente (ej. Emission), el cual interactúa con la Base de Datos (PostgreSQL) para persistencia y Redis para caché. Finalmente, se disparan tareas asíncronas hacia servicios externos como Stripe, Zoho CRM y Gemini AI.]
+<p align="center">
+  <img src="https://res.cloudinary.com/de1xmnmeq/image/upload/v1774964851/78a70d24-b8b7-40d8-a217-681ea340c7a6.png" alt="Yastubo Architecture Flow" width="100%" />
+</p>
+
 
 ---
 

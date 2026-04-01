@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useTranslations } from "next-intl";
-import { useRouter } from "@/navigation";
+import { useRouter, Link } from "@/navigation";
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/lib/store/auth.store";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -132,6 +132,14 @@ export function LoginForm() {
           </Button>
         </form>
       </Form>
+      <div className="mt-6 text-center text-sm">
+        <p className="text-[var(--color-neutral-500)]">
+          {t("dont_have_account")}{" "}
+          <Link href="/register" className="font-semibold text-primary hover:underline">
+            {t("register_link")}
+          </Link>
+        </p>
+      </div>
     </GlassCard>
   );
 }

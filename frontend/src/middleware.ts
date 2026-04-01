@@ -13,6 +13,7 @@ export default function middleware(request: NextRequest) {
   // Paths that are public (login, etc)
   const isPublicPage =
     pathname.includes("/login") ||
+    pathname.includes("/register") ||
     pathname === "/" ||
     pathname === "/en" ||
     pathname === "/es";
