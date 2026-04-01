@@ -10,8 +10,8 @@ from app.modules.ai.models import KnowledgeDocument, ChatConversation, ChatMessa
 class AIService:
     def __init__(self, api_key: str):
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
-        self.embedding_model = "models/text-embedding-004"
+        self.model = genai.GenerativeModel("gemini-2.5-flash")
+        self.embedding_model = "models/gemini-embedding-001"
 
     def _should_handoff(
         self, user_message: str, assistant_text: str

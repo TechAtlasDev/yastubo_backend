@@ -18,8 +18,8 @@ class KnowledgeDocument(BaseModel):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
 
-    # Gemini embedding (768 dimensions for text-embedding-004)
-    embedding: Mapped[Optional[Any]] = mapped_column(Vector(768), nullable=True)
+    # Gemini embedding (3072 dimensions for gemini-embedding-001)
+    embedding: Mapped[Optional[Any]] = mapped_column(Vector(3072), nullable=True)
 
     metadata_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     source_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
