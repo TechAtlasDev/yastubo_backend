@@ -1,7 +1,9 @@
 import uuid
 from typing import List
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from pypdf import PdfReader
+import io
 from app.core.database import get_db
 from app.modules.auth.dependencies import (
     get_current_user,
@@ -19,6 +21,51 @@ from app.modules.ai.service import get_ai_service, AIService
 from app.modules.ai.models import KnowledgeDocument
 
 router = APIRouter(prefix="/ai", tags=["AI"])
+
+
+@router.post("/knowledge/upload", response_model=KnowledgeDocumentResponse)
+async def upload_knowledge_pdf(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    company_id: uuid.UUID = Depends(get_current_company_id),
+    ai_service: AIService = Depends(get_ai_service),
+    current_user: User = Depends(require_role("ADMIN")),
+):
+    """Extrae texto de un PDF y lo carga en el sistema de conocimiento (RAG)."""
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Solo se permiten archivos PDF.")
+
+    try:
+        content = await file.read()
+        pdf_reader = PdfReader(io.BytesIO(content))
+        extracted_text = ""
+        for page in pdf_reader.pages:
+            extracted_text += page.extract_text() + "\n"
+
+        if not extracted_text.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="No se pudo extraer texto legible del PDF.",
+            )
+
+        # Generate embedding for the extracted text
+        embedding = await ai_service.generate_embedding(extracted_text)
+
+        doc = KnowledgeDocument(
+            company_id=company_id,
+            title=file.filename,
+            content=extracted_text,
+            embedding=embedding,
+            metadata_json={"filename": file.filename, "size": len(content)},
+        )
+        db.add(doc)
+        await db.commit()
+        await db.refresh(doc)
+        return doc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500, detail=f"Error procesando el PDF: {str(exc)}"
+        )
 
 
 @router.post("/knowledge", response_model=KnowledgeDocumentResponse)

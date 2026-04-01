@@ -34,6 +34,7 @@ dependencies = [
     "pkpass>=0.1.1",
     "pandas>=3.0.1",
     "openpyxl>=3.1.5",
+    "pypdf>=6.9.2",
 ]
 
 [dependency-groups]
@@ -45,6 +46,7 @@ dev = [
     "aiosqlite>=0.20.0",
     "fakeredis[aioredis]>=2.26.0",
     "textual>=0.52.0",
+    "reportlab>=4.4.10",
 ]
 
 [tool.pytest.ini_options]

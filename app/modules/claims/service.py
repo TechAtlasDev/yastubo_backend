@@ -44,7 +44,6 @@ async def create_claim(
             "claim_id": str(new_claim.id),
             "policy_id": str(new_claim.policy_id),
             "client_id": str(new_claim.policy_id),  # Reference for n8n lookup
-            "claim_type": new_claim.claim_type,
             "description": new_claim.description,
         },
     )
