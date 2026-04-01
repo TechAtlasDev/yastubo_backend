@@ -79,6 +79,8 @@ export default defineConfig({
 						{ label: 'Escalabilidad', slug: 'operations/scaling' },
 						{ label: 'Monitoreo', slug: 'operations/monitoring' },
 						{ label: 'CI/CD', slug: 'operations/cicd' },
+						{ label: 'Migraciones', slug: 'operations/migrations' },
+						{ label: 'Integración con n8n', slug: 'operations/n8n' },
 					],
 				},
 				{
