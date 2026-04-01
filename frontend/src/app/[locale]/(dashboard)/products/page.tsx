@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Package, Info, ArrowUpRight } from "lucide-react";
 import { Link } from "@/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { productsApi } from "@/lib/api/modules";
+import { productsApi } from "@/lib/api/products";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ProductDeepView } from "@/components/products/product-deep-view";

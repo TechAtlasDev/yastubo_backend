@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { productsApi } from "@/lib/api/modules";
+import { productsApi } from "@/lib/api/products";
 import { PlanVersion, PriceCalculationResponse } from "@/lib/api/types/catalog";
 import { 
   Dialog, 

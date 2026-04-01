@@ -72,25 +72,6 @@ export const aiApi = {
   },
 };
 
-export const productsApi = {
-  list: async (activeOnly = true): Promise<Product[]> => {
-    const { data } = await apiClient.get("/products/", {
-      params: { active_only: activeOnly }
-    });
-    return data;
-  },
-  
-  get: async (id: string): Promise<Product> => {
-    const { data } = await apiClient.get(`/products/${id}`);
-    return data;
-  },
-
-  calculatePrice: async (params: PriceCalculationRequest): Promise<PriceCalculationResponse> => {
-    const { data } = await apiClient.post("/plans/calculate-price", params);
-    return data;
-  }
-};
-
 export interface StripeConnectStatus {
   is_verified: boolean;
   onboarding_complete: boolean;

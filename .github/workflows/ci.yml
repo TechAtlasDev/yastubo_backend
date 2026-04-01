@@ -1,12 +1,18 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   pull_request:
     branches: [main, develop]
   push:
     branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
+  # 1. QUALITY GATE: Tests and Lints
   quality-gate:
     runs-on: ubuntu-latest
     env:
@@ -40,3 +46,60 @@ jobs:
 
       - name: Build quality gate (lint + tests)
         run: uv run python scripts/build.py
+
+  # 2. DOCKER BUILD: Build and push to GHCR (Only on push to main)
+  docker:
+    needs: quality-gate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/yastubo-backend
+          tags: |
+            type=raw,value=latest
+            type=sha
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  # 3. VPS DEPLOY: Update the server (Only on push to main)
+  deploy:
+    needs: docker
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy on server via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd ~/yastubo_backend
+            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+            docker compose pull app worker
+            docker compose up -d app worker
+            docker compose exec -T app alembic upgrade head
